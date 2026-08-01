@@ -1,0 +1,71 @@
+# Technical Architecture — Udaan AI
+
+## Overview
+
+Udaan AI is architected as an 8-microservice platform designed for scale, clean boundary separation, and domain ownership.
+
+```mermaid
+flowchart LR
+    FE["React + Vite Frontend\n(Browser: http://localhost:5173)"]
+    GW["API Gateway Service\n(Port: 8000)"]
+
+    AUTH["Authentication Service\n(Port: 8001)"]
+    STUDENT["Student Profile Service\n(Port: 8002)"]
+    ASSESSMENT["Assessment Service\n(Port: 8003)"]
+    AI["AI Career Intelligence Service\n(Port: 8004)"]
+    ROADMAP["Career Roadmap Service\n(Port: 8005)"]
+    INSTITUTION["Institution Service\n(Port: 8006)"]
+    ADMIN["Admin and Analytics Service\n(Port: 8007)"]
+
+    DB[("PostgreSQL Database\n(7 Isolated Schemas)")]
+
+    FE -->|Phase 1 Connectivity: GET /health| GW
+
+    GW -.-|Future Phase 2+ Proxy Routing| AUTH
+    GW -.-|Future Phase 2+ Proxy Routing| STUDENT
+    GW -.-|Future Phase 2+ Proxy Routing| ASSESSMENT
+    GW -.-|Future Phase 2+ Proxy Routing| AI
+    GW -.-|Future Phase 2+ Proxy Routing| ROADMAP
+    GW -.-|Future Phase 2+ Proxy Routing| INSTITUTION
+    GW -.-|Future Phase 2+ Proxy Routing| ADMIN
+
+    AUTH --> DB
+    STUDENT --> DB
+    ASSESSMENT --> DB
+    AI --> DB
+    ROADMAP --> DB
+    INSTITUTION --> DB
+    ADMIN --> DB
+```
+
+> [!NOTE]
+> The dotted arrows from `API Gateway` to microservices represent future Phase 2+ request routing. In Phase 1, the API Gateway operates as an entrypoint skeleton exposing `/health` and `/docs`.
+
+---
+
+## Data Ownership & Database Boundaries
+
+Each backend microservice logically owns its own schema within PostgreSQL:
+
+| Microservice | PostgreSQL Schema | Domain Owned |
+| ------------ | ----------------- | ------------ |
+| `auth-service` | `auth` | User accounts, credentials, roles, token metadata |
+| `student-service` | `student` | Academic profiles, interests, skills, preferences |
+| `assessment-service` | `assessment` | Assessment questions, responses, scoring outputs |
+| `ai-career-service` | `career_ai` | Recommendation logs, prompt context, compatibility scores |
+| `roadmap-service` | `roadmap` | Career routes, milestones, goals, progress tracking |
+| `institution-service` | `institution` | Public institution pages, workshop directory, registrations |
+| `admin-analytics-service` | `admin_analytics` | Platform metrics, activity logs, administrative data |
+| `api-gateway` | None | Pure routing & cross-cutting concern entrypoint |
+
+### Rules:
+1. No service directly queries another service's database schema.
+2. Cross-service data requests are conducted via synchronous REST APIs in future phases.
+3. Database connection credentials are provided strictly via environment variables.
+
+---
+
+## Networking Boundaries (Browser vs Docker)
+
+1. **Browser Networking**: The React application runs in the user's web browser and communicates with the API Gateway at `http://localhost:8000`. It MUST NOT attempt to use Docker internal service names (such as `http://api-gateway:8000`) because Docker internal DNS is not resolvable outside container networks.
+2. **Docker Internal Networking**: Backend containers within the Docker network communicate with each other using Docker container names (e.g., `http://auth-service:8001`, `http://postgres:5432`).

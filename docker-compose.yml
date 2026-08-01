@@ -1,0 +1,171 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: udaan-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-udaan_ai}
+      POSTGRES_USER: ${POSTGRES_USER:-udaan_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_in_dev}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init-schemas.sql:/docker-entrypoint-initdb.d/init-schemas.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-udaan_user} -d ${POSTGRES_DB:-udaan_ai}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api-gateway:
+    build:
+      context: ./backend/api-gateway
+      dockerfile: Dockerfile
+    container_name: udaan-api-gateway
+    restart: always
+    environment:
+      PORT: 8000
+      ALLOWED_ORIGINS: "http://localhost:5173"
+      AUTH_SERVICE_URL: "http://auth-service:8001"
+      STUDENT_SERVICE_URL: "http://student-service:8002"
+      ASSESSMENT_SERVICE_URL: "http://assessment-service:8003"
+      AI_CAREER_SERVICE_URL: "http://ai-career-service:8004"
+      ROADMAP_SERVICE_URL: "http://roadmap-service:8005"
+      INSTITUTION_SERVICE_URL: "http://institution-service:8006"
+      ADMIN_ANALYTICS_SERVICE_URL: "http://admin-analytics-service:8007"
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  auth-service:
+    build:
+      context: ./backend/auth-service
+      dockerfile: Dockerfile
+    container_name: udaan-auth-service
+    restart: always
+    environment:
+      PORT: 8001
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-udaan_user}:${POSTGRES_PASSWORD:-change_me_in_dev}@postgres:5432/${POSTGRES_DB:-udaan_ai}"
+      DB_SCHEMA: "auth"
+    ports:
+      - "8001:8001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  student-service:
+    build:
+      context: ./backend/student-service
+      dockerfile: Dockerfile
+    container_name: udaan-student-service
+    restart: always
+    environment:
+      PORT: 8002
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-udaan_user}:${POSTGRES_PASSWORD:-change_me_in_dev}@postgres:5432/${POSTGRES_DB:-udaan_ai}"
+      DB_SCHEMA: "student"
+    ports:
+      - "8002:8002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  assessment-service:
+    build:
+      context: ./backend/assessment-service
+      dockerfile: Dockerfile
+    container_name: udaan-assessment-service
+    restart: always
+    environment:
+      PORT: 8003
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-udaan_user}:${POSTGRES_PASSWORD:-change_me_in_dev}@postgres:5432/${POSTGRES_DB:-udaan_ai}"
+      DB_SCHEMA: "assessment"
+    ports:
+      - "8003:8003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  ai-career-service:
+    build:
+      context: ./backend/ai-career-service
+      dockerfile: Dockerfile
+    container_name: udaan-ai-career-service
+    restart: always
+    environment:
+      PORT: 8004
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-udaan_user}:${POSTGRES_PASSWORD:-change_me_in_dev}@postgres:5432/${POSTGRES_DB:-udaan_ai}"
+      DB_SCHEMA: "career_ai"
+    ports:
+      - "8004:8004"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  roadmap-service:
+    build:
+      context: ./backend/roadmap-service
+      dockerfile: Dockerfile
+    container_name: udaan-roadmap-service
+    restart: always
+    environment:
+      PORT: 8005
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-udaan_user}:${POSTGRES_PASSWORD:-change_me_in_dev}@postgres:5432/${POSTGRES_DB:-udaan_ai}"
+      DB_SCHEMA: "roadmap"
+    ports:
+      - "8005:8005"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  institution-service:
+    build:
+      context: ./backend/institution-service
+      dockerfile: Dockerfile
+    container_name: udaan-institution-service
+    restart: always
+    environment:
+      PORT: 8006
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-udaan_user}:${POSTGRES_PASSWORD:-change_me_in_dev}@postgres:5432/${POSTGRES_DB:-udaan_ai}"
+      DB_SCHEMA: "institution"
+    ports:
+      - "8006:8006"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  admin-analytics-service:
+    build:
+      context: ./backend/admin-analytics-service
+      dockerfile: Dockerfile
+    container_name: udaan-admin-analytics-service
+    restart: always
+    environment:
+      PORT: 8007
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-udaan_user}:${POSTGRES_PASSWORD:-change_me_in_dev}@postgres:5432/${POSTGRES_DB:-udaan_ai}"
+      DB_SCHEMA: "admin_analytics"
+    ports:
+      - "8007:8007"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend/web
+      dockerfile: Dockerfile
+    container_name: udaan-frontend
+    restart: always
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api-gateway
+
+volumes:
+  postgres_data:
