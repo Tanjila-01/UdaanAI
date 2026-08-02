@@ -62,13 +62,18 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
-  const logout = () => {
-    logoutApi();
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    setToken(null);
-    setUser(null);
-    setProfile(null);
+  const logout = async () => {
+    try {
+      await logoutApi();
+    } catch (err) {
+      // Ignore API errors during logout
+    } finally {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      setToken(null);
+      setUser(null);
+      setProfile(null);
+    }
   };
 
   const refreshProfile = async () => {

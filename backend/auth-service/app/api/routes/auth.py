@@ -1,5 +1,7 @@
 import uuid
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.schemas.auth import UserRegister, UserLogin, TokenRefreshRequest, TokenResponse, TokenRefreshResponse, UserResponse
@@ -8,15 +10,16 @@ from app.core.security import decode_token
 from app.models.user import User
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+security = HTTPBearer(auto_error=False)
 
 
-def get_current_user(authorization: str = Header(None), db: Session = Depends(get_db)) -> User:
-    if not authorization or not authorization.startswith("Bearer "):
+def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security), db: Session = Depends(get_db)) -> User:
+    if not credentials or not credentials.credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing or invalid Authorization header"
         )
-    token = authorization.split(" ")[1]
+    token = credentials.credentials
     payload = decode_token(token)
     user_id_str = payload.get("sub")
     try:

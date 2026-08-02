@@ -1,8 +1,11 @@
 import httpx
-from fastapi import APIRouter, Request, Response, HTTPException, status
+from typing import Optional
+from fastapi import APIRouter, Request, Response, HTTPException, status, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.core.config import settings
 
 router = APIRouter(prefix="/api/v1")
+security = HTTPBearer(auto_error=False)
 
 
 async def forward_request(target_url: str, request: Request) -> Response:
@@ -34,12 +37,12 @@ async def forward_request(target_url: str, request: Request) -> Response:
 
 
 @router.api_route("/auth/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
-async def proxy_auth(path: str, request: Request):
+async def proxy_auth(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
     target_url = f"{settings.AUTH_SERVICE_URL.rstrip('/')}/auth/{path}"
     return await forward_request(target_url, request)
 
 
 @router.api_route("/students/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
-async def proxy_students(path: str, request: Request):
+async def proxy_students(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
     target_url = f"{settings.STUDENT_SERVICE_URL.rstrip('/')}/students/{path}"
     return await forward_request(target_url, request)
