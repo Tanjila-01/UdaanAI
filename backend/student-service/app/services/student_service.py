@@ -29,6 +29,9 @@ class StudentService:
                 current_level=data.current_level,
                 class_or_year=data.class_or_year,
                 board=data.board,
+                stream=data.stream,
+                diploma_branch=data.diploma_branch,
+                iti_trade=data.iti_trade,
                 institution_name=data.institution_name,
                 district=data.district,
                 state=data.state or "Karnataka",
@@ -42,6 +45,9 @@ class StudentService:
             profile.current_level = data.current_level
             profile.class_or_year = data.class_or_year
             profile.board = data.board
+            profile.stream = data.stream
+            profile.diploma_branch = data.diploma_branch
+            profile.iti_trade = data.iti_trade
             profile.institution_name = data.institution_name
             profile.district = data.district
             profile.state = data.state or "Karnataka"

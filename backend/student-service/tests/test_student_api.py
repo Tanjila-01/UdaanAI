@@ -102,7 +102,22 @@ def test_student_profile_full_flow():
     res_user2_get = client.get("/students/profile/me", headers={"Authorization": f"Bearer {token2}"})
     assert res_user2_get.status_code == 404
 
-    # 6. Update profile for User 1
+    # 6. Create PUC Science Profile for User 2 with stream
+    puc_payload = {
+        "full_name": "Student Two",
+        "current_level": "PUC 2",
+        "class_or_year": "2nd Year PUC",
+        "board": "Karnataka Pre-University Education",
+        "stream": "Science",
+        "institution_name": "National College",
+        "district": "Bengaluru Urban",
+        "state": "Karnataka"
+    }
+    res_puc = client.post("/students/profile", json=puc_payload, headers={"Authorization": f"Bearer {token2}"})
+    assert res_puc.status_code == 201
+    assert res_puc.json()["stream"] == "Science"
+
+    # 7. Update profile for User 1
     res_update = client.put("/students/profile/me", json={"district": "Mysuru"}, headers={"Authorization": f"Bearer {token1}"})
     assert res_update.status_code == 200
     assert res_update.json()["district"] == "Mysuru"

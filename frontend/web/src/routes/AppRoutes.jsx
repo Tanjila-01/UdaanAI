@@ -39,7 +39,7 @@ const AppRoutes = () => {
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requireProfile={true}>
             <DashboardPage />
           </ProtectedRoute>
         }

@@ -7,8 +7,8 @@ export const PublicOnlyRoute = ({ children }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
-        <div className="text-sm font-medium text-slate-400 animate-pulse">
+      <div className="min-h-screen bg-slate-50 text-slate-800 flex items-center justify-center font-sans">
+        <div className="text-sm font-bold text-teal-800 animate-pulse">
           Loading session...
         </div>
       </div>
@@ -16,7 +16,7 @@ export const PublicOnlyRoute = ({ children }) => {
   }
 
   if (user) {
-    if (!profile) {
+    if (!profile || !profile.is_complete) {
       return <Navigate to="/onboarding" replace />;
     }
     return <Navigate to="/dashboard" replace />;
