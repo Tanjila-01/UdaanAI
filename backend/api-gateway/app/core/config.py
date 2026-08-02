@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     VERSION: str = "0.1.0"
     ENVIRONMENT: str = "development"
     ALLOWED_ORIGINS: str = "http://localhost:5173"
+    AUTH_SERVICE_URL: str = "http://localhost:8001"
+    STUDENT_SERVICE_URL: str = "http://localhost:8002"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

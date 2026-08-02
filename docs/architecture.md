@@ -19,15 +19,15 @@ flowchart LR
 
     DB[("PostgreSQL Database\n(7 Isolated Schemas)")]
 
-    FE -->|Phase 1 Connectivity: GET /health| GW
+    FE -->|Phase 2 Active Routing| GW
 
-    GW -.-|Future Phase 2+ Proxy Routing| AUTH
-    GW -.-|Future Phase 2+ Proxy Routing| STUDENT
-    GW -.-|Future Phase 2+ Proxy Routing| ASSESSMENT
-    GW -.-|Future Phase 2+ Proxy Routing| AI
-    GW -.-|Future Phase 2+ Proxy Routing| ROADMAP
-    GW -.-|Future Phase 2+ Proxy Routing| INSTITUTION
-    GW -.-|Future Phase 2+ Proxy Routing| ADMIN
+    GW -->|/api/v1/auth/*| AUTH
+    GW -->|/api/v1/students/*| STUDENT
+    GW -.-|Future Phase 3+ Proxy Routing| ASSESSMENT
+    GW -.-|Future Phase 3+ Proxy Routing| AI
+    GW -.-|Future Phase 4+ Proxy Routing| ROADMAP
+    GW -.-|Future Phase 5+ Proxy Routing| INSTITUTION
+    GW -.-|Future Phase 6+ Proxy Routing| ADMIN
 
     AUTH --> DB
     STUDENT --> DB
@@ -39,7 +39,7 @@ flowchart LR
 ```
 
 > [!NOTE]
-> The dotted arrows from `API Gateway` to microservices represent future Phase 2+ request routing. In Phase 1, the API Gateway operates as an entrypoint skeleton exposing `/health` and `/docs`.
+> In Phase 2, `API Gateway` routes `/api/v1/auth/*` to `auth-service` and `/api/v1/students/*` to `student-service`. The remaining 5 microservices remain Phase 1 health skeletons.
 
 ---
 
@@ -47,20 +47,20 @@ flowchart LR
 
 Each backend microservice logically owns its own schema within PostgreSQL:
 
-| Microservice | PostgreSQL Schema | Domain Owned |
-| ------------ | ----------------- | ------------ |
-| `auth-service` | `auth` | User accounts, credentials, roles, token metadata |
-| `student-service` | `student` | Academic profiles, interests, skills, preferences |
-| `assessment-service` | `assessment` | Assessment questions, responses, scoring outputs |
-| `ai-career-service` | `career_ai` | Recommendation logs, prompt context, compatibility scores |
-| `roadmap-service` | `roadmap` | Career routes, milestones, goals, progress tracking |
-| `institution-service` | `institution` | Public institution pages, workshop directory, registrations |
-| `admin-analytics-service` | `admin_analytics` | Platform metrics, activity logs, administrative data |
-| `api-gateway` | None | Pure routing & cross-cutting concern entrypoint |
+| Microservice | PostgreSQL Schema | Domain Owned | Phase Status |
+| ------------ | ----------------- | ------------ | ------------ |
+| `auth-service` | `auth` | User accounts, credentials, roles, JWT token metadata | **Phase 2 Active** |
+| `student-service` | `student` | Academic profiles, Class, Board, District, language | **Phase 2 Active** |
+| `assessment-service` | `assessment` | Assessment questions, responses, scoring outputs | Phase 1 Skeleton |
+| `ai-career-service` | `career_ai` | Recommendation logs, prompt context, compatibility scores | Phase 1 Skeleton |
+| `roadmap-service` | `roadmap` | Career routes, milestones, goals, progress tracking | Phase 1 Skeleton |
+| `institution-service` | `institution` | Public institution pages, workshop directory, registrations | Phase 1 Skeleton |
+| `admin-analytics-service` | `admin_analytics` | Platform metrics, activity logs, administrative data | Phase 1 Skeleton |
+| `api-gateway` | None | Pure routing & cross-cutting concern entrypoint | **Active Proxy** |
 
 ### Rules:
 1. No service directly queries another service's database schema.
-2. Cross-service data requests are conducted via synchronous REST APIs in future phases.
+2. Cross-service data requests are conducted via synchronous REST APIs or JWT claims.
 3. Database connection credentials are provided strictly via environment variables.
 
 ---

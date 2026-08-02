@@ -1,22 +1,25 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { checkGatewayHealth } from '../api/client';
+import { useAuth } from '../context/AuthContext';
+import Navbar from '../components/Navbar';
 import { 
-  Activity, 
   Server, 
   CheckCircle2, 
   XCircle, 
   RefreshCw, 
   Layers, 
   Database, 
-  Cpu, 
-  BookOpen, 
-  Sparkles, 
   ShieldCheck,
   Compass,
-  ArrowRight
+  ArrowRight,
+  UserPlus,
+  LogIn,
+  LayoutDashboard
 } from 'lucide-react';
 
 const HomePage = () => {
+  const { user, profile } = useAuth();
   const [gatewayStatus, setGatewayStatus] = useState({
     loading: true,
     connected: false,
@@ -49,58 +52,19 @@ const HomePage = () => {
   }, []);
 
   const microservices = [
-    { name: 'API Gateway Service', folder: 'api-gateway', port: 8000, schema: 'N/A', status: 'Healthy', role: 'Entry point & BFF request router' },
-    { name: 'Authentication Service', folder: 'auth-service', port: 8001, schema: 'auth', status: 'Healthy', role: 'Identity, JWT auth & RBAC' },
-    { name: 'Student Profile Service', folder: 'student-service', port: 8002, schema: 'student', status: 'Healthy', role: 'Class 8-12 profile & preferences' },
-    { name: 'Assessment Service', folder: 'assessment-service', port: 8003, schema: 'assessment', status: 'Healthy', role: 'Interests, skills & personality scoring' },
-    { name: 'AI Career Intelligence Service', folder: 'ai-career-service', port: 8004, schema: 'career_ai', status: 'Healthy', role: 'Career recommendations & insights' },
-    { name: 'Career Roadmap Service', folder: 'roadmap-service', port: 8005, schema: 'roadmap', status: 'Healthy', role: 'Path After Class 10 explorer & goals' },
-    { name: 'Institution Service', folder: 'institution-service', port: 8006, schema: 'institution', status: 'Healthy', role: 'Public institution info & workshops' },
-    { name: 'Admin and Analytics Service', folder: 'admin-analytics-service', port: 8007, schema: 'admin_analytics', status: 'Healthy', role: 'Platform metrics & admin dashboard' },
+    { name: 'API Gateway Service', folder: 'api-gateway', port: 8000, schema: 'N/A', status: 'Active Proxy', role: 'Entry point & API proxy router' },
+    { name: 'Authentication Service', folder: 'auth-service', port: 8001, schema: 'auth', status: 'Phase 2 Active', role: 'JWT identity, login & registration' },
+    { name: 'Student Profile Service', folder: 'student-service', port: 8002, schema: 'student', status: 'Phase 2 Active', role: 'Class 8-12 profile & onboarding' },
+    { name: 'Assessment Service', folder: 'assessment-service', port: 8003, schema: 'assessment', status: 'Phase 1 Skeleton', role: 'Interests, skills & personality scoring' },
+    { name: 'AI Career Intelligence Service', folder: 'ai-career-service', port: 8004, schema: 'career_ai', status: 'Phase 1 Skeleton', role: 'Career recommendations & insights' },
+    { name: 'Career Roadmap Service', folder: 'roadmap-service', port: 8005, schema: 'roadmap', status: 'Phase 1 Skeleton', role: 'Path After Class 10 explorer & goals' },
+    { name: 'Institution Service', folder: 'institution-service', port: 8006, schema: 'institution', status: 'Phase 1 Skeleton', role: 'Public institution info & workshops' },
+    { name: 'Admin and Analytics Service', folder: 'admin-analytics-service', port: 8007, schema: 'admin_analytics', status: 'Phase 1 Skeleton', role: 'Platform metrics & admin dashboard' },
   ];
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
-      {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-              <Sparkles className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">
-                Udaan AI
-              </span>
-              <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">
-                Phase 1 Foundation
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2 text-sm bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-full">
-              <span className="relative flex h-2.5 w-2.5">
-                {gatewayStatus.connected && (
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                )}
-                <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${gatewayStatus.connected ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-              </span>
-              <span className="text-slate-300 text-xs font-semibold">
-                {gatewayStatus.loading ? 'Checking Gateway...' : gatewayStatus.connected ? 'API Gateway: Connected' : 'API Gateway: Unavailable'}
-              </span>
-            </div>
-            <button
-              onClick={fetchHealth}
-              disabled={gatewayStatus.loading}
-              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all border border-slate-700 disabled:opacity-50"
-              title="Refresh Health Status"
-            >
-              <RefreshCw className={`w-4 h-4 ${gatewayStatus.loading ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex-1 w-full space-y-12">
@@ -112,7 +76,7 @@ const HomePage = () => {
           <div className="relative z-10 space-y-6 max-w-3xl">
             <div className="inline-flex items-center space-x-2 text-xs font-semibold px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
               <Compass className="w-3.5 h-3.5" />
-              <span>Karnataka Career Exploration & Pathway Platform</span>
+              <span>Karnataka Career Exploration & Education Pathway Platform</span>
             </div>
 
             <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight">
@@ -123,25 +87,50 @@ const HomePage = () => {
               Empowering Karnataka Board students in **Classes 8–10** and **Classes 11–12 (PUC)** to discover their strengths, explore post-Class 10 education pathways (PUC, Diploma, ITI, Skill routes), and set actionable goals.
             </p>
 
-            <div className="pt-2 flex flex-wrap gap-4">
+            <div className="pt-4 flex flex-wrap items-center gap-4">
+              {user ? (
+                <Link
+                  to={profile ? "/dashboard" : "/onboarding"}
+                  className="inline-flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg shadow-indigo-600/30 text-sm"
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  <span>Go to Student Dashboard</span>
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    to="/register"
+                    className="inline-flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-xl font-semibold transition-all shadow-lg shadow-indigo-600/30 text-sm"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    <span>Register as Student</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+
+                  <Link
+                    to="/login"
+                    className="inline-flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-6 py-3 rounded-xl font-semibold transition-colors text-sm"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    <span>Student Sign In</span>
+                  </Link>
+                </>
+              )}
+
               <a 
                 href="http://localhost:8000/docs" 
                 target="_blank" 
                 rel="noreferrer" 
-                className="inline-flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl font-semibold transition-all shadow-lg shadow-indigo-600/30 text-sm"
+                className="inline-flex items-center space-x-2 bg-slate-900 border border-slate-800 text-slate-400 hover:text-white px-4 py-3 rounded-xl font-medium text-xs transition-colors"
               >
-                <span>Explore API Gateway Docs</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>API Gateway Swagger Docs</span>
               </a>
-              <div className="inline-flex items-center space-x-2 bg-slate-800 border border-slate-700 text-slate-300 px-5 py-2.5 rounded-xl font-medium text-sm">
-                <Database className="w-4 h-4 text-indigo-400" />
-                <span>PostgreSQL 15 (8 Schemas)</span>
-              </div>
             </div>
           </div>
         </div>
 
-        {/* Live Connectivity Card */}
+        {/* Live Gateway Status Card */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 backdrop-blur-sm space-y-3">
             <div className="flex items-center justify-between">
@@ -170,27 +159,27 @@ const HomePage = () => {
 
           <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 backdrop-blur-sm space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Architecture Mode</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Phase 2 Status</span>
               <Layers className="w-5 h-5 text-indigo-400" />
             </div>
             <div className="text-2xl font-bold text-white">
-              8 Microservices
+              Auth & Profile Active
             </div>
             <p className="text-xs text-slate-400">
-              Independent FastAPI Python services connected through Docker Compose internal network.
+              Student Registration, Login, JWT Tokens, and Academic Profile Onboarding implemented.
             </p>
           </div>
 
           <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 backdrop-blur-sm space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Database Ownership</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Database Boundaries</span>
               <ShieldCheck className="w-5 h-5 text-violet-400" />
             </div>
             <div className="text-2xl font-bold text-white">
-              Schema Isolation
+              Isolated Schemas
             </div>
             <p className="text-xs text-slate-400">
-              Single PostgreSQL container hosting 7 distinct service schemas (`auth`, `student`, `assessment`, etc.).
+              PostgreSQL isolated schemas (`auth` & `student` populated for Phase 2).
             </p>
           </div>
         </div>
@@ -215,8 +204,8 @@ const HomePage = () => {
                   <th className="px-6 py-4">Directory</th>
                   <th className="px-6 py-4">Port</th>
                   <th className="px-6 py-4">Schema</th>
+                  <th className="px-6 py-4">Phase 2 Status</th>
                   <th className="px-6 py-4">Responsibility & Role</th>
-                  <th className="px-6 py-4 text-right">Health URL</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800 text-slate-300">
@@ -237,17 +226,16 @@ const HomePage = () => {
                         {svc.schema}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-slate-400 text-xs">{svc.role}</td>
-                    <td className="px-6 py-4 text-right font-mono text-xs">
-                      <a 
-                        href={`http://localhost:${svc.port}/health`} 
-                        target="_blank" 
-                        rel="noreferrer" 
-                        className="text-indigo-400 hover:text-indigo-300 hover:underline"
-                      >
-                        /health
-                      </a>
+                    <td className="px-6 py-4 text-xs font-semibold">
+                      <span className={`px-2.5 py-0.5 rounded-full ${
+                        svc.status.includes('Active')
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                          : 'bg-slate-800 text-slate-400'
+                      }`}>
+                        {svc.status}
+                      </span>
                     </td>
+                    <td className="px-6 py-4 text-slate-400 text-xs">{svc.role}</td>
                   </tr>
                 ))}
               </tbody>
@@ -263,7 +251,7 @@ const HomePage = () => {
             Udaan AI — AI-Powered Career Exploration and Education Pathway Platform for Karnataka Students
           </div>
           <div>
-            Phase 1 Foundation Setup Complete
+            Phase 2 Authentication & Profile Foundation Active
           </div>
         </div>
       </footer>
