@@ -1,4 +1,5 @@
 import uuid
+from typing import Optional
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.models.student_profile import StudentProfile
@@ -7,8 +8,52 @@ from app.schemas.student_profile import ProfileCreate, ProfileUpdate
 
 class StudentService:
     @staticmethod
+    def normalize_and_validate_academic_fields(
+        level: str,
+        stream: Optional[str],
+        diploma_branch: Optional[str],
+        iti_trade: Optional[str]
+    ) -> tuple[Optional[str], Optional[str], Optional[str]]:
+        level_str = (level or "").strip()
+
+        if level_str in ["Class 8", "Class 9", "Class 10"]:
+            return None, None, None
+        elif level_str in ["PUC 1", "PUC 2"]:
+            if not stream or not stream.strip():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Stream is required for {level_str} (e.g. Science, Commerce, Arts)"
+                )
+            return stream.strip(), None, None
+        elif level_str == "Diploma":
+            if not diploma_branch or not diploma_branch.strip():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Diploma branch is required for Diploma level"
+                )
+            return None, diploma_branch.strip(), None
+        elif level_str == "ITI":
+            if not iti_trade or not iti_trade.strip():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="ITI trade is required for ITI level"
+                )
+            return None, None, iti_trade.strip()
+        else:
+            return stream, diploma_branch, iti_trade
+
+    @staticmethod
     def calculate_completion(profile_data: dict) -> tuple[bool, int]:
+        level = (profile_data.get("current_level") or "").strip()
         required_fields = ["current_level", "class_or_year", "board", "institution_name", "district"]
+
+        if level in ["PUC 1", "PUC 2"]:
+            required_fields.append("stream")
+        elif level == "Diploma":
+            required_fields.append("diploma_branch")
+        elif level == "ITI":
+            required_fields.append("iti_trade")
+
         filled = sum(1 for field in required_fields if profile_data.get(field))
         percentage = int((filled / len(required_fields)) * 100)
         is_complete = percentage == 100
@@ -20,7 +65,17 @@ class StudentService:
         profile = db.query(StudentProfile).filter(StudentProfile.user_id == user_uuid).first()
 
         full_name = data.full_name or full_name_claim or "Student"
-        is_complete, percentage = StudentService.calculate_completion(data.model_dump())
+
+        clean_stream, clean_diploma, clean_iti = StudentService.normalize_and_validate_academic_fields(
+            data.current_level, data.stream, data.diploma_branch, data.iti_trade
+        )
+
+        profile_dict = data.model_dump()
+        profile_dict["stream"] = clean_stream
+        profile_dict["diploma_branch"] = clean_diploma
+        profile_dict["iti_trade"] = clean_iti
+
+        is_complete, percentage = StudentService.calculate_completion(profile_dict)
 
         if not profile:
             profile = StudentProfile(
@@ -29,9 +84,9 @@ class StudentService:
                 current_level=data.current_level,
                 class_or_year=data.class_or_year,
                 board=data.board,
-                stream=data.stream,
-                diploma_branch=data.diploma_branch,
-                iti_trade=data.iti_trade,
+                stream=clean_stream,
+                diploma_branch=clean_diploma,
+                iti_trade=clean_iti,
                 institution_name=data.institution_name,
                 district=data.district,
                 state=data.state or "Karnataka",
@@ -45,9 +100,9 @@ class StudentService:
             profile.current_level = data.current_level
             profile.class_or_year = data.class_or_year
             profile.board = data.board
-            profile.stream = data.stream
-            profile.diploma_branch = data.diploma_branch
-            profile.iti_trade = data.iti_trade
+            profile.stream = clean_stream
+            profile.diploma_branch = clean_diploma
+            profile.iti_trade = clean_iti
             profile.institution_name = data.institution_name
             profile.district = data.district
             profile.state = data.state or "Karnataka"
@@ -79,12 +134,23 @@ class StudentService:
             if value is not None:
                 setattr(profile, field, value)
 
+        clean_stream, clean_diploma, clean_iti = StudentService.normalize_and_validate_academic_fields(
+            profile.current_level, profile.stream, profile.diploma_branch, profile.iti_trade
+        )
+
+        profile.stream = clean_stream
+        profile.diploma_branch = clean_diploma
+        profile.iti_trade = clean_iti
+
         current_dict = {
             "current_level": profile.current_level,
             "class_or_year": profile.class_or_year,
             "board": profile.board,
             "institution_name": profile.institution_name,
             "district": profile.district,
+            "stream": profile.stream,
+            "diploma_branch": profile.diploma_branch,
+            "iti_trade": profile.iti_trade,
         }
         is_complete, percentage = StudentService.calculate_completion(current_dict)
         profile.is_complete = is_complete
