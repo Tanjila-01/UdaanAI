@@ -68,3 +68,21 @@ export const updateMyProfileApi = async (data) => {
   const response = await apiClient.put('/api/v1/students/profile/me', data);
   return response.data;
 };
+
+export const getPathwaysApi = async (params = {}) => {
+  const cleanParams = {};
+  if (params.education_level && typeof params.education_level === 'string' && params.education_level.trim()) {
+    cleanParams.education_level = params.education_level.trim();
+  }
+  if (params.stream && typeof params.stream === 'string' && params.stream.trim()) {
+    cleanParams.stream = params.stream.trim();
+  }
+  const response = await apiClient.get('/api/v1/roadmaps/pathways', { params: cleanParams });
+  return response.data;
+};
+
+export const getPathwayDetailApi = async (pathwayId) => {
+  const response = await apiClient.get(`/api/v1/roadmaps/pathways/${encodeURIComponent(pathwayId)}`);
+  return response.data;
+};
+

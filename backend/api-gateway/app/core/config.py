@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: str = "http://localhost:5173"
     AUTH_SERVICE_URL: str = "http://localhost:8001"
     STUDENT_SERVICE_URL: str = "http://localhost:8002"
+    ROADMAP_SERVICE_URL: str = "http://localhost:8005"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

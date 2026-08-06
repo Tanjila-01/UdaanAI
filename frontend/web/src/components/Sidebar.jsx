@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   Home, 
@@ -17,23 +17,27 @@ import {
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { logout } = useAuth();
   const [showComingNext, setShowComingNext] = useState(false);
   const [comingNextTitle, setComingNextTitle] = useState('');
 
   const navItems = [
-    { label: 'Udaan Trail Home', icon: Home, path: '/dashboard', active: true },
-    { label: 'Explore Pathways', icon: Compass, path: '#', feature: 'Karnataka Education Pathway Explorer' },
+    { label: 'Udaan Trail Home', icon: Home, path: '/dashboard' },
+    { label: 'Explore Pathways', icon: Compass, path: '/pathways' },
     { label: 'Self-Discovery', icon: Sparkles, path: '#', feature: 'Skill & Interest Assessment', badge: 'Phase 4B' },
     { label: 'Learning Modules', icon: BookOpen, path: '#', feature: 'Future Skills Learning Paths' },
-    { label: 'Roadmap & Options', icon: Map, path: '#', feature: 'Post-SSLC Career Roadmap' },
+    { label: 'My Career Roadmap', icon: Map, path: '/my-roadmap' },
     { label: 'Student Goals', icon: Target, path: '#', feature: 'Goal Milestone Tracker' },
     { label: 'Saved Careers', icon: Bookmark, path: '#', feature: 'Bookmarked Pathways' },
     { label: 'Government Info', icon: FolderOpen, path: '#', feature: 'Karnataka Scholarship & Institution Info' },
   ];
 
   const handleNavClick = (item) => {
-    if (item.feature) {
+    if (item.path && item.path !== '#') {
+      navigate(item.path);
+      if (onClose) onClose();
+    } else if (item.feature) {
       setComingNextTitle(item.feature);
       setShowComingNext(true);
     }
@@ -83,7 +87,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           <nav className="space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isSelected = item.active;
+              const isSelected = location.pathname === item.path;
 
               return (
                 <button

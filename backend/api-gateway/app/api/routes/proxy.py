@@ -8,7 +8,7 @@ router = APIRouter(prefix="/api/v1")
 security = HTTPBearer(auto_error=False)
 
 
-async def forward_request(target_url: str, request: Request) -> Response:
+async def forward_request(target_url: str, request: Request, error_detail: Optional[str] = None) -> Response:
     body = await request.body()
     headers = dict(request.headers)
     # Strip host header to prevent target service header conflicts
@@ -30,9 +30,10 @@ async def forward_request(target_url: str, request: Request) -> Response:
                 media_type=resp.headers.get("content-type"),
             )
         except httpx.RequestError as exc:
+            detail_msg = error_detail if error_detail else f"Target microservice unavailable: {exc}"
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"Target microservice unavailable: {exc}"
+                detail=detail_msg
             )
 
 
@@ -108,3 +109,25 @@ async def proxy_students_patch(path: str, request: Request, credentials: Optiona
 @router.options("/students/{path:path}", operation_id="proxy_students_options")
 async def proxy_students_options(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
     return await _proxy_students(path, request)
+
+
+# --- Roadmap Service Proxy Routes ---
+
+@router.get("/roadmaps/pathways", operation_id="get_roadmap_pathways", tags=["Roadmaps"])
+async def get_roadmap_pathways(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+):
+    target_url = f"{settings.ROADMAP_SERVICE_URL.rstrip('/')}/roadmaps/pathways"
+    return await forward_request(target_url, request, error_detail="Roadmap service is temporarily unavailable.")
+
+
+@router.get("/roadmaps/pathways/{pathway_id}", operation_id="get_roadmap_pathway_detail", tags=["Roadmaps"])
+async def get_roadmap_pathway_detail(
+    pathway_id: str,
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+):
+    target_url = f"{settings.ROADMAP_SERVICE_URL.rstrip('/')}/roadmaps/pathways/{pathway_id}"
+    return await forward_request(target_url, request, error_detail="Roadmap service is temporarily unavailable.")
+

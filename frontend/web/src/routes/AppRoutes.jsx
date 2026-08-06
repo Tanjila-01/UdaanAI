@@ -5,6 +5,8 @@ import RegisterPage from '../pages/RegisterPage';
 import LoginPage from '../pages/LoginPage';
 import OnboardingPage from '../pages/OnboardingPage';
 import DashboardPage from '../pages/DashboardPage';
+import PathwaysPage from '../pages/PathwaysPage';
+import MyCareerRoadmapPage from '../pages/MyCareerRoadmapPage';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { PublicOnlyRoute } from '../components/PublicOnlyRoute';
 
@@ -41,6 +43,22 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute requireProfile={true}>
             <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/pathways"
+        element={
+          <ProtectedRoute requireProfile={true}>
+            <PathwaysPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/my-roadmap"
+        element={
+          <ProtectedRoute requireProfile={true}>
+            <MyCareerRoadmapPage />
           </ProtectedRoute>
         }
       />

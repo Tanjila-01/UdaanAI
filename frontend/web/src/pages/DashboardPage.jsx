@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
@@ -21,6 +22,7 @@ import {
 } from 'lucide-react';
 
 const DashboardPage = () => {
+  const navigate = useNavigate();
   const { user, profile, loading, refreshProfile } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
@@ -34,10 +36,7 @@ const DashboardPage = () => {
   };
 
   const handleExploreClick = () => {
-    setModalFeature({
-      title: 'Explore Education Pathways',
-      desc: 'The SSLC, PUC, Polytechnic Diploma, and ITI pathway explorer is coming in Phase 4B.'
-    });
+    navigate('/pathways');
   };
 
   return (
@@ -232,22 +231,25 @@ const DashboardPage = () => {
                 </div>
               </div>
 
-              {/* Personal Roadmap Placeholder */}
-              <div className="bg-white border border-slate-200/80 rounded-3xl p-6 space-y-3 flex flex-col justify-between shadow-2xs">
+              {/* Personal Roadmap Explorer Card */}
+              <div 
+                onClick={() => navigate('/pathways')}
+                className="bg-white border border-teal-200/80 hover:border-[#005F60] rounded-3xl p-6 space-y-3 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all cursor-pointer group"
+              >
                 <div className="space-y-3">
-                  <div className="w-10 h-10 rounded-2xl bg-orange-50 text-[#F97316] border border-orange-200 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-2xl bg-teal-50 text-[#005F60] border border-teal-200 flex items-center justify-center group-hover:scale-105 transition-transform">
                     <Map className="w-5 h-5" />
                   </div>
-                  <h3 className="text-sm font-black text-[#0F172A]">Personalized Pathway Map</h3>
+                  <h3 className="text-sm font-black text-[#0F172A] group-hover:text-[#005F60]">Personalized Pathway Map</h3>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    Detailed step-by-step post-Class 10 or PUC action plans will generate upon roadmap service connection.
+                    Explore detailed step-by-step post-Class 10, PUC, Diploma, and ITI action plans tailored to your profile.
                   </p>
                 </div>
                 <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="text-[10px] font-extrabold text-[#F97316] bg-orange-50 px-2 py-0.5 rounded">
-                    Phase 4B
+                  <span className="text-[10px] font-extrabold text-[#005F60] bg-teal-50 border border-teal-200 px-2 py-0.5 rounded">
+                    Active Module
                   </span>
-                  <span className="text-[#005F60] font-bold">Coming Next</span>
+                  <span className="text-[#005F60] font-bold group-hover:underline">Explore Pathways →</span>
                 </div>
               </div>
 
