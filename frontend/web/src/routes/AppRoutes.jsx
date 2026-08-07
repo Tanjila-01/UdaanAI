@@ -7,6 +7,7 @@ import OnboardingPage from '../pages/OnboardingPage';
 import DashboardPage from '../pages/DashboardPage';
 import PathwaysPage from '../pages/PathwaysPage';
 import MyCareerRoadmapPage from '../pages/MyCareerRoadmapPage';
+import DesignSystemShowcasePage from '../pages/DesignSystemShowcasePage';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { PublicOnlyRoute } from '../components/PublicOnlyRoute';
 
@@ -14,6 +15,7 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
+      <Route path="/design-system" element={<DesignSystemShowcasePage />} />
       <Route
         path="/register"
         element={
