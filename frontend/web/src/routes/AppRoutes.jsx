@@ -7,6 +7,7 @@ import OnboardingPage from '../pages/OnboardingPage';
 import DashboardPage from '../pages/DashboardPage';
 import PathwaysPage from '../pages/PathwaysPage';
 import MyCareerRoadmapPage from '../pages/MyCareerRoadmapPage';
+import AssessmentPage from '../pages/AssessmentPage';
 import DesignSystemShowcasePage from '../pages/DesignSystemShowcasePage';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { PublicOnlyRoute } from '../components/PublicOnlyRoute';
@@ -49,6 +50,14 @@ const AppRoutes = () => {
         }
       />
       <Route
+        path="/assessment"
+        element={
+          <ProtectedRoute requireProfile={true}>
+            <AssessmentPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/pathways"
         element={
           <ProtectedRoute requireProfile={true}>
@@ -68,5 +77,6 @@ const AppRoutes = () => {
     </Routes>
   );
 };
+
 
 export default AppRoutes;

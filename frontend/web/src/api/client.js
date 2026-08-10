@@ -86,3 +86,49 @@ export const getPathwayDetailApi = async (pathwayId) => {
   return response.data;
 };
 
+// --- Assessment Service APIs ---
+
+export const getAssessmentsApi = async () => {
+  const response = await apiClient.get('/api/v1/assessments');
+  return response.data;
+};
+
+export const getAssessmentDetailApi = async (assessmentId) => {
+  const response = await apiClient.get(`/api/v1/assessments/${encodeURIComponent(assessmentId)}`);
+  return response.data;
+};
+
+export const startAssessmentAttemptApi = async (assessmentId) => {
+  const response = await apiClient.post(`/api/v1/assessments/${encodeURIComponent(assessmentId)}/attempts`);
+  return response.data;
+};
+
+export const submitAssessmentAnswerApi = async (attemptId, questionId, selectedOptionId) => {
+  const response = await apiClient.post(`/api/v1/assessments/attempts/${encodeURIComponent(attemptId)}/answers`, {
+    question_id: questionId,
+    selected_option_id: selectedOptionId,
+  });
+  return response.data;
+};
+
+export const completeAssessmentAttemptApi = async (attemptId) => {
+  const response = await apiClient.post(`/api/v1/assessments/attempts/${encodeURIComponent(attemptId)}/complete`);
+  return response.data;
+};
+
+export const getAttemptDetailApi = async (attemptId) => {
+  const response = await apiClient.get(`/api/v1/assessments/attempts/${encodeURIComponent(attemptId)}`);
+  return response.data;
+};
+
+export const getAttemptResultApi = async (attemptId) => {
+  const response = await apiClient.get(`/api/v1/assessments/attempts/${encodeURIComponent(attemptId)}/result`);
+  return response.data;
+};
+
+export const getMyLatestAssessmentResultApi = async () => {
+  const response = await apiClient.get('/api/v1/assessments/my-latest-result');
+  return response.data;
+};
+
+

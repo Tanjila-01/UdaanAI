@@ -6,6 +6,7 @@ import Header from '../components/Header';
 import UdaanTrailHero from '../components/UdaanTrailHero';
 import UdaanTrailMilestones from '../components/UdaanTrailMilestones';
 import EditProfileDrawer from '../components/EditProfileDrawer';
+import { getMyLatestAssessmentResultApi } from '../api/client';
 import { 
   UserCheck, 
   GraduationCap, 
@@ -18,7 +19,10 @@ import {
   Target,
   Sparkles,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  Award,
+  ArrowRight,
+  Compass
 } from 'lucide-react';
 
 const DashboardPage = () => {
@@ -27,13 +31,18 @@ const DashboardPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
   const [modalFeature, setModalFeature] = useState(null);
+  const [latestAssessmentResult, setLatestAssessmentResult] = useState(null);
+
+  React.useEffect(() => {
+    getMyLatestAssessmentResultApi()
+      .then((res) => setLatestAssessmentResult(res))
+      .catch(() => setLatestAssessmentResult(null));
+  }, []);
 
   const handleAssessmentClick = () => {
-    setModalFeature({
-      title: 'Self-Discovery Assessment',
-      desc: 'The interactive skill and interest assessment will be released in Phase 4B. Your authenticated profile is saved and ready in PostgreSQL.'
-    });
+    navigate('/assessment');
   };
+
 
   const handleExploreClick = () => {
     navigate('/pathways');
@@ -102,8 +111,37 @@ const DashboardPage = () => {
             })}
           />
 
+          {/* Assessment Status Banner */}
+          <section className="bg-gradient-to-r from-teal-900 via-[#005F60] to-teal-950 text-white rounded-3xl p-6 sm:p-8 shadow-md border border-teal-700/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+            <div className="space-y-2">
+              <div className="inline-flex items-center space-x-1.5 text-[11px] font-extrabold uppercase tracking-widest text-teal-300 bg-teal-950/60 px-3 py-0.5 rounded-full border border-teal-700/60">
+                <Compass className="w-3.5 h-3.5 text-[#F97316]" />
+                <span>Career & Stream Aptitude Assessment</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                {latestAssessmentResult
+                  ? `Match Found: ${latestAssessmentResult.primary_stream_recommendation}`
+                  : 'Discover Your Stream Aptitude & Match'}
+              </h2>
+              <p className="text-xs sm:text-sm text-teal-100/90 font-medium max-w-2xl leading-relaxed">
+                {latestAssessmentResult
+                  ? latestAssessmentResult.summary_text
+                  : 'Take our 10-question Karnataka SSLC & Pre-University assessment to discover your primary stream recommendation and target career roles.'}
+              </p>
+            </div>
+
+            <button
+              onClick={handleAssessmentClick}
+              className="bg-[#F97316] hover:bg-[#C2580E] text-white font-extrabold text-xs px-5 py-3 rounded-xl transition-all shadow-xs flex items-center space-x-2 shrink-0 cursor-pointer"
+            >
+              <span>{latestAssessmentResult ? 'View / Retake Assessment' : 'Take Assessment'}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </section>
+
           {/* Student Profile Summary — Structured Rows Layout (NO Card Overload) */}
           <section className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xs">
+
             <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-5 gap-4">
               <div>
                 <div className="inline-flex items-center space-x-1.5 text-[11px] font-extrabold text-[#005F60] bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200 mb-1">

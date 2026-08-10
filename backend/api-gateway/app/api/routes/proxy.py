@@ -131,3 +131,48 @@ async def get_roadmap_pathway_detail(
     target_url = f"{settings.ROADMAP_SERVICE_URL.rstrip('/')}/roadmaps/pathways/{pathway_id}"
     return await forward_request(target_url, request, error_detail="Roadmap service is temporarily unavailable.")
 
+
+# --- Assessment Service Proxy Routes ---
+
+async def _proxy_assessments(path: str, request: Request) -> Response:
+    clean_path = f"/{path.lstrip('/')}" if path else ""
+    target_url = f"{settings.ASSESSMENT_SERVICE_URL.rstrip('/')}/assessments{clean_path}"
+    return await forward_request(target_url, request, error_detail="Assessment service is temporarily unavailable.")
+
+
+
+@router.get("/assessments", operation_id="proxy_assessments_root_get", tags=["Assessments"])
+async def proxy_assessments_root_get(request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_assessments("", request)
+
+
+@router.get("/assessments/{path:path}", operation_id="proxy_assessments_get", tags=["Assessments"])
+async def proxy_assessments_get(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_assessments(path, request)
+
+
+@router.post("/assessments/{path:path}", operation_id="proxy_assessments_post", tags=["Assessments"])
+async def proxy_assessments_post(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_assessments(path, request)
+
+
+@router.put("/assessments/{path:path}", operation_id="proxy_assessments_put", tags=["Assessments"])
+async def proxy_assessments_put(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_assessments(path, request)
+
+
+@router.delete("/assessments/{path:path}", operation_id="proxy_assessments_delete", tags=["Assessments"])
+async def proxy_assessments_delete(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_assessments(path, request)
+
+
+@router.patch("/assessments/{path:path}", operation_id="proxy_assessments_patch", tags=["Assessments"])
+async def proxy_assessments_patch(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_assessments(path, request)
+
+
+@router.options("/assessments/{path:path}", operation_id="proxy_assessments_options", tags=["Assessments"])
+async def proxy_assessments_options(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_assessments(path, request)
+
+

@@ -34,8 +34,11 @@ services:
       ROADMAP_SERVICE_URL: "http://roadmap-service:8005"
       INSTITUTION_SERVICE_URL: "http://institution-service:8006"
       ADMIN_ANALYTICS_SERVICE_URL: "http://admin-analytics-service:8007"
+    volumes:
+      - ./backend/api-gateway:/app
     ports:
       - "8000:8000"
+
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
@@ -88,11 +91,16 @@ services:
       PORT: 8003
       DATABASE_URL: "postgresql://${POSTGRES_USER:-udaan_user}:${POSTGRES_PASSWORD:-change_me_in_dev}@postgres:5432/${POSTGRES_DB:-udaan_ai}"
       DB_SCHEMA: "assessment"
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY:-dev_secret_key_udaan_ai_phase2_change_in_prod}"
+      JWT_ALGORITHM: "${JWT_ALGORITHM:-HS256}"
+    volumes:
+      - ./backend/assessment-service:/app
     ports:
       - "8003:8003"
     depends_on:
       postgres:
         condition: service_healthy
+
 
   ai-career-service:
     build:
