@@ -18,7 +18,7 @@ import { Send, ArrowRight } from 'lucide-react';
 export const CTABanner = ({
   title,
   description,
-  primaryCtaText = 'Get Started Today',
+  primaryCtaText = 'Explore Careers',
   onPrimaryCtaClick,
   secondaryCtaText,
   onSecondaryCtaClick,
@@ -28,13 +28,13 @@ export const CTABanner = ({
   return (
     <div
       className={cn(
-        'relative bg-gradient-to-br from-[#005F60] to-[#004D4E] rounded-3xl p-8 sm:p-12 text-white shadow-xl overflow-hidden border border-teal-700/50',
+        'relative bg-gradient-to-br from-[#005F60] to-[#004D4E] rounded-3xl p-8 sm:p-12 text-white shadow-xl min-h-fit border border-teal-700/50',
         className
       )}
       {...props}
     >
       {/* Background paper plane guidance motif */}
-      <div className="absolute right-6 top-6 opacity-10 pointer-events-none animate-paper-plane">
+      <div className="absolute right-6 top-6 opacity-10 pointer-events-none animate-paper-plane hidden sm:block">
         <Send className="w-48 h-48 text-white" />
       </div>
 
@@ -44,35 +44,35 @@ export const CTABanner = ({
           <span>Karnataka Career Guidance</span>
         </span>
 
-        <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight">
           {title}
         </h2>
 
-        <p className="text-sm sm:text-base text-teal-50/90 leading-relaxed">
+        <p className="text-sm sm:text-base text-teal-50/90 leading-relaxed font-medium">
           {description}
         </p>
 
-        <div className="flex flex-wrap items-center gap-3 pt-2">
+        <div className="flex flex-wrap items-center gap-3.5 pt-3">
           {primaryCtaText && (
             <Button
               variant="secondary"
               size="lg"
               onClick={onPrimaryCtaClick}
-              rightIcon={<ArrowRight className="w-4 h-4" />}
+              className="bg-[#E06D14] hover:bg-[#C2580E] text-white font-bold shadow-md hover:shadow-lg transition-all duration-200 px-6"
+              rightIcon={<ArrowRight className="w-4.5 h-4.5 text-white" />}
             >
               {primaryCtaText}
             </Button>
           )}
 
           {secondaryCtaText && (
-            <Button
-              variant="outline"
-              size="lg"
+            <button
+              type="button"
               onClick={onSecondaryCtaClick}
-              className="bg-transparent text-white border-white/30 hover:bg-white/10 hover:border-white/50"
+              className="h-12 px-6 rounded-xl font-bold text-sm text-white bg-white/10 hover:bg-white/20 border border-white/35 hover:border-white/60 transition-all duration-200 shadow-2xs cursor-pointer flex items-center justify-center"
             >
               {secondaryCtaText}
-            </Button>
+            </button>
           )}
         </div>
       </div>

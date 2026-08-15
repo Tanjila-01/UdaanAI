@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { createProfileApi } from '../api/client';
-import Navbar from '../components/Navbar';
+import AuthHeader from '../components/layout/AuthHeader';
 import { 
   GraduationCap, 
   CheckCircle2, 
@@ -206,7 +206,7 @@ const OnboardingPage = () => {
 
   return (
     <div className="min-h-screen bg-[#F8FAF8] text-[#0F172A] flex flex-col justify-between selection:bg-[#005F60] selection:text-white font-sans">
-      <Navbar />
+      <AuthHeader />
 
       <main className="max-w-4xl w-full mx-auto px-4 py-8 flex-1">
         {/* Title Section */}

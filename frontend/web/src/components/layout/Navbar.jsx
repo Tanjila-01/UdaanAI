@@ -6,7 +6,9 @@ import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 
 /**
- * Reusable Navbar layout component adhering to Udaan AI Design Tokens.
+ * Modern, minimal Navbar component for Udaan AI public and marketing pages.
+ * Enforces single clear primary CTA, clean wayfinding section anchors,
+ * and responsive mobile drawer.
  */
 export const Navbar = () => {
   const { user, profile, logout } = useAuth();
@@ -28,12 +30,12 @@ export const Navbar = () => {
     navigate('/login');
   };
 
+  // Senior IA audit curated navigation anchors mapped directly to homepage sections
   const navLinks = [
-    { label: 'Home', href: '#hero' },
-    { label: 'Explore Pathways', href: '#pathways' },
+    { label: 'Pathways', href: '#pathways' },
+    { label: 'How It Works', href: '#roadmap' },
     { label: 'Workshops', href: '#workshops' },
-    { label: 'Resources', href: '#resources' },
-    { label: 'About', href: '#about' },
+    { label: 'For Schools', href: '#school-invitation' },
   ];
 
   const handleNavClick = (e, href) => {
@@ -41,12 +43,19 @@ export const Navbar = () => {
       e.preventDefault();
       setMobileMenuOpen(false);
       
+      const targetId = href.replace('#', '');
+      
       if (location.pathname !== '/') {
         navigate('/' + href);
+        setTimeout(() => {
+          const element = document.getElementById(targetId);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 100);
         return;
       }
       
-      const targetId = href.replace('#', '');
       const element = document.getElementById(targetId);
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' });
@@ -55,14 +64,16 @@ export const Navbar = () => {
   };
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-      isScrolled 
-        ? 'bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-xs py-3' 
-        : 'bg-white/80 backdrop-blur-xs py-4 border-b border-slate-100'
-    }`}>
+    <header 
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        isScrolled 
+          ? 'bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-xs py-3' 
+          : 'bg-white/80 backdrop-blur-xs py-4 border-b border-slate-100'
+      }`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
         
-        {/* Left: Brand Logo */}
+        {/* Left: Brand Logo & Tagline */}
         <Link to="/" className="flex items-center space-x-3 group">
           <div className="w-10 h-10 rounded-xl bg-[#005F60] flex items-center justify-center text-white shadow-xs group-hover:scale-105 transition-transform">
             <Send className="w-5 h-5 text-white animate-paper-plane" />
@@ -82,21 +93,21 @@ export const Navbar = () => {
           </div>
         </Link>
 
-        {/* Center: Navigation Links */}
+        {/* Center: Curated Public Section Anchors */}
         <nav className="hidden lg:flex items-center space-x-1 bg-slate-100/90 p-1.5 rounded-xl border border-slate-200/80 backdrop-blur-xs">
           {navLinks.map((link) => (
             <a
               key={link.label}
               href={link.href}
               onClick={(e) => handleNavClick(e, link.href)}
-              className="px-4 py-1.5 rounded-lg text-xs font-bold text-slate-800 hover:text-[#005F60] hover:bg-white transition-all"
+              className="px-4 py-1.5 rounded-lg text-xs font-bold text-slate-800 hover:text-[#005F60] hover:bg-white transition-all cursor-pointer"
             >
               {link.label}
             </a>
           ))}
         </nav>
 
-        {/* Right: Actions */}
+        {/* Right: Focused Actions (One Clear Primary Action) */}
         <div className="hidden sm:flex items-center space-x-3">
           {user ? (
             <>
@@ -129,7 +140,12 @@ export const Navbar = () => {
                 </Button>
               </Link>
               <Link to="/register">
-                <Button variant="secondary" size="sm" rightIcon={<ChevronRight className="w-4 h-4" />}>
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  className="bg-[#E06D14] hover:bg-[#C2580E] text-white shadow-2xs font-extrabold"
+                  rightIcon={<ChevronRight className="w-4 h-4" />}
+                >
                   Sign Up
                 </Button>
               </Link>
@@ -143,21 +159,25 @@ export const Navbar = () => {
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           className="lg:hidden p-2 rounded-lg text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
           aria-label="Toggle Navigation Menu"
+          aria-expanded={mobileMenuOpen}
         >
           {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
       </div>
 
-      {/* Mobile Dropdown */}
+      {/* Mobile Drawer Dropdown */}
       {mobileMenuOpen && (
-        <div className="lg:hidden bg-white border-b border-slate-200 px-4 pt-3 pb-6 space-y-3 shadow-lg">
+        <div className="lg:hidden bg-white border-b border-slate-200 px-4 pt-3 pb-6 space-y-4 shadow-lg animate-in slide-in-from-top-2 duration-200">
           <div className="flex flex-col space-y-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3.5 py-1">
+              Navigation
+            </span>
             {navLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
                 onClick={(e) => handleNavClick(e, link.href)}
-                className="px-3.5 py-2.5 rounded-lg text-xs font-bold text-slate-800 hover:bg-teal-50 hover:text-[#005F60]"
+                className="px-3.5 py-2.5 rounded-lg text-xs font-bold text-slate-800 hover:bg-teal-50 hover:text-[#005F60] transition-colors"
               >
                 {link.label}
               </a>
@@ -165,27 +185,31 @@ export const Navbar = () => {
           </div>
 
           <div className="pt-3 border-t border-slate-100 flex flex-col space-y-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1">
+              Account
+            </span>
             {user ? (
               <Link
-                to="/dashboard"
+                to={profile ? "/dashboard" : "/onboarding"}
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full text-center py-2.5 rounded-lg bg-[#005F60] text-white text-xs font-bold"
+                className="w-full text-center py-2.5 rounded-lg bg-[#005F60] text-white text-xs font-bold shadow-xs flex items-center justify-center space-x-2"
               >
-                Go to Dashboard
+                <LayoutDashboard className="w-4 h-4" />
+                <span>Go to Dashboard</span>
               </Link>
             ) : (
               <div className="grid grid-cols-2 gap-2">
                 <Link
                   to="/login"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="text-center py-2.5 rounded-lg bg-slate-100 text-slate-800 text-xs font-bold"
+                  className="text-center py-2.5 rounded-lg bg-slate-100 text-slate-800 text-xs font-bold hover:bg-slate-200 transition-colors"
                 >
                   Login
                 </Link>
                 <Link
                   to="/register"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="text-center py-2.5 rounded-lg bg-[#E06D14] text-white text-xs font-bold"
+                  className="text-center py-2.5 rounded-lg bg-[#E06D14] text-white text-xs font-bold hover:bg-[#C2580E] transition-colors shadow-2xs"
                 >
                   Sign Up
                 </Link>

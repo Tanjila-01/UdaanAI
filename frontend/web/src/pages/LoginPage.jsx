@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import Navbar from '../components/Navbar';
+import AuthHeader from '../components/layout/AuthHeader';
 import { LogIn, AlertCircle, ArrowRight } from 'lucide-react';
 
 const LoginPage = () => {
@@ -41,7 +41,7 @@ const LoginPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between selection:bg-teal-700 selection:text-white font-sans">
-      <Navbar />
+      <AuthHeader />
 
       <main className="max-w-md w-full mx-auto px-4 py-12 flex-1 flex flex-col justify-center">
         <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm space-y-6">

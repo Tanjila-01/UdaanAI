@@ -13,26 +13,22 @@ import CTABanner from '../components/layout/CTABanner';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import Tag from '../components/ui/Tag';
-import Stat from '../components/ui/Stat';
+import AnimatedStat from '../components/ui/AnimatedStat';
 import ProgressBar from '../components/ui/ProgressBar';
-import ProgressRing from '../components/ui/ProgressRing';
 import WorkshopCard from '../components/product/WorkshopCard';
-import CareerNode from '../components/product/CareerNode';
-import CareerPathCard from '../components/product/CareerPathCard';
-import PathwayVisualizer from '../components/product/PathwayVisualizer';
 
-import { 
-  Send, 
-  ArrowRight, 
-  Sparkles, 
-  Compass, 
-  Target, 
-  BookOpen, 
-  GraduationCap, 
-  Users, 
-  Briefcase, 
-  TrendingUp, 
-  ShieldCheck, 
+import {
+  Send,
+  ArrowRight,
+  Sparkles,
+  Compass,
+  Target,
+  BookOpen,
+  GraduationCap,
+  Users,
+  Briefcase,
+  TrendingUp,
+  ShieldCheck,
   Calendar,
   CheckCircle2,
   Cpu,
@@ -47,20 +43,116 @@ import {
   Milestone,
   HelpCircle,
   Clock,
-  Download,
-  FileText,
   Check,
-  CheckCircle
+  CheckCircle,
+  FileCheck,
+  BarChart3,
+  Layers3,
+  Lightbulb,
+  CheckSquare
 } from 'lucide-react';
 
 const HomePage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // State for Interactive Career Explorer (Section 6)
+  // Hero visual image asset slot
+  const heroImageSrc = '/hero_career_pathway.png';
+
+  // State for Interactive Stream Explorer (Section 5)
   const [activeBranch, setActiveBranch] = useState('science');
 
-  // Branch data for Section 6
+  // State for Merged Capability Flow (Section 4)
+  const [activeFlowStep, setActiveFlowStep] = useState(0);
+
+  // State for Personalized Roadmap Step Focus (Section 6)
+  const [activeRoadmapStep, setActiveRoadmapStep] = useState(0);
+
+  // Merged 5-Step Experience Data ("From Self-Discovery to Career Direction")
+  const flowSteps = [
+    {
+      id: 'discover',
+      stepNum: '01',
+      tabTitle: 'Discover Yourself',
+      title: 'Understand Strengths & Interests',
+      shortDesc: 'Understand interests, strengths, preferences and academic context.',
+      fullDesc: 'Take guided interest assessments mapping your natural aptitude across SSLC subjects, logical reasoning, hands-on mechanics, or creative problem-solving.',
+      bullets: [
+        'SSLC subject affinity breakdown',
+        'Aptitude & interest pattern matching',
+        'Karnataka educational context mapping'
+      ],
+      icon: <Compass className="w-5 h-5 text-[#005F60]" />,
+      badge: 'Step 01: Profile Assessment',
+      visualType: 'radar'
+    },
+    {
+      id: 'explore',
+      stepNum: '02',
+      tabTitle: 'Explore Careers',
+      title: 'Explore Mapped Opportunities',
+      shortDesc: 'Explore careers connected to your interests and education options.',
+      fullDesc: 'Browse over 140+ verified career options mapped to current industrial demand across Bengaluru, Mysuru, Hubballi, and Karnataka hubs.',
+      bullets: [
+        'Real-world salary ranges & growth rates',
+        'Key technical and soft skills required',
+        'Industry demand ratings updated for 2026'
+      ],
+      icon: <Briefcase className="w-5 h-5 text-[#E06D14]" />,
+      badge: 'Step 02: Career Matching',
+      visualType: 'careers'
+    },
+    {
+      id: 'compare',
+      stepNum: '03',
+      tabTitle: 'Compare Pathways',
+      title: 'Compare Education Streams Side-by-Side',
+      shortDesc: 'Compare PUC, Diploma, ITI and degree routes.',
+      fullDesc: 'Transparently evaluate PUC (Science, Commerce, Arts) vs 3-Year Polytechnic Technical Diplomas vs ITI Vocational Trades before making decisions.',
+      bullets: [
+        'Duration, tuition estimates, and eligibility',
+        'Entrance exams: KCET, NEET, DCET',
+        'Direct 2nd-year lateral entry B.Tech paths'
+      ],
+      icon: <GitBranch className="w-5 h-5 text-blue-600" />,
+      badge: 'Step 03: Stream Analysis',
+      visualType: 'compare'
+    },
+    {
+      id: 'roadmap',
+      stepNum: '04',
+      tabTitle: 'Build Your Roadmap',
+      title: 'Construct Your Milestone Roadmap',
+      shortDesc: 'Turn a chosen direction into a structured sequence of milestones.',
+      fullDesc: 'Generate a step-by-step sequential action timeline connecting your current grade directly to entrance exams, higher degrees, and target job roles.',
+      bullets: [
+        'Grade-by-grade timeline markers',
+        'Exam preparation target dates',
+        'Skill certification milestones'
+      ],
+      icon: <Milestone className="w-5 h-5 text-purple-600" />,
+      badge: 'Step 04: Actionable Plan',
+      visualType: 'roadmap'
+    },
+    {
+      id: 'track',
+      stepNum: '05',
+      tabTitle: 'Track Your Progress',
+      title: 'Track Milestones & Achievements',
+      shortDesc: 'Keep track of important milestones and next steps.',
+      fullDesc: 'Continuously track SSLC score goals, KCET/DCET prep milestones, and skill achievements with progress metrics that keep you on route.',
+      bullets: [
+        'SSLC target score tracker',
+        'Entrance exam prep milestones',
+        'Skill certification badges'
+      ],
+      icon: <TrendingUp className="w-5 h-5 text-emerald-600" />,
+      badge: 'Step 05: Execution',
+      visualType: 'track'
+    }
+  ];
+
+  // Stream data for Branch Explorer (Section 5)
   const branchData = {
     science: {
       title: 'Pre-University Science (PUC Science)',
@@ -119,155 +211,94 @@ const HomePage = () => {
     }
   };
 
+  // 6 Streamlined Roadmap Steps (Section 6)
+  const roadmapSteps = [
+    { step: 1, title: 'Student Profile', subtitle: 'SSLC / Grade 10 Context', detail: 'Evaluate SSLC subject performance, interests, and location.', badge: 'Input' },
+    { step: 2, title: 'Career Goal', subtitle: 'Target Industry Role', detail: 'Select target industry roles like Software, CA, Solar Tech, or Civil Services.', badge: 'Target' },
+    { step: 3, title: 'Recommended Pathway', subtitle: 'PUC / Diploma / ITI Route', detail: 'Receive clear stream recommendations tailored to your timeline.', badge: 'Stream' },
+    { step: 4, title: 'Entrance Exams', subtitle: 'KCET / NEET / DCET', detail: 'Track mandatory entrance exams, syllabus weightage, and application dates.', badge: 'Exam' },
+    { step: 5, title: 'Skills to Learn', subtitle: 'Core Technical Competencies', detail: 'Build essential foundational skills required by your target sector.', badge: 'Skills' },
+    { step: 6, title: 'Certifications', subtitle: 'Academic & Certification', detail: 'Attain verified NCVT, Polytechnic Diploma, or University Degree credentials.', badge: 'Outcome' },
+  ];
+
   return (
     <div className="min-h-screen bg-white text-slate-900 flex flex-col font-sans selection:bg-[#005F60] selection:text-white">
-      
+
       {/* GLOBAL NAVBAR */}
       <Navbar />
 
       <main className="flex-1">
 
         {/* ========================================================= */}
-        {/* SECTION 1: HERO (SPLIT LAYOUT WITH PRODUCT ILLUSTRATION) */}
+        {/* SECTION 1: HERO SECTION */}
         {/* ========================================================= */}
-        <section id="hero" className="relative pt-24 pb-16 lg:pt-32 lg:pb-24 bg-gradient-to-b from-slate-50 via-white to-slate-50/50 overflow-hidden border-b border-slate-200/60">
-          
-          {/* Background Geometry */}
-          <div className="absolute top-0 right-0 -mr-20 -mt-20 w-[600px] h-[600px] bg-teal-50/60 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-[500px] h-[500px] bg-orange-50/50 rounded-full blur-3xl pointer-events-none" />
+        <section id="hero" className="relative pt-20 pb-14 lg:pt-24 lg:pb-20 bg-white overflow-hidden scroll-mt-28 border-b border-slate-100">
 
-          <Container size="xl">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
-              
-              {/* LEFT COLUMN: Powerful Copy & CTAs */}
-              <div className="lg:col-span-6 flex flex-col items-start gap-6">
-                
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-300 text-[#004D4E] text-xs font-bold tracking-wide uppercase shadow-2xs">
-                  <Send className="w-3.5 h-3.5 text-[#C2580E] animate-paper-plane" />
-                  <span>AI Career Exploration Platform for Karnataka</span>
-                </div>
+          {/* RIGHT ARTWORK INTEGRATION (Clipped strictly inside Hero container) */}
+          <div className="absolute top-0 right-0 bottom-0 w-full lg:w-[58%] xl:w-[55%] h-full pointer-events-none flex items-center justify-end z-0">
+            <div className="relative w-full h-full flex items-center justify-end">
 
-                <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-slate-950 tracking-tight leading-[1.12]">
-                  Discover Your Pathway. <br className="hidden sm:block" />
-                  <span className="text-[#005F60]">Build Your Future</span> with Confidence.
-                </h1>
+              {/* Left-edge smooth gradient mask to blend into white background */}
+              <div className="absolute inset-y-0 left-0 w-28 sm:w-40 lg:w-52 bg-gradient-to-r from-white via-white/85 to-transparent z-10" />
 
-                <p className="text-base sm:text-lg text-slate-700 leading-relaxed max-w-xl font-medium">
-                  Udaan AI helps Karnataka students across <strong>Class 8–10 (SSLC)</strong>, <strong>PUC</strong>, <strong>Polytechnic Diploma</strong>, and <strong>ITI Trades</strong> discover verified education pathways, future careers, and structured roadmaps before making life-changing decisions.
-                </p>
+              {/* Top and bottom subtle edge fades to blend with hero borders */}
+              <div className="absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-white to-transparent z-10" />
+              <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white to-transparent z-10" />
 
-                <div className="flex flex-wrap items-center gap-4 pt-2 w-full sm:w-auto">
-                  <Link to={user ? "/dashboard" : "/register"} className="w-full sm:w-auto">
-                    <Button
-                      variant="primary"
-                      size="lg"
-                      fullWidth
-                      rightIcon={<ArrowRight className="w-4 h-4" />}
-                    >
-                      Start Your Journey
-                    </Button>
-                  </Link>
+              {/* Career Pathway Artwork */}
+              <img
+                src={heroImageSrc}
+                alt="Student career pathway showing education choices from Class 10 to future career opportunities."
+                className="w-full h-full object-contain object-right opacity-95 block"
+              />
 
-                  <a href="#pathways" className="w-full sm:w-auto">
-                    <Button variant="outline" size="lg" fullWidth className="font-bold text-slate-800 border-slate-300 hover:border-slate-400">
-                      Explore Pathways
-                    </Button>
-                  </a>
-                </div>
+            </div>
+          </div>
 
-                {/* Trust Badges */}
-                <div className="flex flex-wrap items-center gap-6 pt-6 text-xs font-bold text-slate-800 border-t border-slate-200/80 w-full">
-                  <span className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4.5 h-4.5 text-[#005F60]" />
-                    Aligned with KSEEB & DTE Karnataka
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4.5 h-4.5 text-[#005F60]" />
-                    100% Free for Students
-                  </span>
-                </div>
+          <Container size="xl" className="relative z-10">
+            <div className="max-w-xl lg:max-w-md xl:max-w-lg flex flex-col items-start gap-5">
 
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-[#004D4E] text-[11px] font-bold tracking-wide uppercase shadow-2xs">
+                <Send className="w-3.5 h-3.5 text-[#C2580E] animate-paper-plane" />
+                <span>AI Career Platform for Karnataka</span>
               </div>
 
-              {/* RIGHT COLUMN: Custom Interactive Pathway Vector Preview */}
-              <div className="lg:col-span-6 relative">
-                <div className="relative w-full aspect-square max-w-lg mx-auto bg-gradient-to-br from-white to-slate-50 rounded-3xl border border-slate-300 p-8 shadow-xl overflow-hidden flex flex-col justify-between">
-                  
-                  {/* Decorative Grid Pattern Background */}
-                  <div className="absolute inset-0 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:16px_16px] opacity-40 pointer-events-none" />
+              {/* 4-Line Headline (Matching Reference Composition) */}
+              <h1 className="text-3xl sm:text-4xl lg:text-[42px] xl:text-[48px] font-extrabold text-slate-950 tracking-tight leading-[1.14]">
+                Discover Your <br />
+                Pathway. <br />
+                <span className="text-[#005F60]">Build Your Future</span> <br />
+                with Confidence.
+              </h1>
 
-                  {/* Top Bar Status */}
-                  <div className="relative z-10 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-emerald-600 animate-pulse" />
-                      <span className="text-xs font-bold text-slate-900">Live Pathway Generation</span>
-                    </div>
-                    <Badge variant="primary" size="sm">
-                      Karnataka 2026
-                    </Badge>
-                  </div>
+              {/* Compact Paragraph */}
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium max-w-md">
+                Every year, thousands of Karnataka students finish Class 10 unsure whether to choose <strong>PUC, Polytechnic Diploma</strong>, or <strong>ITI Trades</strong>. Udaan AI provides clear, step-by-step career guidance mapped to real job market demand.
+              </p>
 
-                  {/* Connected Pathway Nodes Illustration SVG */}
-                  <div className="relative z-10 my-auto py-4 flex flex-col gap-5">
-                    
-                    {/* Node 1: SSLC */}
-                    <div className="flex items-center gap-4 bg-white p-3.5 rounded-xl border border-slate-300 shadow-xs">
-                      <div className="w-10 h-10 rounded-lg bg-teal-50 text-[#005F60] flex items-center justify-center font-bold text-xs shrink-0">
-                        10th
-                      </div>
-                      <div className="flex-1">
-                        <span className="text-xs font-bold text-slate-950 block">Class 10 SSLC Completion</span>
-                        <span className="text-[11px] text-slate-700 font-medium">Karnataka State Board (KSEEB)</span>
-                      </div>
-                      <Badge variant="success" size="sm">Completed</Badge>
-                    </div>
+              {/* Both Hero CTAs */}
+              <div className="flex items-center gap-3 pt-1">
+                <Link to={user ? "/dashboard" : "/register"}>
+                  <Button
+                    variant="primary"
+                    size="md"
+                    className="bg-[#005F60] hover:bg-[#004D4E] text-white font-bold shadow-md hover:shadow-lg transition-all duration-200 rounded-xl px-5 h-11 text-xs sm:text-sm"
+                    rightIcon={<ArrowRight className="w-4 h-4 text-white" />}
+                  >
+                    Start Your Journey
+                  </Button>
+                </Link>
 
-                    {/* Connecting Line Vector */}
-                    <div className="ml-8 -my-2.5 h-5 w-0.5 border-l-2 border-dashed border-[#005F60]" />
-
-                    {/* Node 2: Decision Branches (PUC / Diploma / ITI) */}
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="p-2.5 rounded-lg bg-teal-50 border border-teal-300 text-center">
-                        <span className="text-[11px] font-bold text-[#004D4E] block">PUC Science</span>
-                        <span className="text-[9px] font-bold text-slate-700">2 Yrs • KCET</span>
-                      </div>
-                      <div className="p-2.5 rounded-lg bg-orange-50 border border-orange-300 text-center">
-                        <span className="text-[11px] font-bold text-[#C2580E] block">Diploma CSE</span>
-                        <span className="text-[9px] font-bold text-slate-700">3 Yrs • B.Tech</span>
-                      </div>
-                      <div className="p-2.5 rounded-lg bg-blue-50 border border-blue-300 text-center">
-                        <span className="text-[11px] font-bold text-blue-900 block">ITI Trades</span>
-                        <span className="text-[9px] font-bold text-slate-700">1-2 Yrs • NCVT</span>
-                      </div>
-                    </div>
-
-                    {/* Connecting Line Vector */}
-                    <div className="ml-8 -my-2.5 h-5 w-0.5 border-l-2 border-dashed border-[#C2580E]" />
-
-                    {/* Node 3: Career Goal */}
-                    <div className="flex items-center gap-4 bg-[#005F60] text-white p-3.5 rounded-xl shadow-md">
-                      <div className="w-10 h-10 rounded-lg bg-white/20 text-white flex items-center justify-center font-bold text-xs shrink-0">
-                        <Sparkles className="w-5 h-5" />
-                      </div>
-                      <div className="flex-1">
-                        <span className="text-xs font-bold block">AI & Software Application Engineer</span>
-                        <span className="text-[11px] text-teal-100 font-medium">Estimated Industry Demand: High (+24%)</span>
-                      </div>
-                      <Badge variant="secondary" size="sm">Goal Reached</Badge>
-                    </div>
-
-                  </div>
-
-                  {/* Bottom Flight Badge */}
-                  <div className="relative z-10 flex items-center justify-between text-xs text-slate-800 font-bold border-t border-slate-200 pt-3">
-                    <span className="flex items-center gap-1">
-                      <Compass className="w-3.5 h-3.5 text-[#005F60]" />
-                      Verified Academic Map
-                    </span>
-                    <span className="font-bold text-[#005F60]">31 Districts Covered</span>
-                  </div>
-
-                </div>
+                <a href="#pathways">
+                  <Button
+                    variant="outline"
+                    size="md"
+                    className="font-bold text-slate-800 bg-white border-slate-300 hover:border-slate-400 hover:bg-slate-50 shadow-2xs rounded-xl px-5 h-11 text-xs sm:text-sm"
+                  >
+                    Explore Pathways
+                  </Button>
+                </a>
               </div>
 
             </div>
@@ -276,35 +307,38 @@ const HomePage = () => {
 
 
         {/* ========================================================= */}
-        {/* SECTION 2: TRUST & CREDIBILITY STATS */}
+        {/* SECTION 2: STATS STRIP (SEPARATE SECTION BELOW HERO) */}
         {/* ========================================================= */}
-        <section id="about" className="py-14 bg-white border-b border-slate-200/60">
+        <section id="about" className="py-8 bg-slate-50/50 border-b border-slate-200/60 scroll-mt-28">
           <Container size="xl">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Stat
+            <div className="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-md shadow-slate-900/5 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              <AnimatedStat
+                numericValue={24500}
+                suffix="+"
                 label="Karnataka Students Guided"
-                value="24,500+"
-                subtitle="Class 8-10, PUC, Diploma & ITI"
+                subtitle="Class 8–10, PUC, Diploma & ITI"
                 trend="+18% YoY"
                 icon={<Users className="w-5 h-5 text-[#005F60]" />}
               />
-              <Stat
+              <AnimatedStat
+                numericValue={140}
+                suffix="+"
                 label="Verified Career Pathways"
-                value="140+"
                 subtitle="Mapped to KSEEB, DTE & Universities"
                 trend="Verified"
                 icon={<GraduationCap className="w-5 h-5 text-[#005F60]" />}
               />
-              <Stat
+              <AnimatedStat
+                numericValue={31}
                 label="Districts Covered"
-                value="31"
-                subtitle="Statewide Karnataka student outreach"
+                subtitle="Statewide Karnataka outreach"
                 trend="100% State"
                 icon={<ShieldCheck className="w-5 h-5 text-[#005F60]" />}
               />
-              <Stat
+              <AnimatedStat
+                numericValue={85}
+                suffix="+"
                 label="Career Workshops"
-                value="85+"
                 subtitle="Conducted in school & polytechnic hubs"
                 trend="Live"
                 icon={<Calendar className="w-5 h-5 text-[#005F60]" />}
@@ -317,14 +351,14 @@ const HomePage = () => {
         {/* ========================================================= */}
         {/* SECTION 3: THE CAREER CROSSROADS PROBLEM */}
         {/* ========================================================= */}
-        <section id="problem" className="py-20 bg-slate-950 text-white relative overflow-hidden">
-          
-          {/* Subtle Glow Overlay */}
+        <section id="problem" className="py-20 bg-slate-950 text-white relative overflow-hidden scroll-mt-28">
+
+          {/* Glow Overlay */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-[#005F60]/20 blur-3xl pointer-events-none" />
 
           <Container size="xl">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-              
+
               {/* Story Narrative */}
               <div className="lg:col-span-5 flex flex-col gap-5">
                 <Badge variant="warning" size="md" dot>
@@ -355,16 +389,15 @@ const HomePage = () => {
                 </div>
               </div>
 
-              {/* Visual Decision Grid Matrix */}
+              {/* Visual Decision Matrix */}
               <div className="lg:col-span-7">
                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative">
-                  
+
                   <div className="text-xs font-bold uppercase tracking-widest text-teal-400 mb-6 flex items-center justify-between">
                     <span>The Decision Maze</span>
                     <span className="text-slate-300 font-bold">Class 10 SSLC Junction</span>
                   </div>
 
-                  {/* Decision Grid Matrix */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {[
                       { name: 'PUC Science', tag: 'PCMB / PCMC', color: 'border-teal-500/70 bg-teal-950/70 text-teal-200' },
@@ -383,7 +416,6 @@ const HomePage = () => {
                     ))}
                   </div>
 
-                  {/* Solution Overlay Banner */}
                   <div className="mt-6 pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <span className="text-xs text-slate-200 font-semibold">
                       Udaan AI replaces guesswork with a single, clear, data-backed roadmap.
@@ -404,143 +436,226 @@ const HomePage = () => {
 
 
         {/* ========================================================= */}
-        {/* SECTION 4: WHAT STUDENTS CAN DO */}
+        {/* SECTION 4: MERGED INTERACTIVE EXPERIENCE */}
+        {/* "From Self-Discovery to Career Direction" */}
         {/* ========================================================= */}
-        <section id="capabilities" className="py-20 bg-white border-b border-slate-100">
+        <section id="capabilities" className="py-20 bg-white border-b border-slate-100 scroll-mt-28">
           <Container size="xl">
-            
-            <div className="text-center max-w-2xl mx-auto mb-14">
+
+            <div className="text-center max-w-3xl mx-auto mb-12">
               <Badge variant="primary" size="md" dot className="mb-3">
-                Student Capabilities
+                Interactive Guided System
               </Badge>
               <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight">
-                What You Can Do on Udaan AI
+                From Self-Discovery to Career Direction
               </h2>
-              <p className="text-sm sm:text-base text-slate-700 mt-3 font-semibold">
-                Everything you need to discover, compare, and execute your career roadmap.
+              <p className="text-base text-slate-700 mt-3 font-semibold">
+                Explore yourself, compare possibilities, understand pathways, and build a clearer next step.
               </p>
             </div>
 
-            {/* Cleaner Feature Showcase (6 Core Capabilities) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              
-              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-teal-400 hover:bg-white transition-all flex flex-col gap-3">
-                <div className="w-10 h-10 rounded-xl bg-teal-100 text-[#004D4E] flex items-center justify-center font-bold">
-                  <Compass className="w-5 h-5" />
-                </div>
-                <h3 className="text-base font-bold text-slate-950">1. Discover Career Interests</h3>
-                <p className="text-xs text-slate-700 leading-relaxed font-medium">
-                  Take interactive interest assessments mapping your natural strengths in Mathematics, Science, Commerce, or Technical Trades.
-                </p>
-              </div>
-
-              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-orange-400 hover:bg-white transition-all flex flex-col gap-3">
-                <div className="w-10 h-10 rounded-xl bg-orange-100 text-[#C2580E] flex items-center justify-center font-bold">
-                  <Layers className="w-5 h-5" />
-                </div>
-                <h3 className="text-base font-bold text-slate-950">2. Explore Education Pathways</h3>
-                <p className="text-xs text-slate-700 leading-relaxed font-medium">
-                  Deep-dive into Karnataka streams: PUC (Science, Commerce, Arts), Polytechnic Diplomas, and ITI Vocational Trades.
-                </p>
-              </div>
-
-              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-blue-400 hover:bg-white transition-all flex flex-col gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center font-bold">
-                  <GitBranch className="w-5 h-5" />
-                </div>
-                <h3 className="text-base font-bold text-slate-950">3. Compare Streams Side-by-Side</h3>
-                <p className="text-xs text-slate-700 leading-relaxed font-medium">
-                  Compare program durations, fee structures, entrance exams (KCET, NEET, DCET), and lateral entry options transparently.
-                </p>
-              </div>
-
-              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-purple-400 hover:bg-white transition-all flex flex-col gap-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center font-bold">
-                  <Milestone className="w-5 h-5" />
-                </div>
-                <h3 className="text-base font-bold text-slate-950">4. Build Personalized Roadmap</h3>
-                <p className="text-xs text-slate-700 leading-relaxed font-medium">
-                  Generate a customized step-by-step timeline connecting your current grade directly to university degrees and job roles.
-                </p>
-              </div>
-
-              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-emerald-400 hover:bg-white transition-all flex flex-col gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
-                  <TrendingUp className="w-5 h-5" />
-                </div>
-                <h3 className="text-base font-bold text-slate-950">5. Track Learning Journey</h3>
-                <p className="text-xs text-slate-700 leading-relaxed font-medium">
-                  Monitor your SSLC marks goals, KCET entrance exam milestones, and essential skill development over time.
-                </p>
-              </div>
-
-              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-amber-400 hover:bg-white transition-all flex flex-col gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
-                  <Calendar className="w-5 h-5" />
-                </div>
-                <h3 className="text-base font-bold text-slate-950">6. Attend Career Workshops</h3>
-                <p className="text-xs text-slate-700 leading-relaxed font-medium">
-                  Reserve free seats for live regional orientation sessions conducted by Karnataka educational experts.
-                </p>
-              </div>
-
-            </div>
-          </Container>
-        </section>
-
-
-        {/* ========================================================= */}
-        {/* SECTION 5: HOW UDAAN WORKS (5-STEP METHOD) */}
-        {/* ========================================================= */}
-        <section id="how-it-works" className="py-20 bg-slate-50 border-b border-slate-200/60">
-          <Container size="xl">
-            
-            <div className="text-center max-w-2xl mx-auto mb-14">
-              <Badge variant="primary" size="md" dot className="mb-3">
-                5-Step Method
-              </Badge>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight">
-                How Udaan AI Guides Your Path
-              </h2>
-              <p className="text-sm sm:text-base text-slate-700 mt-3 font-semibold">
-                A structured process from self-discovery to milestone execution.
-              </p>
-            </div>
-
-            {/* Stepper Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              {[
-                { step: '01', title: 'Discover Yourself', desc: 'Map your academic strengths in SSLC subjects and interests.', icon: <Compass className="w-5 h-5" /> },
-                { step: '02', title: 'Explore Careers', desc: 'Browse 140+ verified careers across technology, engineering & commerce.', icon: <Briefcase className="w-5 h-5" /> },
-                { step: '03', title: 'Compare Pathways', desc: 'Compare PUC vs Polytechnic Diploma vs ITI trade durations & fees.', icon: <GitBranch className="w-5 h-5" /> },
-                { step: '04', title: 'Create Roadmap', desc: 'Generate a personalized step-by-step milestone execution map.', icon: <Milestone className="w-5 h-5" /> },
-                { step: '05', title: 'Track Progress', desc: 'Update marks, entrance prep milestones & skill achievements.', icon: <TrendingUp className="w-5 h-5" /> },
-              ].map((item, index) => (
-                <div key={index} className="flex flex-col items-start p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:border-teal-400 transition-all">
-                  <div className="flex items-center justify-between w-full mb-3">
-                    <span className="text-xs font-bold text-[#004D4E] bg-teal-50 px-2.5 py-1 rounded-md border border-teal-200">
-                      Step {item.step}
-                    </span>
-                    <div className="text-slate-700">
-                      {item.icon}
-                    </div>
-                  </div>
-                  <h4 className="text-sm font-bold text-slate-950 mb-1">{item.title}</h4>
-                  <p className="text-xs text-slate-700 leading-relaxed font-medium">{item.desc}</p>
-                </div>
+            {/* Step Selection Tabs */}
+            <div className="flex flex-wrap items-center justify-center gap-2 mb-10 max-w-4xl mx-auto p-2 bg-slate-100 rounded-2xl border border-slate-200 shadow-2xs">
+              {flowSteps.map((step, idx) => (
+                <button
+                  key={step.id}
+                  type="button"
+                  onClick={() => setActiveFlowStep(idx)}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer select-none ${activeFlowStep === idx
+                      ? 'bg-[#005F60] text-white shadow-xs'
+                      : 'text-slate-800 hover:bg-white'
+                    }`}
+                >
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-mono ${activeFlowStep === idx ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                    }`}>
+                    {step.stepNum}
+                  </span>
+                  <span>{step.tabTitle}</span>
+                </button>
               ))}
             </div>
 
+            {/* Active Step Interactive Showcase Container */}
+            <div className="max-w-5xl mx-auto bg-slate-50 border border-slate-200/90 rounded-3xl p-6 sm:p-10 shadow-md">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+
+                {/* Left: Step Description & Highlights */}
+                <div className="lg:col-span-6 flex flex-col items-start gap-4">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="primary" size="sm" className="bg-teal-100 text-[#004D4E] border-teal-200">
+                      {flowSteps[activeFlowStep].badge}
+                    </Badge>
+                  </div>
+
+                  <h3 className="text-2xl font-extrabold text-slate-950 tracking-tight">
+                    {flowSteps[activeFlowStep].title}
+                  </h3>
+
+                  <p className="text-sm text-slate-700 font-medium leading-relaxed">
+                    {flowSteps[activeFlowStep].fullDesc}
+                  </p>
+
+                  <div className="flex flex-col gap-2.5 py-2 w-full">
+                    {flowSteps[activeFlowStep].bullets.map((bullet, i) => (
+                      <div key={i} className="flex items-center gap-2.5 text-xs text-slate-800 font-bold bg-white p-3 rounded-xl border border-slate-200/80 shadow-2xs">
+                        <CheckCircle2 className="w-4 h-4 text-[#005F60] shrink-0" />
+                        <span>{bullet}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Link to={user ? "/dashboard" : "/register"} className="pt-2">
+                    <Button variant="primary" size="md" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                      Try This Step Now
+                    </Button>
+                  </Link>
+                </div>
+
+                {/* Right: Dynamic Visual Diagram Preview */}
+                <div className="lg:col-span-6">
+                  <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm min-h-[300px] flex flex-col justify-between">
+
+                    {/* Header */}
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        {flowSteps[activeFlowStep].icon}
+                        <span className="text-xs font-bold text-slate-900">
+                          {flowSteps[activeFlowStep].tabTitle} Module Preview
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono text-slate-500 uppercase">Live UI</span>
+                    </div>
+
+                    {/* Content Preview based on active tab */}
+                    {activeFlowStep === 0 && (
+                      <div className="py-4 space-y-3">
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs font-bold text-slate-800">
+                            <span>Logical & Technical Reasoning</span>
+                            <span className="text-[#005F60]">88%</span>
+                          </div>
+                          <ProgressBar value={88} variant="primary" size="md" />
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs font-bold text-slate-800">
+                            <span>Hands-on Engineering Aptitude</span>
+                            <span className="text-[#E06D14]">92%</span>
+                          </div>
+                          <ProgressBar value={92} variant="warning" size="md" />
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-xs font-bold text-slate-800">
+                            <span>Business & Commerce Analysis</span>
+                            <span className="text-blue-600">74%</span>
+                          </div>
+                          <ProgressBar value={74} variant="info" size="md" />
+                        </div>
+                      </div>
+                    )}
+
+                    {activeFlowStep === 1 && (
+                      <div className="py-4 space-y-2.5">
+                        <div className="p-3 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-between">
+                          <div>
+                            <span className="text-xs font-bold text-slate-950 block">AI & Software Engineer</span>
+                            <span className="text-[10px] text-slate-700 font-medium">Demand: High (+24%) • ₹4.5L - ₹14L</span>
+                          </div>
+                          <Badge variant="primary" size="sm">Top Match</Badge>
+                        </div>
+                        <div className="p-3 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-between">
+                          <div>
+                            <span className="text-xs font-bold text-slate-950 block">Industrial Automation Tech</span>
+                            <span className="text-[10px] text-slate-700 font-medium">Demand: Steady (+16%) • ₹3.2L - ₹8.5L</span>
+                          </div>
+                          <Badge variant="warning" size="sm">High Demand</Badge>
+                        </div>
+                      </div>
+                    )}
+
+                    {activeFlowStep === 2 && (
+                      <div className="py-4 space-y-2">
+                        <div className="grid grid-cols-2 gap-2 text-center text-xs">
+                          <div className="p-3 rounded-xl bg-teal-50 border border-teal-200">
+                            <span className="font-bold text-[#004D4E] block">PUC Science</span>
+                            <span className="text-[10px] text-slate-600">2 Yrs • KCET Prep</span>
+                          </div>
+                          <div className="p-3 rounded-xl bg-blue-50 border border-blue-200">
+                            <span className="font-bold text-blue-900 block">Polytechnic Diploma</span>
+                            <span className="text-[10px] text-slate-600">3 Yrs • Direct B.Tech 2nd Yr</span>
+                          </div>
+                        </div>
+                        <div className="p-2.5 rounded-lg bg-slate-100 text-[11px] text-slate-700 font-semibold text-center">
+                          Result: Diploma provides earlier practical exposure; PUC offers broader university entrance options.
+                        </div>
+                      </div>
+                    )}
+
+                    {activeFlowStep === 3 && (
+                      <div className="py-4 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-[#005F60] text-white flex items-center justify-center font-bold text-xs">10</div>
+                          <div className="flex-1 border-b border-slate-200 pb-1">
+                            <span className="text-xs font-bold text-slate-900 block">SSLC Class 10 Completion</span>
+                            <span className="text-[10px] text-slate-600">Target Score: 85%+</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-[#E06D14] text-white flex items-center justify-center font-bold text-xs">Dip</div>
+                          <div className="flex-1 border-b border-slate-200 pb-1">
+                            <span className="text-xs font-bold text-slate-900 block">Polytechnic CSE Diploma</span>
+                            <span className="text-[10px] text-slate-600">3 Years Applied Learning</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs">Eng</div>
+                          <div className="flex-1">
+                            <span className="text-xs font-bold text-slate-900 block">B.Tech 2nd Year Lateral Entry</span>
+                            <span className="text-[10px] text-slate-600">DCET Karnataka Exam</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {activeFlowStep === 4 && (
+                      <div className="py-4 space-y-3">
+                        <div className="flex items-center justify-between text-xs font-bold text-slate-800">
+                          <span>Overall Roadmap Progress</span>
+                          <span className="text-[#005F60]">4 of 6 Milestones Completed</span>
+                        </div>
+                        <ProgressBar value={66} variant="primary" size="lg" />
+                        <div className="grid grid-cols-2 gap-2 text-[11px] font-bold text-slate-700">
+                          <span className="flex items-center gap-1 text-emerald-700">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> SSLC Verified
+                          </span>
+                          <span className="flex items-center gap-1 text-emerald-700">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Stream Selected
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Footer */}
+                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500 font-semibold">
+                      <span>Udaan AI Interactive Engine</span>
+                      <span className="text-[#005F60] font-bold">Karnataka Curriculum Aligned</span>
+                    </div>
+
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
           </Container>
         </section>
 
 
         {/* ========================================================= */}
-        {/* SECTION 6: INTERACTIVE CAREER EXPLORER */}
+        {/* SECTION 5: INTERACTIVE BRANCH EXPLORER */}
         {/* ========================================================= */}
-        <section id="pathways" className="py-20 bg-white border-b border-slate-100">
+        <section id="pathways" className="py-20 bg-slate-50 border-b border-slate-200/60 scroll-mt-28">
           <Container size="xl">
-            
+
             <div className="text-center max-w-2xl mx-auto mb-12">
               <Badge variant="primary" size="md" dot className="mb-3">
                 Interactive Branch Explorer
@@ -554,7 +669,7 @@ const HomePage = () => {
             </div>
 
             {/* Interactive Stream Tabs */}
-            <div className="flex flex-wrap items-center justify-center gap-2 mb-10 max-w-4xl mx-auto p-2 bg-slate-100 rounded-2xl border border-slate-200 shadow-2xs">
+            <div className="flex flex-wrap items-center justify-center gap-2 mb-10 max-w-4xl mx-auto p-2 bg-white rounded-2xl border border-slate-200 shadow-2xs">
               {[
                 { id: 'science', label: 'PUC Science' },
                 { id: 'commerce', label: 'PUC Commerce' },
@@ -566,11 +681,10 @@ const HomePage = () => {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveBranch(tab.id)}
-                  className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer select-none ${
-                    activeBranch === tab.id
+                  className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer select-none ${activeBranch === tab.id
                       ? 'bg-[#005F60] text-white shadow-xs'
-                      : 'text-slate-800 hover:bg-white'
-                  }`}
+                      : 'text-slate-800 hover:bg-slate-100'
+                    }`}
                 >
                   {tab.label}
                 </button>
@@ -579,7 +693,7 @@ const HomePage = () => {
 
             {/* Expanded Active Branch Showcase */}
             {branchData[activeBranch] && (
-              <div className="bg-slate-50 rounded-3xl border border-slate-200 p-8 sm:p-10 shadow-md max-w-5xl mx-auto animate-fade-in-rise">
+              <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-10 shadow-md max-w-5xl mx-auto">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6 pb-6 border-b border-slate-200">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
@@ -595,7 +709,7 @@ const HomePage = () => {
                     </p>
                   </div>
 
-                  <Link to={user ? "/pathways" : "/register"}>
+                  <Link to={user ? "/dashboard" : "/register"}>
                     <Button variant="secondary" size="md" rightIcon={<ArrowRight className="w-4 h-4" />}>
                       Explore All Pathways
                     </Button>
@@ -603,14 +717,14 @@ const HomePage = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  
+
                   {/* Specialization Sub-Tracks */}
                   <div className="md:col-span-2 space-y-3">
                     <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                       Key Specialization Streams:
                     </h4>
                     {branchData[activeBranch].subTracks.map((sub, i) => (
-                      <div key={i} className="p-4 rounded-xl bg-white border border-slate-200">
+                      <div key={i} className="p-4 rounded-xl bg-slate-50 border border-slate-200">
                         <span className="text-sm font-bold text-slate-950 block mb-1">{sub.name}</span>
                         <span className="text-xs text-slate-700 leading-relaxed font-medium">{sub.desc}</span>
                       </div>
@@ -650,58 +764,17 @@ const HomePage = () => {
               </div>
             )}
 
-            {/* Representative Outcome Cards */}
-            <div className="pt-16">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-slate-950 tracking-tight">
-                  Featured Career Pathways
-                </h3>
-                <span className="text-xs font-bold text-[#005F60]">
-                  High-Growth Sectors in Karnataka
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <CareerPathCard
-                  title="Software & AI Application Engineer"
-                  category="Technology Stream"
-                  salaryRange="₹4.5 LPA - ₹14.0 LPA"
-                  growthRate="High Growth (+24%)"
-                  description="Develop web software, cloud infrastructure, and AI models for global technology enterprises."
-                  topSkills={['Python', 'JavaScript', 'React', 'Database Systems']}
-                  onExplore={() => navigate(user ? '/pathways' : '/register')}
-                />
-                <CareerPathCard
-                  title="Industrial Automation Technician"
-                  category="Polytechnic / ITI"
-                  salaryRange="₹3.2 LPA - ₹8.5 LPA"
-                  growthRate="Steady Demand (+16%)"
-                  description="Maintain PLC controllers, industrial robotics, motor drives, and solar power installations."
-                  topSkills={['Electrical Wiring', 'PLC Systems', 'Circuit Testing', 'CAD']}
-                  onExplore={() => navigate(user ? '/pathways' : '/register')}
-                />
-                <CareerPathCard
-                  title="Financial Analyst & CA Associate"
-                  category="Commerce Stream"
-                  salaryRange="₹4.0 LPA - ₹12.0 LPA"
-                  growthRate="High Growth (+20%)"
-                  description="Manage corporate taxation, financial auditing, investment planning, and business accounting."
-                  topSkills={['Tally Prime', 'Corporate Law', 'Auditing', 'Excel']}
-                  onExplore={() => navigate(user ? '/pathways' : '/register')}
-                />
-              </div>
-            </div>
-
           </Container>
         </section>
 
 
         {/* ========================================================= */}
-        {/* SECTION 7: YOUR CAREER ROADMAP (CONNECTED PRODUCT JOURNEY) */}
+        {/* SECTION 6: STREAMLINED YOUR PERSONALIZED CAREER ROADMAP */}
+        {/* (Refactored 6 Steps with Interactive Milestone Timeline) */}
         {/* ========================================================= */}
-        <section id="roadmap" className="py-20 bg-slate-50 border-b border-slate-200/60">
+        <section id="roadmap" className="py-20 bg-white border-b border-slate-100 scroll-mt-28">
           <Container size="xl">
-            
+
             <div className="text-center max-w-2xl mx-auto mb-14">
               <Badge variant="primary" size="md" dot className="mb-3">
                 Intelligent Personalization
@@ -714,40 +787,72 @@ const HomePage = () => {
               </p>
             </div>
 
-            {/* Connected Visual Product Journey Flow */}
-            <div className="max-w-5xl mx-auto bg-white p-8 rounded-3xl border border-slate-200 shadow-md">
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 text-center">
-                
-                {[
-                  { step: '1', title: 'Student Profile', desc: 'SSLC / Grade 10', bg: 'bg-teal-50 border-teal-300 text-[#004D4E]' },
-                  { step: '2', title: 'Career Goal', desc: 'Target Industry Role', bg: 'bg-orange-50 border-orange-300 text-[#C2580E]' },
-                  { step: '3', title: 'Recommended Pathway', desc: 'PUC / Diploma Stream', bg: 'bg-[#005F60] text-white' },
-                  { step: '4', title: 'Entrance Exams', desc: 'KCET / NEET / DCET', bg: 'bg-blue-50 border-blue-300 text-blue-900' },
-                  { step: '5', title: 'Skills to Learn', desc: 'Core Technical Skills', bg: 'bg-purple-50 border-purple-300 text-purple-900' },
-                  { step: '6', title: 'Projects', desc: 'Practical Application', bg: 'bg-amber-50 border-amber-300 text-amber-900' },
-                  { step: '7', title: 'Certifications', desc: 'Academic & Trade', bg: 'bg-emerald-50 border-emerald-300 text-emerald-900' },
-                  { step: '8', title: 'Career Opportunity', desc: 'Job / Higher Degree', bg: 'bg-slate-950 text-white' },
-                ].map((item, index) => (
-                  <div key={index} className={`p-3.5 rounded-xl border flex flex-col justify-between items-center gap-1.5 ${item.bg}`}>
-                    <span className="text-[10px] font-bold uppercase opacity-80">Step {item.step}</span>
-                    <span className="text-xs font-bold leading-tight">{item.title}</span>
-                    <span className="text-[9px] font-bold opacity-90">{item.desc}</span>
-                  </div>
-                ))}
+            {/* Interactive 6-Step Timeline Container */}
+            <div className="max-w-5xl mx-auto bg-slate-50 p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md">
 
+              {/* Timeline Sequence Nodes */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-center mb-8">
+                {roadmapSteps.map((item, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => setActiveRoadmapStep(index)}
+                    className={`p-3.5 rounded-xl border flex flex-col justify-between items-center gap-1.5 transition-all cursor-pointer text-left ${activeRoadmapStep === index
+                        ? 'bg-[#005F60] text-white border-[#005F60] shadow-md ring-2 ring-teal-600/30'
+                        : 'bg-white border-slate-200 hover:border-teal-400 text-slate-800'
+                      }`}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className={`text-[10px] font-bold uppercase ${activeRoadmapStep === index ? 'text-teal-200' : 'text-slate-500'
+                        }`}>
+                        Step {item.step}
+                      </span>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${activeRoadmapStep === index ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
+                        }`}>
+                        {item.badge}
+                      </span>
+                    </div>
+
+                    <span className="text-xs font-bold leading-tight my-1">{item.title}</span>
+                    <span className={`text-[9px] font-medium ${activeRoadmapStep === index ? 'text-teal-100' : 'text-slate-500'
+                      }`}>
+                      {item.subtitle}
+                    </span>
+                  </button>
+                ))}
               </div>
 
-              <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-800 font-bold">
-                <span className="flex items-center gap-2">
-                  <CheckCircle className="w-4.5 h-4.5 text-[#005F60]" />
-                  Roadmaps automatically adjust based on SSLC marks and skill progress.
-                </span>
-                <Link to={user ? "/dashboard" : "/register"}>
-                  <Button variant="primary" size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
+              {/* Selected Step Detail Card */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-[#005F60] bg-teal-50 px-2 py-0.5 rounded">
+                      Step {roadmapSteps[activeRoadmapStep].step} Focus
+                    </span>
+                    <h4 className="text-base font-bold text-slate-950">
+                      {roadmapSteps[activeRoadmapStep].title}
+                    </h4>
+                  </div>
+                  <p className="text-xs text-slate-700 font-medium">
+                    {roadmapSteps[activeRoadmapStep].detail}
+                  </p>
+                </div>
+
+                <Link to={user ? "/dashboard" : "/register"} className="shrink-0">
+                  <Button variant="secondary" size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
                     Generate Your Roadmap
                   </Button>
                 </Link>
               </div>
+
+              <div className="mt-6 pt-4 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-800 font-bold">
+                <span className="flex items-center gap-2">
+                  <CheckCircle className="w-4.5 h-4.5 text-[#005F60]" />
+                  Roadmaps dynamically update as you submit SSLC marks and milestone targets.
+                </span>
+                <span className="text-[#005F60]">6 Verified Milestone Stages</span>
+              </div>
+
             </div>
 
           </Container>
@@ -755,11 +860,11 @@ const HomePage = () => {
 
 
         {/* ========================================================= */}
-        {/* SECTION 8: FEATURED WORKSHOPS (MAX 3 CARDS) */}
+        {/* SECTION 7: FEATURED WORKSHOPS */}
         {/* ========================================================= */}
-        <section id="workshops" className="py-20 bg-white border-b border-slate-100">
+        <section id="workshops" className="py-20 bg-slate-50 border-b border-slate-200/60 scroll-mt-28">
           <Container size="xl">
-            
+
             <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-12 gap-4">
               <div>
                 <Badge variant="secondary" size="md" dot className="mb-2">
@@ -817,11 +922,11 @@ const HomePage = () => {
 
 
         {/* ========================================================= */}
-        {/* SECTION 9: STUDENT TESTIMONIALS & TRUST STORIES */}
+        {/* SECTION 8: STUDENT TESTIMONIALS & TRUST STORIES */}
         {/* ========================================================= */}
-        <section id="testimonials" className="py-20 bg-slate-50 border-b border-slate-200/60">
+        <section id="testimonials" className="py-20 bg-white border-b border-slate-100 scroll-mt-28">
           <Container size="xl">
-            
+
             <div className="text-center max-w-2xl mx-auto mb-14">
               <Badge variant="primary" size="md" dot className="mb-3">
                 Student & Workshop Stories
@@ -832,15 +937,15 @@ const HomePage = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              
-              <div className="p-6 rounded-2xl bg-white border border-slate-200 flex flex-col justify-between shadow-2xs">
+
+              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between shadow-2xs">
                 <div>
                   <Quote className="w-8 h-8 text-[#005F60] opacity-50 mb-3" />
                   <p className="text-xs text-slate-800 leading-relaxed italic font-medium mb-6">
                     "After Class 10 in Mysuru, I was confused between PUC Science and Diploma CSE. Udaan AI's roadmap showed me how Polytechnic Diploma leads directly to 2nd-year B.Tech lateral entry. That saved me a year of entrance exam stress!"
                   </p>
                 </div>
-                <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
+                <div className="flex items-center gap-3 pt-4 border-t border-slate-200/60">
                   <div className="w-9 h-9 rounded-full bg-teal-100 text-[#004D4E] font-bold text-xs flex items-center justify-center">
                     M
                   </div>
@@ -851,14 +956,14 @@ const HomePage = () => {
                 </div>
               </div>
 
-              <div className="p-6 rounded-2xl bg-white border border-slate-200 flex flex-col justify-between shadow-2xs">
+              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between shadow-2xs">
                 <div>
                   <Quote className="w-8 h-8 text-[#E06D14] opacity-50 mb-3" />
                   <p className="text-xs text-slate-800 leading-relaxed italic font-medium mb-6">
                     "I attended the ITI trade bootcamp in Hubballi. The transparent fee structures, NCVT trade info, and job salary range data helped me choose the solar electrician trade with full confidence."
                   </p>
                 </div>
-                <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
+                <div className="flex items-center gap-3 pt-4 border-t border-slate-200/60">
                   <div className="w-9 h-9 rounded-full bg-orange-100 text-[#C2580E] font-bold text-xs flex items-center justify-center">
                     R
                   </div>
@@ -869,14 +974,14 @@ const HomePage = () => {
                 </div>
               </div>
 
-              <div className="p-6 rounded-2xl bg-white border border-slate-200 flex flex-col justify-between shadow-2xs">
+              <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between shadow-2xs">
                 <div>
                   <Quote className="w-8 h-8 text-blue-600 opacity-50 mb-3" />
                   <p className="text-xs text-slate-800 leading-relaxed italic font-medium mb-6">
                     "Our school hosted an Udaan AI career orientation session for 300 SSLC students in Bengaluru. The interactive stream visualizer made it so easy for us to understand PUC PCMB vs PCMC vs CEBA."
                   </p>
                 </div>
-                <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
+                <div className="flex items-center gap-3 pt-4 border-t border-slate-200/60">
                   <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-800 font-bold text-xs flex items-center justify-center">
                     S
                   </div>
@@ -893,125 +998,54 @@ const HomePage = () => {
 
 
         {/* ========================================================= */}
-        {/* SECTION 10: STUDENT RESOURCES HUB */}
+        {/* SECTION 9: SCHOOL & INSTITUTION REGISTRATION */}
         {/* ========================================================= */}
-        <section id="resources" className="py-20 bg-white border-b border-slate-100">
-          <Container size="xl">
-            
-            <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-12 gap-4">
-              <div>
-                <Badge variant="primary" size="md" dot className="mb-2">
-                  Student Resource Hub
-                </Badge>
-                <h2 className="text-3xl font-extrabold text-slate-950 tracking-tight">
-                  Free Education Pathway Guides
-                </h2>
-              </div>
-              <span className="text-xs font-bold text-slate-700">
-                Verified Curriculum References for Karnataka
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              
-              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
-                <div>
-                  <FileText className="w-8 h-8 text-[#005F60] mb-3" />
-                  <h4 className="text-sm font-bold text-slate-950 mb-1">SSLC Career Stream Guide 2026</h4>
-                  <p className="text-xs text-slate-700 font-medium leading-relaxed">
-                    Complete breakdown of PUC, Diploma, and ITI trade entry rules post Class 10.
-                  </p>
-                </div>
-                <Button variant="outline" size="sm" className="mt-4 font-bold text-slate-800 border-slate-300 hover:border-slate-400" leftIcon={<Download className="w-3.5 h-3.5" />}>
-                  Download PDF
-                </Button>
-              </div>
-
-              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
-                <div>
-                  <FileText className="w-8 h-8 text-[#E06D14] mb-3" />
-                  <h4 className="text-sm font-bold text-slate-950 mb-1">KCET Entrance Exam Roadmap</h4>
-                  <p className="text-xs text-slate-700 font-medium leading-relaxed">
-                    Key Physics, Chemistry, and Math syllabus weightage for Engineering seats.
-                  </p>
-                </div>
-                <Button variant="outline" size="sm" className="mt-4 font-bold text-slate-800 border-slate-300 hover:border-slate-400" leftIcon={<Download className="w-3.5 h-3.5" />}>
-                  Download PDF
-                </Button>
-              </div>
-
-              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
-                <div>
-                  <FileText className="w-8 h-8 text-blue-600 mb-3" />
-                  <h4 className="text-sm font-bold text-slate-950 mb-1">Diploma Lateral Entry Chart</h4>
-                  <p className="text-xs text-slate-700 font-medium leading-relaxed">
-                    How DCET Karnataka enables direct 2nd-year entry to B.E. / B.Tech degrees.
-                  </p>
-                </div>
-                <Button variant="outline" size="sm" className="mt-4 font-bold text-slate-800 border-slate-300 hover:border-slate-400" leftIcon={<Download className="w-3.5 h-3.5" />}>
-                  Download PDF
-                </Button>
-              </div>
-
-              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-between">
-                <div>
-                  <FileText className="w-8 h-8 text-emerald-600 mb-3" />
-                  <h4 className="text-sm font-bold text-slate-950 mb-1">ITI Trades & Skill Checklist</h4>
-                  <p className="text-xs text-slate-700 font-medium leading-relaxed">
-                    NCVT trade certifications, solar electrician apprenticeship & career scope.
-                  </p>
-                </div>
-                <Button variant="outline" size="sm" className="mt-4 font-bold text-slate-800 border-slate-300 hover:border-slate-400" leftIcon={<Download className="w-3.5 h-3.5" />}>
-                  Download PDF
-                </Button>
-              </div>
-
-            </div>
-
-          </Container>
-        </section>
-
-
-        {/* ========================================================= */}
-        {/* SECTION 11: BRING UDAAN AI TO YOUR SCHOOL */}
-        {/* ========================================================= */}
-        <section id="school-invitation" className="py-20 bg-slate-950 text-white relative overflow-hidden">
+        <section id="school-invitation" className="py-20 bg-slate-950 text-white relative overflow-hidden border-b border-slate-800 scroll-mt-28">
           <Container size="xl">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-              
-              <div className="lg:col-span-8 space-y-4">
+
+              <div className="lg:col-span-8 flex flex-col items-start gap-5">
                 <Badge variant="primary" size="md">
-                  School & College Sessions
+                  School & College Participation
                 </Badge>
-                
+
                 <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
-                  Bring Udaan AI to Your School
+                  Bring Udaan AI to Your Institution
                 </h2>
 
                 <p className="text-sm sm:text-base text-slate-200 leading-relaxed font-medium max-w-2xl">
-                  Schools and colleges across Karnataka can invite Udaan AI to conduct career guidance sessions, pathway exploration workshops, and AI awareness programs for their students.
+                  Schools, colleges, and polytechnics across Karnataka can partner with Udaan AI to bring structured career guidance, stream exploration workshops, and student assessment tools directly to their campuses.
                 </p>
 
-                <div className="flex flex-wrap items-center gap-4 pt-2">
-                  <Link to="/register">
-                    <Button variant="secondary" size="md" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                      Invite Udaan AI
+                {/* Visible, high-contrast, unclipped CTA actions */}
+                <div className="flex flex-wrap items-center gap-4 pt-3 pb-2 w-full">
+                  <Link to="/register" className="w-full sm:w-auto">
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      className="w-full sm:w-auto bg-[#E06D14] hover:bg-[#C2580E] text-white font-bold shadow-md hover:shadow-lg transition-all duration-200 px-6"
+                      rightIcon={<ArrowRight className="w-4.5 h-4.5 text-white" />}
+                    >
+                      Register for Workshop
                     </Button>
                   </Link>
 
-                  <a href="#workshops">
-                    <Button variant="outline" size="md" className="bg-transparent text-white border-slate-700 hover:bg-slate-800">
+                  <a href="#workshops" className="w-full sm:w-auto">
+                    <button
+                      type="button"
+                      className="w-full sm:w-auto h-12 px-6 rounded-xl font-bold text-sm text-slate-200 hover:text-white bg-slate-900 border border-slate-700 hover:bg-slate-800 hover:border-slate-600 transition-all duration-200 shadow-2xs cursor-pointer flex items-center justify-center"
+                    >
                       Request a Workshop
-                    </Button>
+                    </button>
                   </a>
                 </div>
               </div>
 
-              <div className="lg:col-span-4 bg-slate-900 p-6 rounded-2xl border border-slate-800 text-center flex flex-col items-center gap-3">
+              <div className="lg:col-span-4 bg-slate-900 p-6 sm:p-8 rounded-2xl border border-slate-800 text-center flex flex-col items-center gap-3 shadow-lg">
                 <School className="w-10 h-10 text-[#005F60]" />
-                <h3 className="text-base font-bold text-white">Karnataka Educational Outreach</h3>
+                <h3 className="text-base font-bold text-white">Institutional Outreach</h3>
                 <p className="text-xs text-slate-300 font-medium">
-                  Statewide sessions for SSLC 10th and PUC schools across all 31 districts.
+                  Statewide guidance sessions for SSLC Class 10 and PUC schools across all 31 Karnataka districts.
                 </p>
               </div>
 
@@ -1021,20 +1055,20 @@ const HomePage = () => {
 
 
         {/* ========================================================= */}
-        {/* SECTION 12: FINAL CALL TO ACTION */}
+        {/* SECTION 10: FINAL CALL TO ACTION */}
         {/* ========================================================= */}
-        <section id="cta" className="py-20 bg-white">
+        <section id="cta" className="py-20 bg-white scroll-mt-28">
           <Container size="xl">
             <CTABanner
               title="Your Future Shouldn't Depend on Guesswork."
               description="Join over 24,000+ Karnataka students taking control of their education pathways with clarity, confidence, and verified milestone roadmaps."
-              primaryCtaText="Create Free Account"
-              onPrimaryCtaClick={() => navigate(user ? '/dashboard' : '/register')}
-              secondaryCtaText="Explore Careers"
-              onSecondaryCtaClick={() => {
+              primaryCtaText="Explore Careers"
+              onPrimaryCtaClick={() => {
                 const el = document.getElementById('pathways');
                 if (el) el.scrollIntoView({ behavior: 'smooth' });
               }}
+              secondaryCtaText="Create Free Account"
+              onSecondaryCtaClick={() => navigate(user ? '/dashboard' : '/register')}
             />
           </Container>
         </section>
