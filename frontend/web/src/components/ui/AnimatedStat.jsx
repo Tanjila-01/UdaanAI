@@ -78,7 +78,7 @@ export const AnimatedStat = ({
           {label}
         </span>
         {icon && (
-          <div className="p-2.5 rounded-xl bg-teal-50 text-[#005F60] group-hover:scale-110 group-hover:bg-[#005F60] group-hover:text-white transition-all duration-300">
+          <div className="p-2.5 rounded-xl bg-teal-50 text-[#005F60] group-hover:scale-110 group-hover:bg-[#005F60] group-hover:text-white [&_svg]:text-current [&_svg]:transition-colors transition-all duration-300">
             {icon}
           </div>
         )}

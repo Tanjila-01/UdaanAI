@@ -318,7 +318,7 @@ const HomePage = () => {
                 label="Karnataka Students Guided"
                 subtitle="Class 8–10, PUC, Diploma & ITI"
                 trend="+18% YoY"
-                icon={<Users className="w-5 h-5 text-[#005F60]" />}
+                icon={<Users className="w-5 h-5" />}
               />
               <AnimatedStat
                 numericValue={140}
@@ -326,14 +326,14 @@ const HomePage = () => {
                 label="Verified Career Pathways"
                 subtitle="Mapped to KSEEB, DTE & Universities"
                 trend="Verified"
-                icon={<GraduationCap className="w-5 h-5 text-[#005F60]" />}
+                icon={<GraduationCap className="w-5 h-5" />}
               />
               <AnimatedStat
                 numericValue={31}
                 label="Districts Covered"
                 subtitle="Statewide Karnataka outreach"
                 trend="100% State"
-                icon={<ShieldCheck className="w-5 h-5 text-[#005F60]" />}
+                icon={<ShieldCheck className="w-5 h-5" />}
               />
               <AnimatedStat
                 numericValue={85}
@@ -341,7 +341,7 @@ const HomePage = () => {
                 label="Career Workshops"
                 subtitle="Conducted in school & polytechnic hubs"
                 trend="Live"
-                icon={<Calendar className="w-5 h-5 text-[#005F60]" />}
+                icon={<Calendar className="w-5 h-5" />}
               />
             </div>
           </Container>
@@ -455,18 +455,18 @@ const HomePage = () => {
             </div>
 
             {/* Step Selection Tabs */}
-            <div className="flex flex-wrap items-center justify-center gap-2 mb-10 max-w-4xl mx-auto p-2 bg-slate-100 rounded-2xl border border-slate-200 shadow-2xs">
+            <div className="flex flex-wrap items-center justify-center gap-1.5 mb-10 w-fit max-w-full mx-auto p-1.5 bg-slate-100/90 rounded-2xl border border-slate-200/90 shadow-2xs">
               {flowSteps.map((step, idx) => (
                 <button
                   key={step.id}
                   type="button"
                   onClick={() => setActiveFlowStep(idx)}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer select-none ${activeFlowStep === idx
-                      ? 'bg-[#005F60] text-white shadow-xs'
-                      : 'text-slate-800 hover:bg-white'
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer select-none ${activeFlowStep === idx
+                    ? 'bg-[#005F60] text-white shadow-xs'
+                    : 'text-slate-700 hover:text-slate-950 hover:bg-white/80'
                     }`}
                 >
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-mono ${activeFlowStep === idx ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-mono ${activeFlowStep === idx ? 'bg-white/20 text-white' : 'bg-slate-200/80 text-slate-700'
                     }`}>
                     {step.stepNum}
                   </span>
@@ -669,7 +669,7 @@ const HomePage = () => {
             </div>
 
             {/* Interactive Stream Tabs */}
-            <div className="flex flex-wrap items-center justify-center gap-2 mb-10 max-w-4xl mx-auto p-2 bg-white rounded-2xl border border-slate-200 shadow-2xs">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-10 max-w-4xl mx-auto p-2 bg-white rounded-2xl border border-slate-200 shadow-2xs">
               {[
                 { id: 'science', label: 'PUC Science' },
                 { id: 'commerce', label: 'PUC Commerce' },
@@ -681,9 +681,9 @@ const HomePage = () => {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveBranch(tab.id)}
-                  className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer select-none ${activeBranch === tab.id
-                      ? 'bg-[#005F60] text-white shadow-xs'
-                      : 'text-slate-800 hover:bg-slate-100'
+                  className={`w-full py-2.5 px-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer select-none flex items-center justify-center text-center ${activeBranch === tab.id
+                    ? 'bg-[#005F60] text-white shadow-xs'
+                    : 'text-slate-800 hover:bg-slate-100'
                     }`}
                 >
                   {tab.label}
@@ -798,8 +798,8 @@ const HomePage = () => {
                     type="button"
                     onClick={() => setActiveRoadmapStep(index)}
                     className={`p-3.5 rounded-xl border flex flex-col justify-between items-center gap-1.5 transition-all cursor-pointer text-left ${activeRoadmapStep === index
-                        ? 'bg-[#005F60] text-white border-[#005F60] shadow-md ring-2 ring-teal-600/30'
-                        : 'bg-white border-slate-200 hover:border-teal-400 text-slate-800'
+                      ? 'bg-[#005F60] text-white border-[#005F60] shadow-md ring-2 ring-teal-600/30'
+                      : 'bg-white border-slate-200 hover:border-teal-400 text-slate-800'
                       }`}
                   >
                     <div className="flex items-center justify-between w-full">
