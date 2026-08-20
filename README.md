@@ -2,26 +2,61 @@
 
 Udaan AI is an **AI-Powered Career Development and Future Skills Platform for Karnataka students**, primarily supporting Karnataka Board students in Classes 8–10 and PUC students in Classes 11–12.
 
-## Phase 1 Scope & Status
+## Implementation Status Overview
 
-Phase 1 focuses on:
-- Monorepo initialization
-- 8 microservices technical foundation
-- Shared infrastructure & Docker orchestration
-- PostgreSQL schema-per-service architecture
-- React + Vite web application shell with live API Gateway health connectivity
-- Standardized health endpoints and automated testing baseline
+| Domain / Microservice | Status | Implemented Features |
+| :--- | :--- | :--- |
+| **Monorepo & Infrastructure** | **Implemented** | 10 Docker containers, Makefile, environment configs, health check automation. |
+| **Database Architecture** | **Implemented** | PostgreSQL 15 container with 7 schema-isolated microservice boundaries (`auth`, `student`, `roadmap`, `assessment`, `career_ai`, `institution`, `admin_analytics`). |
+| **API Gateway Service** (`api-gateway`) | **Implemented** | Reverse proxy routing for `/api/v1/auth/*`, `/api/v1/students/*`, `/api/v1/roadmaps/*`, and `/api/v1/assessments/*`, CORS, error fallbacks. |
+| **Auth Service** (`auth-service`) | **Implemented** | Registration, login, bcrypt password hashing, 30-min JWT access & 7-day refresh tokens, stateless logout, `/auth/me` session check. |
+| **Student Profile Service** (`student-service`) | **Implemented** | Student profile onboarding (Class 8–10 SSLC, Class 11–12 PUC Science/Commerce/Arts), profile completeness score calculation (0–100%), JWT decoding. |
+| **Career Roadmap Service** (`roadmap-service`) | **Implemented** | Dynamic SQL pathway exploration (`GET /roadmaps/pathways`), detailed pathway option milestones, eligibility rules. |
+| **React Web App** (`frontend/web`) | **Implemented** | Login, Register, multi-step Onboarding, Student Dashboard, interactive Pathways Explorer (`/pathways`). |
+| **Assessment Service** (`assessment-service`) | **Partially Implemented** | Health skeleton active; `/assessment` UI shell and API Gateway proxy routes ready. |
+| **AI Career Service** (`ai-career-service`) | **Planned / Postponed** | Health skeleton active; LLM integrations & recommendation engine planned for future phase. |
+| **Institution Service** (`institution-service`) | **Planned / Postponed** | Health skeleton active; public directory & workshop features planned for future phase. |
+| **Admin & Analytics Service** (`admin-analytics-service`) | **Planned / Postponed** | Health skeleton active; admin portal APIs planned for future phase. |
 
-*Note: Phase 1 establishes technical infrastructure and connectivity. Full product features (login, assessments, recommendations, AI companion) will be implemented in subsequent phases.*
+---
+
+## Detailed System Breakdown
+
+### 1. Fully Implemented Features
+- **User Authentication & Session Management**:
+  - `POST /api/v1/auth/register` — Account creation with email, phone, role validation, and password hashing (`bcrypt`).
+  - `POST /api/v1/auth/login` — Issues HMAC-SHA256 (`HS256`) Access Tokens (30 min) and Refresh Tokens (7 days).
+  - `GET /api/v1/auth/me` — Stateless session user verification.
+- **Student Profile Management**:
+  - `POST /api/v1/students/profile` — Onboarding data collection tailored for Karnataka Board (Class 8–10) and PUC (Class 11–12 Science, Commerce, Arts).
+  - `GET /api/v1/students/profile/me` — Academic profile retrieval with real-time profile completeness metric calculation.
+- **Career Pathways Explorer**:
+  - `GET /api/v1/roadmaps/pathways` — Dynamic pathway lookup filtered by `education_level` and `stream`.
+  - `GET /api/v1/roadmaps/pathways/{id}` — Pathway details with branch options, eligibility badges, and numbered step-by-step milestones.
+- **Student Frontend Application**:
+  - Global `AuthContext` managing authentication state.
+  - Automatic Axios Bearer token header injection via `src/api/client.js`.
+  - Responsive desktop 12-column layout & mobile inline panel expansions.
+
+### 2. Partially Implemented Features
+- **Assessment Interface**:
+  - Frontend UI route (`/assessment`) registered in React Router.
+  - Backend API Gateway proxy routes configured (`/api/v1/assessments/*`).
+
+### 3. Planned / Postponed Features
+- Self-discovery scoring algorithm & question bank in `assessment-service`.
+- AI recommendation LLM integration in `ai-career-service`.
+- Public institution directory & workshop enrollment in `institution-service`.
+- Aggregated analytics dashboard & audit logs in `admin-analytics-service`.
 
 ---
 
 ## Technology Stack
 
-- **Frontend**: React (Vite, JavaScript only), React Router, Tailwind CSS, Axios.
-- **Backend**: Python 3.11, FastAPI, Uvicorn, Pydantic (pydantic-settings), SQLAlchemy.
-- **Database**: PostgreSQL 15 (Docker container with isolated schemas per microservice).
-- **Infrastructure**: Docker & Docker Compose.
+- **Frontend**: React 18 (Vite, JavaScript), React Router v6, Tailwind CSS, Axios, Lucide React icons.
+- **Backend**: Python 3.11, FastAPI, Uvicorn, Pydantic v2, SQLAlchemy ORM, `httpx`.
+- **Database**: PostgreSQL 15 (Docker container with 7 isolated schemas per microservice boundary).
+- **Infrastructure**: Docker & Docker Compose orchestration.
 
 ---
 
@@ -30,23 +65,24 @@ Phase 1 focuses on:
 ```text
 udaan-ai/
 ├── frontend/
-│   └── web/                   # React + Vite application shell
+│   └── web/                   # React 18 + Vite application shell
 ├── backend/
-│   ├── api-gateway/           # Port 8000: Gateway entrypoint & BFF
+│   ├── api-gateway/           # Port 8000: Gateway entrypoint & BFF proxy
 │   ├── auth-service/          # Port 8001: Authentication & identity management
-│   ├── student-service/       # Port 8002: Student profiles & preferences
-│   ├── assessment-service/    # Port 8003: Self-discovery assessments & scoring
-│   ├── ai-career-service/     # Port 8004: Recommendations & AI insights
+│   ├── student-service/       # Port 8002: Student profiles & academic preferences
+│   ├── assessment-service/    # Port 8003: Self-discovery assessments (Skeleton)
+│   ├── ai-career-service/     # Port 8004: Recommendations & AI insights (Skeleton)
 │   ├── roadmap-service/       # Port 8005: Career path guidance & milestones
-│   ├── institution-service/   # Port 8006: Public institution info & workshops
-│   └── admin-analytics-service/ # Port 8007: Admin portal & analytics engine
+│   ├── institution-service/   # Port 8006: Public institution info & workshops (Skeleton)
+│   └── admin-analytics-service/ # Port 8007: Admin portal & analytics engine (Skeleton)
 ├── shared/
-│   ├── contracts/             # Shared API contracts & schemas
-│   └── config/                # Shared constants & configs
+│   ├── contracts/             # Shared API contracts & schemas (Placeholder)
+│   └── config/                # Shared constants & configs (Placeholder)
 ├── infrastructure/
-│   ├── postgres/              # Schema setup scripts
+│   ├── postgres/              # Schema setup scripts (init-schemas.sql)
 │   └── docker/                # Container configurations
-├── docs/                      # Technical documentation
+├── docs/                      # Technical documentation & phase reports
+│   └── reports/               # Historical phase execution reports
 ├── docker-compose.yml
 ├── Makefile
 ├── .env.example
@@ -146,7 +182,7 @@ npm run dev
 
 ## Running Automated Tests
 
-Run health check unit tests across all 8 microservices:
+Run unit & health check test suites across microservices:
 
 ```bash
 # Using Makefile:
@@ -156,23 +192,6 @@ make test
 pytest backend/api-gateway/tests/
 pytest backend/auth-service/tests/
 pytest backend/student-service/tests/
-pytest backend/assessment-service/tests/
-pytest backend/ai-career-service/tests/
 pytest backend/roadmap-service/tests/
-pytest backend/institution-service/tests/
-pytest backend/admin-analytics-service/tests/
 ```
 
----
-
-## Phase 1 Limitations
-
-Phase 1 is strictly limited to initial monorepo setup and service connectivity. The following are **out of scope** for Phase 1:
-- User registration, authentication, JWT tokens, RBAC.
-- Student profile CRUD, onboarding, dashboards.
-- Assessment question banks, scoring engines, result generation.
-- AI LLM API integrations, recommendation scoring formulas.
-- Career path generation, progress tracking, badges.
-- Institution partnership workflows, admin dashboards.
-
-Phase 2 will begin feature implementation starting with Authentication and Student Profile services.
