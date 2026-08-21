@@ -113,23 +113,40 @@ async def proxy_students_options(path: str, request: Request, credentials: Optio
 
 # --- Roadmap Service Proxy Routes ---
 
-@router.get("/roadmaps/pathways", operation_id="get_roadmap_pathways", tags=["Roadmaps"])
-async def get_roadmap_pathways(
-    request: Request,
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
-):
-    target_url = f"{settings.ROADMAP_SERVICE_URL.rstrip('/')}/roadmaps/pathways"
+async def _proxy_roadmaps(path: str, request: Request) -> Response:
+    clean_path = f"/{path.lstrip('/')}" if path else ""
+    target_url = f"{settings.ROADMAP_SERVICE_URL.rstrip('/')}/roadmaps{clean_path}"
     return await forward_request(target_url, request, error_detail="Roadmap service is temporarily unavailable.")
 
 
-@router.get("/roadmaps/pathways/{pathway_id}", operation_id="get_roadmap_pathway_detail", tags=["Roadmaps"])
-async def get_roadmap_pathway_detail(
-    pathway_id: str,
-    request: Request,
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
-):
-    target_url = f"{settings.ROADMAP_SERVICE_URL.rstrip('/')}/roadmaps/pathways/{pathway_id}"
-    return await forward_request(target_url, request, error_detail="Roadmap service is temporarily unavailable.")
+@router.get("/roadmaps", operation_id="proxy_roadmaps_root_get", tags=["Roadmaps"])
+async def proxy_roadmaps_root_get(request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_roadmaps("", request)
+
+
+@router.get("/roadmaps/{path:path}", operation_id="proxy_roadmaps_get", tags=["Roadmaps"])
+async def proxy_roadmaps_get(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_roadmaps(path, request)
+
+
+@router.post("/roadmaps/{path:path}", operation_id="proxy_roadmaps_post", tags=["Roadmaps"])
+async def proxy_roadmaps_post(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_roadmaps(path, request)
+
+
+@router.put("/roadmaps/{path:path}", operation_id="proxy_roadmaps_put", tags=["Roadmaps"])
+async def proxy_roadmaps_put(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_roadmaps(path, request)
+
+
+@router.patch("/roadmaps/{path:path}", operation_id="proxy_roadmaps_patch", tags=["Roadmaps"])
+async def proxy_roadmaps_patch(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_roadmaps(path, request)
+
+
+@router.delete("/roadmaps/{path:path}", operation_id="proxy_roadmaps_delete", tags=["Roadmaps"])
+async def proxy_roadmaps_delete(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_roadmaps(path, request)
 
 
 # --- Assessment Service Proxy Routes ---

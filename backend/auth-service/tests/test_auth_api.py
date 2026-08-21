@@ -63,7 +63,24 @@ def test_auth_full_flow():
     assert res_dup.status_code == 400
     assert "already registered" in res_dup.json()["detail"]
 
-    # 3. Mismatched password rejection
+    # 3. Short password rejection (< 8 characters)
+    res_short_5 = client.post("/auth/register", json={
+        "full_name": "Short Pass User",
+        "email": "short5@test.com",
+        "password": "12345",
+        "confirm_password": "12345"
+    })
+    assert res_short_5.status_code == 422
+
+    res_short_7 = client.post("/auth/register", json={
+        "full_name": "Short Pass User 7",
+        "email": "short7@test.com",
+        "password": "1234567",
+        "confirm_password": "1234567"
+    })
+    assert res_short_7.status_code == 422
+
+    # 4. Mismatched password rejection
     res_mismatch = client.post("/auth/register", json={
         "full_name": "Test Student 2",
         "email": "student2@test.com",

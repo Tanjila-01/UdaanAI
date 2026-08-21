@@ -10,14 +10,16 @@ const UdaanTrailMilestones = ({ onStageClick }) => {
       desc: 'Identify current academic stage (SSLC, PUC, Diploma, ITI)',
       icon: Search,
       status: 'completed',
+      route: '/dashboard',
     },
     {
       stage: 2,
       name: 'Understand Yourself',
-      tag: 'Profile Context',
-      desc: 'School, district, and personal background setup',
+      tag: 'Aptitude & Stream',
+      desc: 'Take aptitude assessment & discover stream recommendations',
       icon: UserCheck,
       status: 'active',
+      route: '/assessment',
     },
     {
       stage: 3,
@@ -26,6 +28,7 @@ const UdaanTrailMilestones = ({ onStageClick }) => {
       desc: 'Discover SSLC, PUC Streams, Diploma & ITI trades',
       icon: Compass,
       status: 'upcoming',
+      route: '/pathways',
     },
     {
       stage: 4,
@@ -34,6 +37,7 @@ const UdaanTrailMilestones = ({ onStageClick }) => {
       desc: 'Identify foundational skills & exam requirements',
       icon: BookOpen,
       status: 'upcoming',
+      route: '/my-roadmap',
     },
     {
       stage: 5,
@@ -42,6 +46,7 @@ const UdaanTrailMilestones = ({ onStageClick }) => {
       desc: 'Select preferred stream, institution, and career track',
       icon: Target,
       status: 'upcoming',
+      route: '/my-roadmap',
     },
     {
       stage: 6,
@@ -50,6 +55,7 @@ const UdaanTrailMilestones = ({ onStageClick }) => {
       desc: 'Higher education entry & future career milestones',
       icon: CheckCircle2,
       status: 'upcoming',
+      route: '/my-roadmap',
     },
   ];
 
@@ -85,7 +91,7 @@ const UdaanTrailMilestones = ({ onStageClick }) => {
             <button
               key={s.stage}
               type="button"
-              onClick={() => onStageClick(s.name)}
+              onClick={() => onStageClick(s.route || s.name)}
               className={`text-left p-4 rounded-2xl border transition-all flex flex-col justify-between group cursor-pointer ${
                 isActive
                   ? 'bg-orange-50/70 border-[#F97316]/50 ring-2 ring-[#F97316]/20 text-[#0F172A] shadow-xs'

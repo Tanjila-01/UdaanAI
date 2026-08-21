@@ -1,6 +1,10 @@
 from typing import List, Optional
+from uuid import UUID
+from datetime import datetime, timezone
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session, selectinload
-from app.models.pathway import Pathway, PathwayOption, PathwayMilestone
+from app.models.pathway import Pathway, PathwayOption, PathwayMilestone, StudentGoal, StudentMilestoneProgress
+from app.schemas.goal import CreateGoalRequest, StudentGoalResponse, GoalProgressSummary, MilestoneProgressResponse
 from app.db.seed_pathways import INITIAL_PATHWAYS_DATA
 
 
@@ -137,3 +141,186 @@ class RoadmapService:
 
         db.commit()
         return db.query(Pathway).count()
+
+    @staticmethod
+    def _build_goal_response(goal: StudentGoal) -> StudentGoalResponse:
+        milestone_items = []
+        completed_count = 0
+        total_count = len(goal.milestone_progress)
+
+        for item in goal.milestone_progress:
+            if item.status == "COMPLETED":
+                completed_count += 1
+            milestone_items.append(
+                MilestoneProgressResponse(
+                    id=item.id,
+                    milestone_id=item.milestone_id,
+                    step_number=item.step_number,
+                    title=item.milestone.title if item.milestone else "",
+                    description=item.milestone.description if item.milestone else "",
+                    key_action=item.milestone.key_action if item.milestone else None,
+                    status=item.status,
+                    completed_at=item.completed_at,
+                )
+            )
+
+        percentage = round((completed_count / total_count * 100.0), 1) if total_count > 0 else 0.0
+
+        return StudentGoalResponse(
+            id=goal.id,
+            student_id=goal.student_id,
+            pathway_id=goal.pathway_id,
+            pathway_title=goal.pathway.title if goal.pathway else "",
+            pathway_option_id=goal.pathway_option_id,
+            pathway_option_name=goal.option.option_name if goal.option else None,
+            goal_title=goal.goal_title,
+            status=goal.status,
+            created_at=goal.created_at,
+            progress=GoalProgressSummary(
+                completed=completed_count,
+                total=total_count,
+                percentage=percentage,
+            ),
+            milestones=milestone_items,
+        )
+
+    @classmethod
+    def get_active_student_goal(cls, db: Session, student_id: UUID) -> Optional[StudentGoalResponse]:
+        goal = (
+            db.query(StudentGoal)
+            .options(
+                selectinload(StudentGoal.pathway),
+                selectinload(StudentGoal.option),
+                selectinload(StudentGoal.milestone_progress).selectinload(StudentMilestoneProgress.milestone),
+            )
+            .filter(StudentGoal.student_id == student_id, StudentGoal.status == "ACTIVE")
+            .first()
+        )
+        if not goal:
+            return None
+        return cls._build_goal_response(goal)
+
+    @classmethod
+    def create_or_update_student_goal(
+        cls,
+        db: Session,
+        student_id: UUID,
+        pathway_id: str,
+        pathway_option_id: Optional[UUID] = None
+    ) -> StudentGoalResponse:
+        pathway = db.query(Pathway).options(selectinload(Pathway.milestones)).filter(Pathway.id == pathway_id.strip()).first()
+        if not pathway:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Pathway '{pathway_id}' not found."
+            )
+
+        selected_option = None
+        if pathway_option_id:
+            selected_option = db.query(PathwayOption).filter(
+                PathwayOption.id == pathway_option_id,
+                PathwayOption.pathway_id == pathway.id
+            ).first()
+            if not selected_option:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Selected pathway option is invalid or does not belong to the target pathway."
+                )
+
+        # Archive any previous active goal for this student
+        db.query(StudentGoal).filter(
+            StudentGoal.student_id == student_id,
+            StudentGoal.status == "ACTIVE"
+        ).update({"status": "ARCHIVED"}, synchronize_session=False)
+
+        goal_title = selected_option.option_name if selected_option else pathway.title
+
+        new_goal = StudentGoal(
+            student_id=student_id,
+            pathway_id=pathway.id,
+            pathway_option_id=selected_option.id if selected_option else None,
+            goal_title=goal_title,
+            status="ACTIVE",
+        )
+        db.add(new_goal)
+        db.flush()
+
+        # Initialize progress records for each milestone in step order
+        milestones = sorted(pathway.milestones, key=lambda m: m.step_number)
+        for idx, m in enumerate(milestones):
+            init_status = "AVAILABLE" if idx == 0 else "LOCKED"
+            prog = StudentMilestoneProgress(
+                goal_id=new_goal.id,
+                milestone_id=m.id,
+                step_number=m.step_number,
+                status=init_status,
+            )
+            db.add(prog)
+
+        db.commit()
+        return cls.get_active_student_goal(db, student_id)
+
+    @classmethod
+    def complete_student_milestone(
+        cls,
+        db: Session,
+        student_id: UUID,
+        milestone_id: UUID
+    ) -> StudentGoalResponse:
+        goal = (
+            db.query(StudentGoal)
+            .options(
+                selectinload(StudentGoal.pathway),
+                selectinload(StudentGoal.option),
+                selectinload(StudentGoal.milestone_progress).selectinload(StudentMilestoneProgress.milestone),
+            )
+            .filter(StudentGoal.student_id == student_id, StudentGoal.status == "ACTIVE")
+            .first()
+        )
+        if not goal:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No active career goal found."
+            )
+
+        target_prog = None
+        for prog in goal.milestone_progress:
+            if str(prog.id) == str(milestone_id) or str(prog.milestone_id) == str(milestone_id):
+                target_prog = prog
+                break
+
+        if not target_prog:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Milestone not found for current goal."
+            )
+
+        if target_prog.status == "COMPLETED":
+            return cls._build_goal_response(goal)
+
+        if target_prog.status == "LOCKED":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Milestone is locked. Please complete previous milestones first."
+            )
+
+        target_prog.status = "COMPLETED"
+        target_prog.completed_at = datetime.now(timezone.utc)
+
+        # Find next milestone in order to unlock
+        next_prog = None
+        for prog in goal.milestone_progress:
+            if prog.step_number == target_prog.step_number + 1:
+                next_prog = prog
+                break
+
+        if next_prog and next_prog.status == "LOCKED":
+            next_prog.status = "AVAILABLE"
+
+        # Check if all milestones are completed
+        all_completed = all(p.status == "COMPLETED" for p in goal.milestone_progress)
+        if all_completed:
+            goal.status = "COMPLETED"
+
+        db.commit()
+        return cls._build_goal_response(goal)

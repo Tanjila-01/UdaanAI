@@ -6,7 +6,7 @@ import Header from '../components/Header';
 import UdaanTrailHero from '../components/UdaanTrailHero';
 import UdaanTrailMilestones from '../components/UdaanTrailMilestones';
 import EditProfileDrawer from '../components/EditProfileDrawer';
-import { getMyLatestAssessmentResultApi } from '../api/client';
+import { getMyLatestAssessmentResultApi, getMyStudentGoalApi } from '../api/client';
 import { 
   UserCheck, 
   GraduationCap, 
@@ -30,13 +30,17 @@ const DashboardPage = () => {
   const { user, profile, loading, refreshProfile } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
-  const [modalFeature, setModalFeature] = useState(null);
   const [latestAssessmentResult, setLatestAssessmentResult] = useState(null);
+  const [activeGoal, setActiveGoal] = useState(null);
 
   React.useEffect(() => {
     getMyLatestAssessmentResultApi()
       .then((res) => setLatestAssessmentResult(res))
       .catch(() => setLatestAssessmentResult(null));
+
+    getMyStudentGoalApi()
+      .then((goal) => setActiveGoal(goal))
+      .catch(() => setActiveGoal(null));
   }, []);
 
   const handleAssessmentClick = () => {
@@ -105,10 +109,13 @@ const DashboardPage = () => {
 
           {/* "THE UDAAN TRAIL" 6-Stage Journey System */}
           <UdaanTrailMilestones 
-            onStageClick={(stageName) => setModalFeature({
-              title: `${stageName} Stage`,
-              desc: `${stageName} pathway module is scheduled for Phase 4B.`
-            })}
+            onStageClick={(targetRoute) => {
+              if (targetRoute && targetRoute.startsWith('/')) {
+                navigate(targetRoute);
+              } else {
+                navigate('/my-roadmap');
+              }
+            }}
           />
 
           {/* Assessment Status Banner */}
@@ -138,6 +145,73 @@ const DashboardPage = () => {
               <ArrowRight className="w-4 h-4" />
             </button>
           </section>
+
+          {/* Active Career Goal Progress Section */}
+          {activeGoal ? (
+            <section className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 gap-4">
+                <div>
+                  <div className="inline-flex items-center space-x-1.5 text-[10px] uppercase font-extrabold tracking-wider bg-orange-100 text-[#F97316] px-2.5 py-0.5 rounded-full border border-orange-200 mb-1">
+                    <Target className="w-3.5 h-3.5 text-[#F97316]" />
+                    <span>Your Active Career Goal</span>
+                  </div>
+                  <h2 className="text-xl font-black text-[#0F172A] tracking-tight">
+                    {activeGoal.goal_title}
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Pathway: <span className="font-bold text-[#005F60]">{activeGoal.pathway_title}</span>
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => navigate('/my-roadmap')}
+                  className="bg-[#005F60] hover:bg-teal-800 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-xs flex items-center space-x-2 shrink-0 cursor-pointer"
+                >
+                  <span>Continue Roadmap</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="space-y-1.5 pt-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-extrabold text-[#005F60]">
+                    Progress ({activeGoal.progress.completed} of {activeGoal.progress.total} Milestones Complete)
+                  </span>
+                  <span className="font-extrabold text-[#F97316]">
+                    {activeGoal.progress.percentage}%
+                  </span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-200/80">
+                  <div 
+                    className="bg-gradient-to-r from-[#005F60] to-[#F97316] h-full rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(activeGoal.progress.percentage, 100)}%` }}
+                  ></div>
+                </div>
+              </div>
+            </section>
+          ) : (
+            <section className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
+              <div className="space-y-1 text-center sm:text-left">
+                <div className="inline-flex items-center space-x-1 text-[10px] font-extrabold text-[#F97316] bg-orange-50 px-2 py-0.5 rounded border border-orange-200">
+                  <Target className="w-3 h-3" />
+                  <span>Choose Your Target Goal</span>
+                </div>
+                <h3 className="text-lg font-black text-[#0F172A]">No Active Career Goal Set</h3>
+                <p className="text-xs text-slate-500">
+                  Explore pathways and choose the direction you want to pursue to unlock your milestone tracker.
+                </p>
+              </div>
+
+              <button
+                onClick={() => navigate('/pathways')}
+                className="bg-[#005F60] hover:bg-teal-800 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-xs flex items-center space-x-2 shrink-0 cursor-pointer"
+              >
+                <span>Explore Pathways</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </section>
+          )}
 
           {/* Student Profile Summary — Structured Rows Layout (NO Card Overload) */}
           <section className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xs">
@@ -238,34 +312,37 @@ const DashboardPage = () => {
             </div>
           </section>
 
-          {/* Honest "Coming Next" Feature Modules (No Fake Scores) */}
+          {/* Active Udaan Feature Modules */}
           <section className="space-y-4">
             <div>
               <h2 className="text-xl font-black text-[#0F172A] tracking-tight">
-                Upcoming Udaan Trail Modules
+                Quick Actions & Career Tools
               </h2>
               <p className="text-xs text-slate-500">
-                Transparent empty states reserved for upcoming Phase 4B pathway & skill explorer features.
+                Direct access to your aptitude assessment, pathway catalog, and personalized career roadmap.
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Assessment Insights Placeholder */}
-              <div className="bg-white border border-slate-200/80 rounded-3xl p-6 space-y-3 flex flex-col justify-between shadow-2xs">
+              {/* Assessment Card */}
+              <div 
+                onClick={() => navigate('/assessment')}
+                className="bg-white border border-teal-200/80 hover:border-[#005F60] rounded-3xl p-6 space-y-3 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all cursor-pointer group"
+              >
                 <div className="space-y-3">
-                  <div className="w-10 h-10 rounded-2xl bg-teal-50 text-[#005F60] border border-teal-200 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-2xl bg-teal-50 text-[#005F60] border border-teal-200 flex items-center justify-center group-hover:scale-105 transition-transform">
                     <Sparkles className="w-5 h-5" />
                   </div>
-                  <h3 className="text-sm font-black text-[#0F172A]">Self-Discovery Insights</h3>
+                  <h3 className="text-sm font-black text-[#0F172A] group-hover:text-[#005F60]">Aptitude & Stream Assessment</h3>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    Interactive skill and interest scoring modules are planned for Phase 4B. Your profile is ready.
+                    10-question SSLC & PUC aptitude evaluation to discover your primary stream recommendation.
                   </p>
                 </div>
                 <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="text-[10px] font-extrabold text-[#F97316] bg-orange-50 px-2 py-0.5 rounded">
-                    Phase 4B
+                  <span className="text-[10px] font-extrabold text-[#005F60] bg-teal-50 border border-teal-200 px-2 py-0.5 rounded">
+                    Active Module
                   </span>
-                  <span className="text-[#005F60] font-bold">Coming Next</span>
+                  <span className="text-[#005F60] font-bold group-hover:underline">Take Assessment →</span>
                 </div>
               </div>
 
@@ -291,22 +368,25 @@ const DashboardPage = () => {
                 </div>
               </div>
 
-              {/* Goals & Milestones Placeholder */}
-              <div className="bg-white border border-slate-200/80 rounded-3xl p-6 space-y-3 flex flex-col justify-between shadow-2xs">
+              {/* Goals & Milestones Card */}
+              <div 
+                onClick={() => navigate('/my-roadmap')}
+                className="bg-white border border-teal-200/80 hover:border-[#005F60] rounded-3xl p-6 space-y-3 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all cursor-pointer group"
+              >
                 <div className="space-y-3">
-                  <div className="w-10 h-10 rounded-2xl bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-2xl bg-teal-50 text-[#005F60] border border-teal-200 flex items-center justify-center group-hover:scale-105 transition-transform">
                     <Target className="w-5 h-5" />
                   </div>
-                  <h3 className="text-sm font-black text-[#0F172A]">Career Goals & Cutoffs</h3>
+                  <h3 className="text-sm font-black text-[#0F172A] group-hover:text-[#005F60]">Career Goals & Milestones</h3>
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    Track diploma cutoffs, PUC college preferences, and vocational trade certifications.
+                    Track persisted active career goals and step-by-step milestone progress in PostgreSQL.
                   </p>
                 </div>
                 <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="text-[10px] font-extrabold text-[#F97316] bg-orange-50 px-2 py-0.5 rounded">
-                    Phase 4B
+                  <span className="text-[10px] font-extrabold text-[#005F60] bg-teal-50 border border-teal-200 px-2 py-0.5 rounded">
+                    Active Module
                   </span>
-                  <span className="text-[#005F60] font-bold">Coming Next</span>
+                  <span className="text-[#005F60] font-bold group-hover:underline">My Roadmap →</span>
                 </div>
               </div>
             </div>
@@ -326,29 +406,6 @@ const DashboardPage = () => {
         isOpen={isEditDrawerOpen} 
         onClose={() => setIsEditDrawerOpen(false)} 
       />
-
-      {/* Feature Coming Next Modal */}
-      {modalFeature && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-slate-200 shadow-2xl space-y-4 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-teal-50 text-[#005F60] border border-teal-200 flex items-center justify-center mx-auto">
-              <Clock className="w-6 h-6" />
-            </div>
-            <div className="space-y-1.5">
-              <h3 className="text-lg font-black text-[#0F172A]">{modalFeature.title}</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                {modalFeature.desc}
-              </p>
-            </div>
-            <button
-              onClick={() => setModalFeature(null)}
-              className="w-full bg-[#005F60] hover:bg-teal-800 text-white font-extrabold py-2.5 rounded-xl text-xs transition-all shadow-md cursor-pointer"
-            >
-              Close Window
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

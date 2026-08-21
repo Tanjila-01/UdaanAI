@@ -21,6 +21,87 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (!error.response || error.response.status !== 401 || !originalRequest || originalRequest._retry) {
+      return Promise.reject(error);
+    }
+
+    const isAuthEndpoint = originalRequest.url?.includes('/auth/login') ||
+                           originalRequest.url?.includes('/auth/register') ||
+                           originalRequest.url?.includes('/auth/refresh');
+
+    if (isAuthEndpoint) {
+      return Promise.reject(error);
+    }
+
+    const refreshToken = localStorage.getItem('refresh_token');
+    if (!refreshToken) {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      if (typeof window !== 'undefined' && !['/login', '/register', '/'].includes(window.location.pathname)) {
+        window.location.href = '/login';
+      }
+      return Promise.reject(error);
+    }
+
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        failedQueue.push({ resolve, reject });
+      })
+        .then((token) => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return apiClient(originalRequest);
+        })
+        .catch((err) => Promise.reject(err));
+    }
+
+    originalRequest._retry = true;
+    isRefreshing = true;
+
+    try {
+      const response = await axios.post(`${baseURL}/api/v1/auth/refresh`, {
+        refresh_token: refreshToken,
+      });
+
+      const { access_token } = response.data;
+      localStorage.setItem('access_token', access_token);
+      apiClient.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+      originalRequest.headers.Authorization = `Bearer ${access_token}`;
+
+      processQueue(null, access_token);
+      return apiClient(originalRequest);
+    } catch (refreshErr) {
+      processQueue(refreshErr, null);
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      if (typeof window !== 'undefined' && !['/login', '/register', '/'].includes(window.location.pathname)) {
+        window.location.href = '/login';
+      }
+      return Promise.reject(refreshErr);
+    } finally {
+      isRefreshing = false;
+    }
+  }
+);
+
 export const checkGatewayHealth = async () => {
   try {
     const response = await apiClient.get('/health');
@@ -128,6 +209,26 @@ export const getAttemptResultApi = async (attemptId) => {
 
 export const getMyLatestAssessmentResultApi = async () => {
   const response = await apiClient.get('/api/v1/assessments/my-latest-result');
+  return response.data;
+};
+
+// --- Student Goal & Milestone APIs ---
+
+export const createStudentGoalApi = async (pathwayId, pathwayOptionId = null) => {
+  const response = await apiClient.post('/api/v1/roadmaps/goals', {
+    pathway_id: pathwayId,
+    pathway_option_id: pathwayOptionId,
+  });
+  return response.data;
+};
+
+export const getMyStudentGoalApi = async () => {
+  const response = await apiClient.get('/api/v1/roadmaps/goals/me');
+  return response.data;
+};
+
+export const completeMilestoneApi = async (milestoneId) => {
+  const response = await apiClient.patch(`/api/v1/roadmaps/goals/me/milestones/${encodeURIComponent(milestoneId)}`);
   return response.data;
 };
 

@@ -1,15 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import EditProfileDrawer from '../components/EditProfileDrawer';
 import { 
+  getMyLatestAssessmentResultApi, 
+  getPathwaysApi,
+  getMyStudentGoalApi,
+  completeMilestoneApi
+} from '../api/client';
+import { 
   Sparkles, 
   Compass, 
   Target, 
-  Map, 
-  Lock, 
   UserCheck, 
   GraduationCap, 
   Building2, 
@@ -17,7 +21,12 @@ import {
   ArrowRight, 
   CheckCircle2, 
   Clock, 
-  Info
+  AlertCircle,
+  RefreshCw,
+  Loader2,
+  BookOpen,
+  Lock,
+  Check
 } from 'lucide-react';
 
 const MyCareerRoadmapPage = () => {
@@ -27,44 +36,55 @@ const MyCareerRoadmapPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
 
-  const roadmapStages = [
-    {
-      step: 1,
-      title: 'Discover Yourself',
-      desc: 'Understand your interests, strengths, learning preferences, and career potential.',
-      icon: Sparkles,
-      status: 'upcoming',
-      statusText: 'Pending Assessment',
-      badgeColor: 'bg-orange-100 text-[#F97316] border-orange-200',
-    },
-    {
-      step: 2,
-      title: 'Choose a Career Direction',
-      desc: 'Explore career options and select the direction you want to work toward.',
-      icon: Compass,
-      status: 'locked',
-      statusText: 'Locked Stage',
-      badgeColor: 'bg-slate-100 text-slate-500 border-slate-200',
-    },
-    {
-      step: 3,
-      title: 'Set Your First Goal',
-      desc: 'Define a meaningful academic, skill, or career goal.',
-      icon: Target,
-      status: 'locked',
-      statusText: 'Locked Stage',
-      badgeColor: 'bg-slate-100 text-slate-500 border-slate-200',
-    },
-    {
-      step: 4,
-      title: 'Unlock Your Personalized Roadmap',
-      desc: 'Your future roadmap will bring together milestones, skills, projects, exams, and progress.',
-      icon: Map,
-      status: 'locked',
-      statusText: 'Locked Stage',
-      badgeColor: 'bg-slate-100 text-slate-500 border-slate-200',
-    },
-  ];
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [assessmentResult, setAssessmentResult] = useState(null);
+  const [pathways, setPathways] = useState([]);
+  const [studentGoal, setStudentGoal] = useState(null);
+  const [completingMilestoneId, setCompletingMilestoneId] = useState(null);
+
+  const loadData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [resAssessment, resPathways, resGoal] = await Promise.all([
+        getMyLatestAssessmentResultApi().catch(() => null),
+        getPathwaysApi({
+          education_level: profile?.current_level || 'Class 10',
+          stream: profile?.stream || '',
+        }).catch(() => ({ pathways: [] })),
+        getMyStudentGoalApi().catch(() => null),
+      ]);
+
+      setAssessmentResult(resAssessment);
+      setPathways(resPathways?.pathways || []);
+      setStudentGoal(resGoal);
+    } catch (err) {
+      console.error('Failed to load roadmap data:', err);
+      setError('Unable to load career roadmap data. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [profile]);
+
+  const handleCompleteMilestone = async (milestoneId) => {
+    setCompletingMilestoneId(milestoneId);
+    try {
+      const updatedGoal = await completeMilestoneApi(milestoneId);
+      setStudentGoal(updatedGoal);
+    } catch (err) {
+      console.error('Failed to complete milestone:', err);
+    } finally {
+      setCompletingMilestoneId(null);
+    }
+  };
+
+  const hasAssessment = !!assessmentResult;
+  const hasPathways = pathways.length > 0;
 
   return (
     <div className="min-h-screen bg-[#F8FAF8] text-[#0F172A] flex font-sans selection:bg-[#005F60] selection:text-white">
@@ -91,13 +111,13 @@ const MyCareerRoadmapPage = () => {
               <div>
                 <div className="inline-flex items-center space-x-1.5 text-[10px] uppercase font-extrabold tracking-wider bg-orange-100 text-[#F97316] px-2.5 py-0.5 rounded-full border border-orange-200 mb-2">
                   <Sparkles className="w-3 h-3 text-[#F97316]" />
-                  <span>YOUR PERSONAL JOURNEY</span>
+                  <span>PERSONALIZED CAREER ROADMAP</span>
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-black text-[#0F172A] tracking-tight">
-                  My Career Roadmap
+                  My Career Goal & Milestones
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                  Build a focused action plan around your interests, career direction, academic stage, and future goals.
+                  Track progress towards your target career goal using PostgreSQL-persisted milestone records.
                 </p>
               </div>
 
@@ -154,119 +174,234 @@ const MyCareerRoadmapPage = () => {
               </div>
 
               <div className="text-right text-[11px] text-slate-500 border-t md:border-t-0 md:border-l border-slate-200 pt-2 md:pt-0 md:pl-5 flex md:flex-col items-center md:items-end justify-between">
-                <span>Data Verified in PostgreSQL</span>
-                <span className="font-mono font-bold text-[#005F60]">Karnataka Student DB</span>
+                <span>Persisted Goal Database</span>
+                <span className="font-mono font-bold text-[#005F60]">roadmap.student_goals</span>
               </div>
             </div>
           </div>
 
-          {/* Honest Status Banner */}
-          <div className="bg-amber-50 border border-amber-200 rounded-3xl p-5 flex items-start space-x-3.5 text-amber-900 text-xs">
-            <Info className="w-5 h-5 text-[#F97316] flex-shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <span className="font-extrabold block text-sm text-amber-950">
-                Personalized Roadmap Setup Framework
-              </span>
-              <p className="text-amber-800 leading-relaxed">
-                Your personalized action plan will bring together milestones, exams, skill requirements, and progress tracking as Self-Discovery scoring and goal selection modules roll out in upcoming Udaan AI phases.
-              </p>
+          {/* Loading state */}
+          {loading && (
+            <div className="bg-white border border-slate-200/80 rounded-3xl p-8 text-center space-y-3">
+              <Loader2 className="w-8 h-8 text-[#005F60] animate-spin mx-auto" />
+              <p className="text-xs text-slate-500 font-medium">Loading active career goal and milestone progress...</p>
             </div>
-          </div>
+          )}
 
-          {/* Vertical Progress Path Container */}
-          <section className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xs">
-            <div className="border-b border-slate-100 pb-4">
-              <h2 className="text-lg font-extrabold text-[#0F172A] tracking-tight">
-                Roadmap Foundation Stages
-              </h2>
-              <p className="text-xs text-slate-500">
-                Complete these foundational steps to unlock your personalized career roadmap.
-              </p>
-            </div>
-
-            {/* Vertical Progress Timeline */}
-            <div className="relative space-y-6 before:absolute before:inset-0 before:left-5 before:w-0.5 before:bg-slate-200 before:z-0">
-              {roadmapStages.map((st) => {
-                const Icon = st.icon;
-                const isUpcoming = st.status === 'upcoming';
-
-                return (
-                  <div key={st.step} className="relative z-10 flex items-start space-x-4 group">
-                    {/* Stage Circle Number / Icon */}
-                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-xs flex-shrink-0 shadow-xs ring-4 ring-white transition-transform group-hover:scale-105 ${
-                      isUpcoming 
-                        ? 'bg-[#F97316] text-white shadow-md shadow-[#F97316]/20' 
-                        : 'bg-slate-200 text-slate-500'
-                    }`}>
-                      <Icon className="w-5 h-5" />
-                    </div>
-
-                    {/* Stage Details Card */}
-                    <div className={`p-5 rounded-2xl border flex-1 space-y-2 transition-all ${
-                      isUpcoming
-                        ? 'bg-orange-50/40 border-orange-200/80 text-[#0F172A]'
-                        : 'bg-[#F8FAF8] border-slate-200/70 text-slate-600'
-                    }`}>
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center space-x-2">
-                          <span className="text-[10px] font-mono font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-white border border-slate-200 text-[#005F60]">
-                            Stage {st.step}
-                          </span>
-                          <h3 className="font-extrabold text-sm text-[#0F172A]">
-                            {st.title}
-                          </h3>
-                        </div>
-
-                        <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${st.badgeColor} flex items-center space-x-1`}>
-                          {isUpcoming ? (
-                            <Clock className="w-3 h-3 text-[#F97316]" />
-                          ) : (
-                            <Lock className="w-3 h-3 text-slate-400" />
-                          )}
-                          <span>{st.statusText}</span>
-                        </span>
-                      </div>
-
-                      <p className="text-xs text-slate-600 leading-relaxed">
-                        {st.desc}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Action Bar with Primary Disabled/Upcoming CTA & Secondary Link */}
-            <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-3 w-full sm:w-auto">
-                <button
-                  disabled
-                  className="w-full sm:w-auto bg-slate-200 text-slate-400 font-extrabold py-3 px-6 rounded-xl text-xs flex items-center justify-center space-x-2 cursor-not-allowed"
-                >
-                  <Sparkles className="w-4 h-4 text-slate-400" />
-                  <span>Start with Self-Discovery</span>
-                </button>
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#F97316] bg-orange-50 border border-orange-200 px-2.5 py-1 rounded-md text-center">
-                  Available in the next Udaan AI phase
-                </span>
+          {/* Error state */}
+          {!loading && error && (
+            <div className="bg-rose-50 border border-rose-200 rounded-3xl p-6 flex items-center justify-between gap-4 text-rose-900 text-xs">
+              <div className="flex items-center space-x-3">
+                <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0" />
+                <span>{error}</span>
               </div>
-
               <button
-                onClick={() => navigate('/pathways')}
-                className="w-full sm:w-auto text-[#005F60] hover:text-teal-900 font-extrabold text-xs flex items-center justify-center space-x-1 hover:underline cursor-pointer"
+                onClick={loadData}
+                className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center space-x-1.5 transition-colors"
               >
-                <span>Browse Pathways Catalog</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Retry</span>
               </button>
             </div>
+          )}
 
-          </section>
+          {!loading && (
+            <>
+              {/* Active Student Goal Section */}
+              {studentGoal ? (
+                <section className="bg-gradient-to-r from-teal-900 via-[#005F60] to-teal-950 text-white rounded-3xl p-6 sm:p-8 shadow-md border border-teal-700/50 space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-teal-700/60 pb-5">
+                    <div className="space-y-1">
+                      <div className="inline-flex items-center space-x-1.5 text-[11px] font-extrabold uppercase tracking-widest text-teal-300 bg-teal-950/60 px-3 py-0.5 rounded-full border border-teal-700/60">
+                        <Target className="w-3.5 h-3.5 text-[#F97316]" />
+                        <span>Active Career Goal</span>
+                      </div>
+                      <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+                        {studentGoal.goal_title}
+                      </h2>
+                      <p className="text-xs sm:text-sm text-teal-100/90 font-medium">
+                        Pathway: <span className="font-extrabold text-white">{studentGoal.pathway_title}</span>
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => navigate('/pathways')}
+                      className="bg-teal-800/80 hover:bg-teal-800 text-teal-100 border border-teal-600 font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all self-start sm:self-auto cursor-pointer"
+                    >
+                      Change Goal
+                    </button>
+                  </div>
+
+                  {/* Real Calculated Progress Bar */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-extrabold text-teal-200">
+                        Overall Milestone Progress
+                      </span>
+                      <span className="font-black text-white bg-teal-950/80 px-3 py-1 rounded-full border border-teal-700/80">
+                        {studentGoal.progress.completed} / {studentGoal.progress.total} Completed ({studentGoal.progress.percentage}%)
+                      </span>
+                    </div>
+                    <div className="w-full bg-teal-950/60 rounded-full h-3 p-0.5 border border-teal-700/60 overflow-hidden">
+                      <div 
+                        className="bg-gradient-to-r from-[#F97316] to-amber-400 h-full rounded-full transition-all duration-500 shadow-sm"
+                        style={{ width: `${Math.min(studentGoal.progress.percentage, 100)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </section>
+              ) : (
+                /* Empty State when no active goal exists */
+                <section className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 space-y-4 text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-orange-50 text-[#F97316] border border-orange-200 flex items-center justify-center mx-auto">
+                    <Target className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1 max-w-md mx-auto">
+                    <h2 className="text-xl font-black text-[#0F172A]">No Active Career Goal Set</h2>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Select a career direction from the Pathways Catalog to initialize your personalized milestone tracker.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => navigate('/pathways')}
+                    className="bg-[#005F60] hover:bg-teal-800 text-white font-extrabold text-xs px-6 py-3 rounded-xl transition-all shadow-md inline-flex items-center space-x-2 cursor-pointer"
+                  >
+                    <Compass className="w-4 h-4" />
+                    <span>Explore Pathways & Set Goal</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </section>
+              )}
+
+              {/* Persisted Milestone Progress Timeline */}
+              {studentGoal && studentGoal.milestones && studentGoal.milestones.length > 0 && (
+                <section className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xs">
+                  <div className="border-b border-slate-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h2 className="text-lg font-extrabold text-[#0F172A] tracking-tight">
+                        Milestone Action Checklist
+                      </h2>
+                      <p className="text-xs text-slate-500">
+                        Mark milestones as completed to unlock next steps and advance your career readiness score.
+                      </p>
+                    </div>
+                    <span className="text-xs font-extrabold text-[#005F60] bg-teal-50 border border-teal-200 px-3 py-1 rounded-full self-start sm:self-auto">
+                      Sequential Progression
+                    </span>
+                  </div>
+
+                  <div className="relative space-y-6 before:absolute before:inset-0 before:left-5 before:w-0.5 before:bg-slate-200 before:z-0">
+                    {studentGoal.milestones.map((m) => {
+                      const isCompleted = m.status === 'COMPLETED';
+                      const isAvailable = m.status === 'AVAILABLE';
+                      const isLocked = m.status === 'LOCKED';
+                      const isCompleting = completingMilestoneId === m.id;
+
+                      return (
+                        <div key={m.id} className="relative z-10 flex items-start space-x-4 group">
+                          {/* Step Number / Icon */}
+                          <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-xs flex-shrink-0 shadow-xs ring-4 ring-white transition-transform group-hover:scale-105 ${
+                            isCompleted
+                              ? 'bg-emerald-600 text-white'
+                              : isAvailable
+                              ? 'bg-[#F97316] text-white shadow-md shadow-[#F97316]/20'
+                              : 'bg-slate-200 text-slate-500'
+                          }`}>
+                            {isCompleted ? <Check className="w-5 h-5" /> : isAvailable ? <BookOpen className="w-5 h-5" /> : <Lock className="w-4 h-4" />}
+                          </div>
+
+                          {/* Details Card */}
+                          <div className={`p-5 rounded-2xl border flex-1 space-y-3 transition-all ${
+                            isCompleted
+                              ? 'bg-emerald-50/40 border-emerald-200/80 text-[#0F172A]'
+                              : isAvailable
+                              ? 'bg-orange-50/40 border-orange-200/80 text-[#0F172A]'
+                              : 'bg-[#F8FAF8] border-slate-200/70 text-slate-500'
+                          }`}>
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-[10px] font-mono font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-white border border-slate-200 text-[#005F60]">
+                                  Step {m.step_number}
+                                </span>
+                                <h3 className="font-extrabold text-sm text-[#0F172A]">
+                                  {m.title}
+                                </h3>
+                              </div>
+
+                              <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border flex items-center space-x-1 ${
+                                isCompleted
+                                  ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                                  : isAvailable
+                                  ? 'bg-orange-100 text-[#F97316] border-orange-200'
+                                  : 'bg-slate-100 text-slate-500 border-slate-200'
+                              }`}>
+                                {isCompleted ? (
+                                  <>
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+                                    <span>Completed</span>
+                                  </>
+                                ) : isAvailable ? (
+                                  <>
+                                    <Clock className="w-3 h-3 text-[#F97316]" />
+                                    <span>Available</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Lock className="w-3 h-3 text-slate-400" />
+                                    <span>Locked</span>
+                                  </>
+                                )}
+                              </span>
+                            </div>
+
+                            <p className="text-xs text-slate-600 leading-relaxed">
+                              {m.description}
+                            </p>
+
+                            {m.key_action && (
+                              <div className="text-[11px] font-medium text-slate-500 bg-white/80 border border-slate-200/60 rounded-xl p-2.5 inline-block">
+                                <span className="font-bold text-[#005F60]">Key Action: </span>
+                                {m.key_action}
+                              </div>
+                            )}
+
+                            {/* Mark Complete CTA for AVAILABLE milestones */}
+                            {isAvailable && (
+                              <div className="pt-1">
+                                <button
+                                  onClick={() => handleCompleteMilestone(m.id)}
+                                  disabled={isCompleting}
+                                  className="bg-[#005F60] hover:bg-teal-800 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-xs inline-flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                                >
+                                  {isCompleting ? (
+                                    <>
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                      <span>Updating Progress...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Check className="w-3.5 h-3.5" />
+                                      <span>Mark Complete</span>
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+            </>
+          )}
 
         </main>
 
         {/* Footer */}
         <footer className="border-t border-slate-200/80 bg-white py-4 px-8 text-center text-xs text-slate-500 mt-8">
-          Udaan AI — My Career Roadmap Foundation
+          Udaan AI — Student Career Roadmap & Milestone Progress
         </footer>
       </div>
 

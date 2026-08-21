@@ -1,3 +1,3 @@
-from app.models.pathway import Pathway, PathwayOption, PathwayMilestone
+from app.models.pathway import Pathway, PathwayOption, PathwayMilestone, StudentGoal, StudentMilestoneProgress
 
-__all__ = ["Pathway", "PathwayOption", "PathwayMilestone"]
+__all__ = ["Pathway", "PathwayOption", "PathwayMilestone", "StudentGoal", "StudentMilestoneProgress"]

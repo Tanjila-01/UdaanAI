@@ -1,45 +1,31 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   Home, 
   Compass, 
   Sparkles, 
-  BookOpen, 
   Map, 
-  Target, 
-  Bookmark, 
-  FolderOpen, 
   LogOut, 
-  X, 
-  Clock
+  X 
 } from 'lucide-react';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
-  const [showComingNext, setShowComingNext] = useState(false);
-  const [comingNextTitle, setComingNextTitle] = useState('');
 
   const navItems = [
     { label: 'Udaan Trail Home', icon: Home, path: '/dashboard' },
     { label: 'Explore Pathways', icon: Compass, path: '/pathways' },
-    { label: 'Self-Discovery', icon: Sparkles, path: '#', feature: 'Skill & Interest Assessment', badge: 'Phase 4B' },
-    { label: 'Learning Modules', icon: BookOpen, path: '#', feature: 'Future Skills Learning Paths' },
+    { label: 'Aptitude Assessment', icon: Sparkles, path: '/assessment' },
     { label: 'My Career Roadmap', icon: Map, path: '/my-roadmap' },
-    { label: 'Student Goals', icon: Target, path: '#', feature: 'Goal Milestone Tracker' },
-    { label: 'Saved Careers', icon: Bookmark, path: '#', feature: 'Bookmarked Pathways' },
-    { label: 'Government Info', icon: FolderOpen, path: '#', feature: 'Karnataka Scholarship & Institution Info' },
   ];
 
-  const handleNavClick = (item) => {
-    if (item.path && item.path !== '#') {
-      navigate(item.path);
+  const handleNavClick = (path) => {
+    if (path) {
+      navigate(path);
       if (onClose) onClose();
-    } else if (item.feature) {
-      setComingNextTitle(item.feature);
-      setShowComingNext(true);
     }
   };
 
@@ -75,7 +61,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             </Link>
             <button 
               onClick={onClose}
-              className="lg:hidden text-slate-400 hover:text-slate-600 p-1"
+              className="lg:hidden text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -93,22 +79,15 @@ const Sidebar = ({ isOpen, onClose }) => {
                 <button
                   key={item.label}
                   type="button"
-                  onClick={() => handleNavClick(item)}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  onClick={() => handleNavClick(item.path)}
+                  className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     isSelected
                       ? 'bg-teal-50 text-[#005F60] border border-teal-200/80 shadow-2xs'
                       : 'text-slate-600 hover:bg-[#F8FAF8] hover:text-[#0F172A]'
                   }`}
                 >
-                  <div className="flex items-center space-x-3">
-                    <Icon className={`w-4 h-4 ${isSelected ? 'text-[#005F60]' : 'text-slate-400'}`} />
-                    <span>{item.label}</span>
-                  </div>
-                  {item.badge && (
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-orange-100 text-[#F97316] font-mono font-bold">
-                      {item.badge}
-                    </span>
-                  )}
+                  <Icon className={`w-4 h-4 ${isSelected ? 'text-[#005F60]' : 'text-slate-400'}`} />
+                  <span>{item.label}</span>
                 </button>
               );
             })}
@@ -131,32 +110,6 @@ const Sidebar = ({ isOpen, onClose }) => {
           </button>
         </div>
       </aside>
-
-      {/* Honest Coming Next Modal */}
-      {showComingNext && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-slate-200 shadow-2xl space-y-4 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-teal-50 text-[#005F60] border border-teal-200 flex items-center justify-center mx-auto">
-              <Clock className="w-6 h-6" />
-            </div>
-            <div className="space-y-1.5">
-              <span className="text-[10px] uppercase font-extrabold tracking-wider bg-orange-100 text-[#F97316] px-2 py-0.5 rounded">
-                Coming Next in Phase 4B
-              </span>
-              <h3 className="text-lg font-black text-[#0F172A]">{comingNextTitle}</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                This pathway exploration feature is actively scheduled for the next development sprint. Your authenticated student profile is complete and saved in PostgreSQL.
-              </p>
-            </div>
-            <button
-              onClick={() => setShowComingNext(false)}
-              className="w-full bg-[#005F60] hover:bg-teal-800 text-white font-extrabold py-2.5 rounded-xl text-xs transition-all shadow-md cursor-pointer"
-            >
-              Understand & Close
-            </button>
-          </div>
-        </div>
-      )}
     </>
   );
 };

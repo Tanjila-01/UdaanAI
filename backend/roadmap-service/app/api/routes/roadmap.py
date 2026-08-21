@@ -1,8 +1,11 @@
 from typing import Optional
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from app.db.session import get_db
+from app.core.security import get_current_user_claims
 from app.schemas.pathway import PathwayDetailResponse, PathwayListResponse
+from app.schemas.goal import CreateGoalRequest, StudentGoalResponse
 from app.services.roadmap_service import RoadmapService
 
 router = APIRouter(prefix="/roadmaps", tags=["Roadmaps"])
@@ -57,3 +60,74 @@ def get_pathway_detail(
             detail=f"Pathway '{pathway_id}' was not found.",
         )
     return PathwayDetailResponse.model_validate(pathway_orm)
+
+
+@router.post(
+    "/goals",
+    response_model=StudentGoalResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create or select active student career goal",
+    description="Sets a target pathway and option as the student's active career goal, initializing ordered milestone progress.",
+)
+def create_goal(
+    data: CreateGoalRequest,
+    claims: dict = Depends(get_current_user_claims),
+    db: Session = Depends(get_db),
+):
+    student_id_str = claims.get("sub")
+    try:
+        student_uuid = UUID(student_id_str)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid student identity claim")
+
+    return RoadmapService.create_or_update_student_goal(
+        db=db,
+        student_id=student_uuid,
+        pathway_id=data.pathway_id,
+        pathway_option_id=data.pathway_option_id,
+    )
+
+
+@router.get(
+    "/goals/me",
+    response_model=Optional[StudentGoalResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Get current active student career goal",
+    description="Retrieves the active career goal, assigned pathway, milestone checklist, and overall completion progress for the authenticated student.",
+)
+def get_my_goal(
+    claims: dict = Depends(get_current_user_claims),
+    db: Session = Depends(get_db),
+):
+    student_id_str = claims.get("sub")
+    try:
+        student_uuid = UUID(student_id_str)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid student identity claim")
+
+    return RoadmapService.get_active_student_goal(db=db, student_id=student_uuid)
+
+
+@router.patch(
+    "/goals/me/milestones/{milestone_id}",
+    response_model=StudentGoalResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Mark milestone complete and unlock next step",
+    description="Updates progress for an available milestone to COMPLETED, automatically unlocking the next milestone in sequence.",
+)
+def complete_milestone(
+    milestone_id: UUID,
+    claims: dict = Depends(get_current_user_claims),
+    db: Session = Depends(get_db),
+):
+    student_id_str = claims.get("sub")
+    try:
+        student_uuid = UUID(student_id_str)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid student identity claim")
+
+    return RoadmapService.complete_student_milestone(
+        db=db,
+        student_id=student_uuid,
+        milestone_id=milestone_id,
+    )
