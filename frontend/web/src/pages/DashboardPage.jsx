@@ -1,10 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
-import UdaanTrailHero from '../components/UdaanTrailHero';
-import UdaanTrailMilestones from '../components/UdaanTrailMilestones';
 import EditProfileDrawer from '../components/EditProfileDrawer';
 import { getMyLatestAssessmentResultApi, getMyStudentGoalApi } from '../api/client';
 import { 
@@ -14,380 +12,626 @@ import {
   Building2, 
   CheckCircle2,
   Edit3,
-  Clock,
   Map,
   Target,
   Sparkles,
-  RefreshCw,
-  AlertCircle,
-  Award,
   ArrowRight,
-  Compass
+  Compass,
+  Check,
+  Clock,
+  ChevronRight,
+  BookOpen
 } from 'lucide-react';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
-  const { user, profile, loading, refreshProfile } = useAuth();
+  const { user, profile, loading: profileLoading } = useAuth();
+  
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
-  const [latestAssessmentResult, setLatestAssessmentResult] = useState(null);
+
+  // Independent state management for API resiliency
+  const [assessmentResult, setAssessmentResult] = useState(null);
+  const [assessmentLoading, setAssessmentLoading] = useState(true);
+
   const [activeGoal, setActiveGoal] = useState(null);
+  const [goalLoading, setGoalLoading] = useState(true);
 
-  React.useEffect(() => {
-    getMyLatestAssessmentResultApi()
-      .then((res) => setLatestAssessmentResult(res))
-      .catch(() => setLatestAssessmentResult(null));
+  const loadAssessmentData = async () => {
+    setAssessmentLoading(true);
+    try {
+      const res = await getMyLatestAssessmentResultApi();
+      setAssessmentResult(res);
+    } catch (err) {
+      setAssessmentResult(null);
+    } finally {
+      setAssessmentLoading(false);
+    }
+  };
 
-    getMyStudentGoalApi()
-      .then((goal) => setActiveGoal(goal))
-      .catch(() => setActiveGoal(null));
+  const loadGoalData = async () => {
+    setGoalLoading(true);
+    try {
+      const goal = await getMyStudentGoalApi();
+      setActiveGoal(goal);
+    } catch (err) {
+      setActiveGoal(null);
+    } finally {
+      setGoalLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAssessmentData();
+    loadGoalData();
   }, []);
 
-  const handleAssessmentClick = () => {
-    navigate('/assessment');
+  // Time-of-day greeting helper
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
   };
 
+  // Student first name extraction
+  const fullName = profile?.full_name || user?.full_name || 'Student';
+  const firstName = fullName.trim().split(' ')[0] || 'Student';
 
-  const handleExploreClick = () => {
-    navigate('/pathways');
-  };
+  // Derived state flags
+  const isAssessmentComplete = Boolean(assessmentResult);
+  const isGoalSelected = Boolean(activeGoal);
+
+  // Compact Academic Context String
+  const academicContextStr = [
+    profile?.current_level || 'Class 10',
+    profile?.stream ? `${profile.stream} Stream` : null,
+    profile?.diploma_branch || null,
+    profile?.iti_trade || null,
+    profile?.state || 'Karnataka',
+  ].filter(Boolean).join(' • ');
 
   return (
     <div className="min-h-screen bg-[#F8FAF8] text-[#0F172A] flex font-sans selection:bg-[#005F60] selection:text-white">
-      {/* Left Navigation Sidebar */}
+      {/* Sidebar Navigation */}
       <Sidebar 
         isOpen={isSidebarOpen} 
         onClose={() => setIsSidebarOpen(false)} 
       />
 
-      {/* Main Content Area */}
+      {/* Main Content Viewport */}
       <div className="flex-1 lg:pl-64 flex flex-col min-w-0">
         
-        {/* Top Header */}
+        {/* Header Bar */}
         <Header 
           onMenuClick={() => setIsSidebarOpen(true)}
           onEditProfileClick={() => setIsEditDrawerOpen(true)}
         />
 
-        {/* Dashboard Content Container */}
-        <main className="p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-8 flex-1">
+        {/* Dashboard Main Container */}
+        <main className="p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6 flex-1">
           
-          {/* Skeleton Loader when Profile/User is Loading */}
-          {loading && (
-            <div className="bg-white border border-slate-200 rounded-3xl p-8 space-y-4 animate-pulse">
-              <div className="h-6 bg-slate-200 rounded w-1/3"></div>
-              <div className="h-32 bg-slate-100 rounded-2xl"></div>
-              <div className="h-20 bg-slate-100 rounded-2xl"></div>
-            </div>
-          )}
-
-          {/* Error Banner with Retry */}
-          {!loading && !profile && (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-amber-900">
-              <div className="flex items-center space-x-3">
-                <AlertCircle className="w-6 h-6 text-amber-600 flex-shrink-0" />
-                <div>
-                  <h3 className="font-extrabold text-sm">Academic Profile Pending</h3>
-                  <p className="text-xs text-amber-700 mt-0.5">Please complete your onboarding profile to view database records.</p>
-                </div>
-              </div>
-              <button
-                onClick={refreshProfile}
-                className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center space-x-1.5 transition-colors cursor-pointer"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Retry Fetch</span>
-              </button>
-            </div>
-          )}
-
-          {/* Signature Illustration-Led Udaan Trail Hero */}
-          <UdaanTrailHero 
-            onExploreClick={handleExploreClick}
-            onAssessmentClick={handleAssessmentClick}
-          />
-
-          {/* "THE UDAAN TRAIL" 6-Stage Journey System */}
-          <UdaanTrailMilestones 
-            onStageClick={(targetRoute) => {
-              if (targetRoute && targetRoute.startsWith('/')) {
-                navigate(targetRoute);
-              } else {
-                navigate('/my-roadmap');
-              }
-            }}
-          />
-
-          {/* Assessment Status Banner */}
-          <section className="bg-gradient-to-r from-teal-900 via-[#005F60] to-teal-950 text-white rounded-3xl p-6 sm:p-8 shadow-md border border-teal-700/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-            <div className="space-y-2">
-              <div className="inline-flex items-center space-x-1.5 text-[11px] font-extrabold uppercase tracking-widest text-teal-300 bg-teal-950/60 px-3 py-0.5 rounded-full border border-teal-700/60">
-                <Compass className="w-3.5 h-3.5 text-[#F97316]" />
-                <span>Career & Stream Aptitude Assessment</span>
-              </div>
-              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                {latestAssessmentResult
-                  ? `Match Found: ${latestAssessmentResult.primary_stream_recommendation}`
-                  : 'Discover Your Stream Aptitude & Match'}
-              </h2>
-              <p className="text-xs sm:text-sm text-teal-100/90 font-medium max-w-2xl leading-relaxed">
-                {latestAssessmentResult
-                  ? latestAssessmentResult.summary_text
-                  : 'Take our 10-question Karnataka SSLC & Pre-University assessment to discover your primary stream recommendation and target career roles.'}
-              </p>
-            </div>
-
-            <button
-              onClick={handleAssessmentClick}
-              className="bg-[#F97316] hover:bg-[#C2580E] text-white font-extrabold text-xs px-5 py-3 rounded-xl transition-all shadow-xs flex items-center space-x-2 shrink-0 cursor-pointer"
-            >
-              <span>{latestAssessmentResult ? 'View / Retake Assessment' : 'Take Assessment'}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </section>
-
-          {/* Active Career Goal Progress Section */}
-          {activeGoal ? (
-            <section className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 space-y-4 shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 gap-4">
-                <div>
-                  <div className="inline-flex items-center space-x-1.5 text-[10px] uppercase font-extrabold tracking-wider bg-orange-100 text-[#F97316] px-2.5 py-0.5 rounded-full border border-orange-200 mb-1">
-                    <Target className="w-3.5 h-3.5 text-[#F97316]" />
-                    <span>Your Active Career Goal</span>
-                  </div>
-                  <h2 className="text-xl font-black text-[#0F172A] tracking-tight">
-                    {activeGoal.goal_title}
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    Pathway: <span className="font-bold text-[#005F60]">{activeGoal.pathway_title}</span>
-                  </p>
+          {/* SECTION 1: WELCOME HEADER */}
+          <section className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-7 shadow-2xs space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="inline-flex items-center space-x-2 text-xs font-bold text-[#005F60] bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
+                  <GraduationCap className="w-3.5 h-3.5" />
+                  <span>{academicContextStr}</span>
                 </div>
 
-                <button
-                  onClick={() => navigate('/my-roadmap')}
-                  className="bg-[#005F60] hover:bg-teal-800 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-xs flex items-center space-x-2 shrink-0 cursor-pointer"
-                >
-                  <span>Continue Roadmap</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="space-y-1.5 pt-1">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-extrabold text-[#005F60]">
-                    Progress ({activeGoal.progress.completed} of {activeGoal.progress.total} Milestones Complete)
-                  </span>
-                  <span className="font-extrabold text-[#F97316]">
-                    {activeGoal.progress.percentage}%
-                  </span>
-                </div>
-                <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-200/80">
-                  <div 
-                    className="bg-gradient-to-r from-[#005F60] to-[#F97316] h-full rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(activeGoal.progress.percentage, 100)}%` }}
-                  ></div>
-                </div>
-              </div>
-            </section>
-          ) : (
-            <section className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs">
-              <div className="space-y-1 text-center sm:text-left">
-                <div className="inline-flex items-center space-x-1 text-[10px] font-extrabold text-[#F97316] bg-orange-50 px-2 py-0.5 rounded border border-orange-200">
-                  <Target className="w-3 h-3" />
-                  <span>Choose Your Target Goal</span>
-                </div>
-                <h3 className="text-lg font-black text-[#0F172A]">No Active Career Goal Set</h3>
-                <p className="text-xs text-slate-500">
-                  Explore pathways and choose the direction you want to pursue to unlock your milestone tracker.
+                <h1 className="text-2xl sm:text-3xl font-black text-[#0F172A] tracking-tight">
+                  {getGreeting()}, <span className="text-[#005F60]">{firstName}</span>
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-500 font-medium">
+                  Here's what you can work on today.
                 </p>
               </div>
 
               <button
-                onClick={() => navigate('/pathways')}
-                className="bg-[#005F60] hover:bg-teal-800 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-xs flex items-center space-x-2 shrink-0 cursor-pointer"
+                type="button"
+                onClick={() => setIsEditDrawerOpen(true)}
+                className="inline-flex items-center space-x-1.5 bg-[#F8FAF8] hover:bg-teal-50 text-slate-700 hover:text-[#005F60] border border-slate-200 hover:border-teal-200 font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition-all self-start sm:self-auto cursor-pointer"
               >
-                <span>Explore Pathways</span>
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Edit profile</span>
+              </button>
+            </div>
+          </section>
+
+          {/* SECTION 2: PRIMARY FOCUS / YOUR NEXT STEP BANNER */}
+          <section className="bg-gradient-to-r from-teal-900 via-[#005F60] to-teal-950 text-white rounded-2xl p-6 sm:p-8 shadow-md border border-teal-800/60 relative overflow-hidden">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative z-10">
+              <div className="space-y-2 max-w-2xl">
+                <div className="inline-flex items-center space-x-1.5 text-[10px] font-black uppercase tracking-widest text-teal-300 bg-teal-950/70 px-3 py-0.5 rounded-full border border-teal-700/60">
+                  <Sparkles className="w-3 h-3 text-[#F97316]" />
+                  <span>Your next step</span>
+                </div>
+
+                {!isAssessmentComplete ? (
+                  <>
+                    <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                      Discover your strengths
+                    </h2>
+                    <p className="text-xs sm:text-sm text-teal-100/90 font-medium leading-relaxed">
+                      Take a short assessment to understand the subjects, activities and career areas that may suit you.
+                    </p>
+                  </>
+                ) : !isGoalSelected ? (
+                  <>
+                    <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                      Explore options that fit you
+                    </h2>
+                    <p className="text-xs sm:text-sm text-teal-100/90 font-medium leading-relaxed">
+                      Based on your assessment responses showing alignment with <span className="font-extrabold text-white underline decoration-[#F97316]">{assessmentResult.primary_stream_recommendation}</span>, explore pathways that match your goals.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                      Keep moving toward your goal
+                    </h2>
+                    <p className="text-xs sm:text-sm text-teal-100/90 font-medium leading-relaxed">
+                      You are currently working toward <span className="font-extrabold text-white underline decoration-[#F97316]">{activeGoal.goal_title}</span>. Continue with your next milestone.
+                    </p>
+                  </>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isAssessmentComplete) navigate('/assessment');
+                  else if (!isGoalSelected) navigate('/pathways');
+                  else navigate('/my-roadmap');
+                }}
+                className="bg-[#F97316] hover:bg-orange-500 text-white font-black text-xs px-6 py-3.5 rounded-xl transition-all shadow-md flex items-center space-x-2 shrink-0 cursor-pointer"
+              >
+                <span>
+                  {!isAssessmentComplete ? 'Start assessment' : !isGoalSelected ? 'Explore pathways' : 'Continue your plan'}
+                </span>
                 <ArrowRight className="w-4 h-4" />
               </button>
-            </section>
-          )}
+            </div>
+          </section>
 
-          {/* Student Profile Summary — Structured Rows Layout (NO Card Overload) */}
-          <section className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xs">
-
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-5 gap-4">
-              <div>
-                <div className="inline-flex items-center space-x-1.5 text-[11px] font-extrabold text-[#005F60] bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200 mb-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Authenticated Database Record</span>
-                </div>
-                <h2 className="text-xl font-black text-[#0F172A] tracking-tight flex items-center space-x-2">
-                  <UserCheck className="w-5 h-5 text-[#005F60]" />
-                  <span>Student Academic Profile Summary</span>
-                </h2>
-                <p className="text-xs text-slate-500">Verified Karnataka Education Details from PostgreSQL DB</p>
-              </div>
-
-              <div className="flex items-center space-x-4">
-                <div className="text-right">
-                  <span className="text-[11px] text-slate-500 font-medium block">Profile Status</span>
-                  <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full inline-block mt-0.5">
-                    {profile?.completion_percentage || 100}% Complete
-                  </span>
-                </div>
-                <button
-                  onClick={() => setIsEditDrawerOpen(true)}
-                  className="bg-[#005F60] hover:bg-teal-800 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all shadow-xs flex items-center space-x-1.5 cursor-pointer"
-                >
-                  <Edit3 className="w-3.5 h-3.5" />
-                  <span>Edit Profile</span>
-                </button>
-              </div>
+          {/* SECTION 3: YOUR PROGRESS OVERVIEW */}
+          <section className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-xs font-black uppercase tracking-wider text-[#005F60] flex items-center space-x-1.5">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Your progress</span>
+              </h3>
             </div>
 
-            {/* Structured Information Rows (Low contrast dividers, ample space) */}
-            <div className="divide-y divide-slate-100 text-xs sm:text-sm">
-              <div className="py-3.5 sm:py-4 grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
-                <span className="text-slate-500 font-medium">Student Full Name</span>
-                <span className="sm:col-span-2 font-black text-[#0F172A]">{profile?.full_name || user?.full_name || 'N/A'}</span>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-xs">
+              {/* Profile Status */}
+              <div className="bg-[#F8FAF8] border border-slate-200/70 rounded-xl p-3 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Profile</span>
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-[#0F172A]">Academic Info</span>
+                  <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full flex items-center space-x-1">
+                    <Check className="w-3 h-3" />
+                    <span>Complete</span>
+                  </span>
+                </div>
               </div>
 
-              <div className="py-3.5 sm:py-4 grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
-                <span className="text-slate-500 font-medium">Education Level & Year</span>
-                <span className="sm:col-span-2 font-black text-[#005F60] flex items-center space-x-2">
+              {/* Assessment Status */}
+              <div className="bg-[#F8FAF8] border border-slate-200/70 rounded-xl p-3 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Assessment</span>
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-[#0F172A]">Aptitude Test</span>
+                  {isAssessmentComplete ? (
+                    <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full flex items-center space-x-1">
+                      <Check className="w-3 h-3" />
+                      <span>Completed</span>
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-extrabold text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-full">
+                      Not completed
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Direction / Insights Status */}
+              <div className="bg-[#F8FAF8] border border-slate-200/70 rounded-xl p-3 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Career options</span>
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-[#0F172A]">Insights</span>
+                  {isAssessmentComplete ? (
+                    <span className="text-[10px] font-extrabold text-teal-800 bg-teal-100/80 px-2 py-0.5 rounded-full">
+                      Career insights available
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-slate-400 bg-slate-200/60 px-2 py-0.5 rounded-full">
+                      Locked
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Goal Status */}
+              <div className="bg-[#F8FAF8] border border-slate-200/70 rounded-xl p-3 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Goal</span>
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-[#0F172A]">Target Track</span>
+                  {isGoalSelected ? (
+                    <span className="text-[10px] font-extrabold text-teal-800 bg-teal-100/80 px-2 py-0.5 rounded-full">
+                      Selected
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-slate-500 bg-slate-200/60 px-2 py-0.5 rounded-full">
+                      Not selected
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Plan / Roadmap Status */}
+              <div className="bg-[#F8FAF8] border border-slate-200/70 rounded-xl p-3 space-y-1 col-span-2 sm:col-span-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Plan</span>
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-[#0F172A]">Roadmap</span>
+                  {isGoalSelected ? (
+                    <span className="text-[10px] font-extrabold text-orange-800 bg-orange-100/80 px-2 py-0.5 rounded-full">
+                      In progress ({activeGoal?.progress?.percentage}%)
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-slate-400 bg-slate-200/60 px-2 py-0.5 rounded-full">
+                      Not started
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* SECTION 4: YOUR STRENGTHS & INTERESTS (CAREER INSIGHTS) */}
+          <section className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 space-y-5 shadow-2xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 gap-2">
+              <div>
+                <div className="inline-flex items-center space-x-1.5 text-[10px] font-black uppercase tracking-wider bg-teal-50 text-[#005F60] px-2.5 py-0.5 rounded-full border border-teal-200 mb-1">
+                  <Compass className="w-3.5 h-3.5" />
+                  <span>Exploration Guidance</span>
+                </div>
+                <h3 className="text-lg font-black text-[#0F172A] tracking-tight">
+                  Your strengths & interests
+                </h3>
+              </div>
+
+              {isAssessmentComplete && (
+                <button
+                  type="button"
+                  onClick={() => navigate('/pathways')}
+                  className="inline-flex items-center space-x-1.5 text-xs font-extrabold text-[#005F60] hover:underline self-start sm:self-auto cursor-pointer"
+                >
+                  <span>Explore options</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Assessment Loading Skeleton */}
+            {assessmentLoading && (
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-3 animate-pulse">
+                <div className="h-4 bg-slate-200 rounded w-1/3"></div>
+                <div className="h-10 bg-slate-200/60 rounded-xl"></div>
+              </div>
+            )}
+
+            {/* Assessment Completed Screen */}
+            {!assessmentLoading && assessmentResult && (
+              <div className="bg-[#F8FAF8] border border-teal-200/80 rounded-2xl p-5 sm:p-6 space-y-4">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-bold text-slate-600">Primary Direction:</span>
+                    <span className="text-xs font-black text-[#005F60] bg-teal-100/90 border border-teal-300/80 px-3 py-1 rounded-xl">
+                      Your responses show strong alignment with {assessmentResult.primary_stream_recommendation} pathways
+                    </span>
+                  </div>
+
+                  {assessmentResult.top_career_match && (
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <span className="text-xs font-bold text-slate-600">Suggested Career Area:</span>
+                      <span className="text-xs font-extrabold text-[#F97316] bg-orange-50 border border-orange-200 px-3 py-0.5 rounded-full">
+                        {assessmentResult.top_career_match}
+                      </span>
+                      {assessmentResult.secondary_stream_recommendation && (
+                        <span className="text-xs text-slate-500 font-medium">
+                          (Secondary: {assessmentResult.secondary_stream_recommendation})
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                  {assessmentResult.summary_text || 'These results suggest areas you may want to explore further based on your assessment responses.'}
+                </p>
+
+                <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs">
+                  <span className="text-[11px] text-slate-400 font-medium italic">
+                    These results are guidance tools to explore options, not fixed career decisions.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/assessment')}
+                    className="text-[#005F60] hover:underline font-bold text-xs cursor-pointer"
+                  >
+                    Retake assessment
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Assessment Incomplete Banner */}
+            {!assessmentLoading && !assessmentResult && (
+              <div className="bg-amber-50/60 border border-amber-200/80 rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-amber-950">
+                <div className="space-y-1 text-center sm:text-left">
+                  <h4 className="font-extrabold text-sm text-amber-900">Discover what fits you</h4>
+                  <p className="text-xs text-amber-800/90 max-w-xl">
+                    Take our short assessment to discover subjects and career areas aligned with your interests and academic background.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/assessment')}
+                  className="bg-[#005F60] hover:bg-teal-800 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-xs shrink-0 cursor-pointer"
+                >
+                  Discover your strengths
+                </button>
+              </div>
+            )}
+          </section>
+
+          {/* SECTION 5: YOUR CAREER PLAN */}
+          <section className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 space-y-5 shadow-2xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 gap-2">
+              <div>
+                <div className="inline-flex items-center space-x-1.5 text-[10px] font-black uppercase tracking-wider bg-orange-50 text-[#F97316] px-2.5 py-0.5 rounded-full border border-orange-200 mb-1">
+                  <Target className="w-3.5 h-3.5" />
+                  <span>Target Goal</span>
+                </div>
+                <h3 className="text-lg font-black text-[#0F172A] tracking-tight">
+                  {isGoalSelected ? 'Your career plan' : 'Choose a career direction'}
+                </h3>
+              </div>
+
+              {isGoalSelected && (
+                <button
+                  type="button"
+                  onClick={() => navigate('/my-roadmap')}
+                  className="inline-flex items-center space-x-1.5 text-xs font-extrabold text-[#005F60] hover:underline self-start sm:self-auto cursor-pointer"
+                >
+                  <span>View full plan</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Goal Loading Skeleton */}
+            {goalLoading && (
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-3 animate-pulse">
+                <div className="h-4 bg-slate-200 rounded w-1/4"></div>
+                <div className="h-10 bg-slate-200/60 rounded-xl"></div>
+              </div>
+            )}
+
+            {/* Active Goal State */}
+            {!goalLoading && activeGoal && (
+              <div className="bg-[#F8FAF8] border border-slate-200/80 rounded-2xl p-5 sm:p-6 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Goal</span>
+                    <h4 className="text-base font-black text-[#0F172A]">{activeGoal.goal_title}</h4>
+                    <p className="text-xs text-slate-500">
+                      Pathway: <span className="font-bold text-[#005F60]">{activeGoal.pathway_title}</span>
+                    </p>
+                  </div>
+
+                  <span className="text-xs font-black text-[#F97316] bg-orange-100/80 px-3 py-1 rounded-full border border-orange-200/80 self-start sm:self-auto">
+                    {activeGoal.progress.completed} of {activeGoal.progress.total} Milestones Complete ({activeGoal.progress.percentage}%)
+                  </span>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="space-y-1">
+                  <div className="w-full bg-slate-200/80 rounded-full h-2.5 overflow-hidden border border-slate-300/40">
+                    <div 
+                      className="bg-gradient-to-r from-[#005F60] to-[#F97316] h-full rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(activeGoal.progress.percentage, 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="text-xs text-slate-600">
+                    <span className="font-bold text-[#005F60]">Next milestone: </span>
+                    <span>
+                      {activeGoal.milestones?.find(m => m.status === 'AVAILABLE')?.title || 'Check roadmap for next step'}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => navigate('/my-roadmap')}
+                    className="bg-[#005F60] hover:bg-teal-800 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-xs flex items-center justify-center space-x-1.5 self-start sm:self-auto cursor-pointer"
+                  >
+                    <span>Continue your plan</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* No Active Goal Empty State */}
+            {!goalLoading && !activeGoal && (
+              <div className="bg-[#F8FAF8] border border-slate-200/80 rounded-2xl p-6 text-center space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-orange-50 text-[#F97316] border border-orange-200 flex items-center justify-center mx-auto">
+                  <Target className="w-5 h-5" />
+                </div>
+                <div className="space-y-1 max-w-md mx-auto">
+                  <h4 className="font-extrabold text-sm text-[#0F172A]">You haven't selected a career goal yet</h4>
+                  <p className="text-xs text-slate-500">
+                    Explore education and career pathways based on your interests and academic background.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate('/pathways')}
+                  className="bg-[#005F60] hover:bg-teal-800 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-xs inline-flex items-center space-x-1.5 cursor-pointer"
+                >
+                  <Compass className="w-4 h-4" />
+                  <span>Explore pathways</span>
+                </button>
+              </div>
+            )}
+          </section>
+
+          {/* SECTION 6: QUICK ACTIONS */}
+          <section className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs space-y-3">
+            <div className="border-b border-slate-100 pb-3">
+              <h3 className="text-xs font-black uppercase tracking-wider text-[#005F60]">
+                Quick actions
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <button
+                type="button"
+                onClick={() => navigate('/assessment')}
+                className="p-3.5 rounded-xl border border-slate-200 hover:border-teal-300 bg-[#F8FAF8] hover:bg-teal-50/50 flex items-center justify-between text-slate-700 font-extrabold transition-all group cursor-pointer"
+              >
+                <div className="flex items-center space-x-2.5">
+                  <Sparkles className="w-4 h-4 text-[#005F60]" />
+                  <span>Discover your strengths</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#005F60] transition-colors" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate('/pathways')}
+                className="p-3.5 rounded-xl border border-slate-200 hover:border-teal-300 bg-[#F8FAF8] hover:bg-teal-50/50 flex items-center justify-between text-slate-700 font-extrabold transition-all group cursor-pointer"
+              >
+                <div className="flex items-center space-x-2.5">
+                  <Compass className="w-4 h-4 text-[#005F60]" />
+                  <span>Explore pathways</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#005F60] transition-colors" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate('/my-roadmap')}
+                className="p-3.5 rounded-xl border border-slate-200 hover:border-teal-300 bg-[#F8FAF8] hover:bg-teal-50/50 flex items-center justify-between text-slate-700 font-extrabold transition-all group cursor-pointer"
+              >
+                <div className="flex items-center space-x-2.5">
+                  <Map className="w-4 h-4 text-[#005F60]" />
+                  <span>View my plan</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#005F60] transition-colors" />
+              </button>
+            </div>
+          </section>
+
+          {/* SECTION 7: ACADEMIC PROFILE */}
+          <section className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 space-y-5 shadow-2xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 gap-2">
+              <div>
+                <div className="inline-flex items-center space-x-1.5 text-[10px] font-black uppercase tracking-wider bg-teal-50 text-[#005F60] px-2.5 py-0.5 rounded-full border border-teal-200 mb-1">
+                  <UserCheck className="w-3.5 h-3.5" />
+                  <span>Academic details</span>
+                </div>
+                <h3 className="text-lg font-black text-[#0F172A] tracking-tight">
+                  Your academic profile
+                </h3>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsEditDrawerOpen(true)}
+                className="inline-flex items-center space-x-1 bg-[#F8FAF8] hover:bg-teal-50 text-slate-700 hover:text-[#005F60] border border-slate-200 font-extrabold text-xs px-3.5 py-2 rounded-xl transition-all self-start sm:self-auto cursor-pointer"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Edit profile</span>
+              </button>
+            </div>
+
+            {/* Profile Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+              <div className="p-3.5 bg-[#F8FAF8] border border-slate-200/70 rounded-xl space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Student name</span>
+                <span className="font-black text-[#0F172A] text-sm block">
+                  {profile?.full_name || user?.full_name || 'N/A'}
+                </span>
+              </div>
+
+              <div className="p-3.5 bg-[#F8FAF8] border border-slate-200/70 rounded-xl space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Education level & year</span>
+                <span className="font-black text-[#005F60] text-sm block flex items-center space-x-1.5">
                   <GraduationCap className="w-4 h-4 text-[#005F60]" />
                   <span>{profile?.current_level || 'Class 10'} ({profile?.class_or_year || '10th Standard'})</span>
                 </span>
               </div>
 
               {profile?.stream && (
-                <div className="py-3.5 sm:py-4 grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
-                  <span className="text-slate-500 font-medium">PUC Academic Stream</span>
-                  <span className="sm:col-span-2 font-extrabold text-[#F97316] bg-orange-50 border border-orange-200 px-3 py-1 rounded-xl inline-block w-fit">
+                <div className="p-3.5 bg-[#F8FAF8] border border-slate-200/70 rounded-xl space-y-1">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">PUC stream</span>
+                  <span className="font-black text-[#F97316] text-sm block">
                     {profile.stream} Stream
                   </span>
                 </div>
               )}
 
               {profile?.diploma_branch && (
-                <div className="py-3.5 sm:py-4 grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
-                  <span className="text-slate-500 font-medium">Diploma Branch</span>
-                  <span className="sm:col-span-2 font-black text-[#0F172A]">{profile.diploma_branch}</span>
+                <div className="p-3.5 bg-[#F8FAF8] border border-slate-200/70 rounded-xl space-y-1">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Diploma branch</span>
+                  <span className="font-black text-[#0F172A] text-sm block">
+                    {profile.diploma_branch}
+                  </span>
                 </div>
               )}
 
               {profile?.iti_trade && (
-                <div className="py-3.5 sm:py-4 grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
-                  <span className="text-slate-500 font-medium">ITI Trade</span>
-                  <span className="sm:col-span-2 font-black text-[#0F172A]">{profile.iti_trade}</span>
+                <div className="p-3.5 bg-[#F8FAF8] border border-slate-200/70 rounded-xl space-y-1">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">ITI trade</span>
+                  <span className="font-black text-[#0F172A] text-sm block">
+                    {profile.iti_trade}
+                  </span>
                 </div>
               )}
 
-              <div className="py-3.5 sm:py-4 grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
-                <span className="text-slate-500 font-medium">Education Board / Authority</span>
-                <span className="sm:col-span-2 font-black text-[#0F172A]">{profile?.board || 'Karnataka State Board (SSLC)'}</span>
-              </div>
-
-              <div className="py-3.5 sm:py-4 grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
-                <span className="text-slate-500 font-medium">School / College Name</span>
-                <span className="sm:col-span-2 font-black text-[#0F172A] flex items-center space-x-2">
-                  <Building2 className="w-4 h-4 text-slate-400" />
-                  <span>{profile?.institution_name || 'Government High School'}</span>
+              <div className="p-3.5 bg-[#F8FAF8] border border-slate-200/70 rounded-xl space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Education board</span>
+                <span className="font-extrabold text-[#0F172A] text-xs block">
+                  {profile?.board || 'Karnataka State Board (SSLC)'}
                 </span>
               </div>
 
-              <div className="py-3.5 sm:py-4 grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
-                <span className="text-slate-500 font-medium">District & State</span>
-                <span className="sm:col-span-2 font-black text-[#0F172A] flex items-center space-x-2">
-                  <MapPin className="w-4 h-4 text-[#005F60]" />
+              <div className="p-3.5 bg-[#F8FAF8] border border-slate-200/70 rounded-xl space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">School / College</span>
+                <span className="font-extrabold text-[#0F172A] text-xs block flex items-center space-x-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span className="truncate">{profile?.institution_name || 'Government High School'}</span>
+                </span>
+              </div>
+
+              <div className="p-3.5 bg-[#F8FAF8] border border-slate-200/70 rounded-xl space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">District & State</span>
+                <span className="font-extrabold text-[#0F172A] text-xs block flex items-center space-x-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-[#005F60] shrink-0" />
                   <span>{profile?.district || 'Bengaluru Urban'}, {profile?.state || 'Karnataka'}</span>
                 </span>
               </div>
 
-              <div className="py-3.5 sm:py-4 grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
-                <span className="text-slate-500 font-medium">Preferred Language</span>
-                <span className="sm:col-span-2 font-black text-[#0F172A]">{profile?.preferred_language || 'English'}</span>
-              </div>
-            </div>
-          </section>
-
-          {/* Active Udaan Feature Modules */}
-          <section className="space-y-4">
-            <div>
-              <h2 className="text-xl font-black text-[#0F172A] tracking-tight">
-                Quick Actions & Career Tools
-              </h2>
-              <p className="text-xs text-slate-500">
-                Direct access to your aptitude assessment, pathway catalog, and personalized career roadmap.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Assessment Card */}
-              <div 
-                onClick={() => navigate('/assessment')}
-                className="bg-white border border-teal-200/80 hover:border-[#005F60] rounded-3xl p-6 space-y-3 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all cursor-pointer group"
-              >
-                <div className="space-y-3">
-                  <div className="w-10 h-10 rounded-2xl bg-teal-50 text-[#005F60] border border-teal-200 flex items-center justify-center group-hover:scale-105 transition-transform">
-                    <Sparkles className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-sm font-black text-[#0F172A] group-hover:text-[#005F60]">Aptitude & Stream Assessment</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    10-question SSLC & PUC aptitude evaluation to discover your primary stream recommendation.
-                  </p>
-                </div>
-                <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="text-[10px] font-extrabold text-[#005F60] bg-teal-50 border border-teal-200 px-2 py-0.5 rounded">
-                    Active Module
-                  </span>
-                  <span className="text-[#005F60] font-bold group-hover:underline">Take Assessment →</span>
-                </div>
-              </div>
-
-              {/* Personal Roadmap Explorer Card */}
-              <div 
-                onClick={() => navigate('/pathways')}
-                className="bg-white border border-teal-200/80 hover:border-[#005F60] rounded-3xl p-6 space-y-3 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all cursor-pointer group"
-              >
-                <div className="space-y-3">
-                  <div className="w-10 h-10 rounded-2xl bg-teal-50 text-[#005F60] border border-teal-200 flex items-center justify-center group-hover:scale-105 transition-transform">
-                    <Map className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-sm font-black text-[#0F172A] group-hover:text-[#005F60]">Personalized Pathway Map</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Explore detailed step-by-step post-Class 10, PUC, Diploma, and ITI action plans tailored to your profile.
-                  </p>
-                </div>
-                <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="text-[10px] font-extrabold text-[#005F60] bg-teal-50 border border-teal-200 px-2 py-0.5 rounded">
-                    Active Module
-                  </span>
-                  <span className="text-[#005F60] font-bold group-hover:underline">Explore Pathways →</span>
-                </div>
-              </div>
-
-              {/* Goals & Milestones Card */}
-              <div 
-                onClick={() => navigate('/my-roadmap')}
-                className="bg-white border border-teal-200/80 hover:border-[#005F60] rounded-3xl p-6 space-y-3 flex flex-col justify-between shadow-2xs hover:shadow-md transition-all cursor-pointer group"
-              >
-                <div className="space-y-3">
-                  <div className="w-10 h-10 rounded-2xl bg-teal-50 text-[#005F60] border border-teal-200 flex items-center justify-center group-hover:scale-105 transition-transform">
-                    <Target className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-sm font-black text-[#0F172A] group-hover:text-[#005F60]">Career Goals & Milestones</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Track persisted active career goals and step-by-step milestone progress in PostgreSQL.
-                  </p>
-                </div>
-                <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="text-[10px] font-extrabold text-[#005F60] bg-teal-50 border border-teal-200 px-2 py-0.5 rounded">
-                    Active Module
-                  </span>
-                  <span className="text-[#005F60] font-bold group-hover:underline">My Roadmap →</span>
-                </div>
+              <div className="p-3.5 bg-[#F8FAF8] border border-slate-200/70 rounded-xl space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Preferred language</span>
+                <span className="font-extrabold text-[#0F172A] text-xs block">
+                  {profile?.preferred_language || 'English'}
+                </span>
               </div>
             </div>
           </section>
@@ -396,7 +640,7 @@ const DashboardPage = () => {
 
         {/* Footer */}
         <footer className="border-t border-slate-200/80 bg-white py-4 px-8 text-center text-xs text-slate-500">
-          Udaan AI — The Udaan Trail for Karnataka Students
+          Udaan AI — Student Career Guidance Dashboard
         </footer>
 
       </div>
