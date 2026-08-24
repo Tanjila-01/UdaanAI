@@ -29,6 +29,8 @@ class RoadmapService:
             if level_clean in ["Class 8", "Class 9"]:
                 # For middle school students (Class 8/9), include both current level & Class 10 SSLC choices
                 query = query.filter(Pathway.education_level.in_([level_clean, "Class 10"]))
+            elif level_clean in ["PUC", "PUC 1", "PUC 2"]:
+                query = query.filter(Pathway.education_level.in_(["PUC", "PUC 1", "PUC 2"]))
             else:
                 query = query.filter(Pathway.education_level == level_clean)
 

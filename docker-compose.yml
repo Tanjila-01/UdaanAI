@@ -128,6 +128,8 @@ services:
       PORT: 8005
       DATABASE_URL: "postgresql://${POSTGRES_USER:-udaan_user}:${POSTGRES_PASSWORD:-change_me_in_dev}@postgres:5432/${POSTGRES_DB:-udaan_ai}"
       DB_SCHEMA: "roadmap"
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY:-dev_secret_key_udaan_ai_phase2_change_in_prod}"
+      JWT_ALGORITHM: "${JWT_ALGORITHM:-HS256}"
     ports:
       - "8005:8005"
     depends_on:

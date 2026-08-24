@@ -16,9 +16,9 @@ const Sidebar = ({ isOpen, onClose }) => {
   const { logout } = useAuth();
 
   const navItems = [
-    { label: 'Udaan Trail Home', icon: Home, path: '/dashboard' },
+    { label: 'Dashboard', icon: Home, path: '/dashboard' },
+    { label: 'Career Discovery Assessment', icon: Sparkles, path: '/assessment' },
     { label: 'Explore Pathways', icon: Compass, path: '/pathways' },
-    { label: 'Aptitude Assessment', icon: Sparkles, path: '/assessment' },
     { label: 'My Career Roadmap', icon: Map, path: '/my-roadmap' },
   ];
 
@@ -55,7 +55,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                   Udaan AI
                 </span>
                 <span className="text-[10px] text-[#005F60] font-extrabold uppercase tracking-wider block">
-                  The Udaan Trail
+                  Karnataka Student Edition
                 </span>
               </div>
             </Link>

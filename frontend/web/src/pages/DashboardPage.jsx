@@ -18,9 +18,7 @@ import {
   ArrowRight,
   Compass,
   Check,
-  Clock,
-  ChevronRight,
-  BookOpen
+  ChevronRight
 } from 'lucide-react';
 
 const DashboardPage = () => {
@@ -81,6 +79,7 @@ const DashboardPage = () => {
   // Derived state flags
   const isAssessmentComplete = Boolean(assessmentResult);
   const isGoalSelected = Boolean(activeGoal);
+  const isRoadmapStarted = isGoalSelected && (activeGoal?.progress?.completed > 0);
 
   // Compact Academic Context String
   const academicContextStr = [
@@ -90,6 +89,21 @@ const DashboardPage = () => {
     profile?.iti_trade || null,
     profile?.state || 'Karnataka',
   ].filter(Boolean).join(' • ');
+
+  // Helper to find the strongest dimension
+  const getStrongestDimension = (scores) => {
+    if (!scores || typeof scores !== 'object') return null;
+    let maxDim = null;
+    let maxScore = -Infinity;
+    for (const [dim, val] of Object.entries(scores)) {
+      if (val > maxScore) {
+        maxScore = val;
+        maxDim = dim;
+      }
+    }
+    if (!maxDim) return null;
+    return maxDim.charAt(0).toUpperCase() + maxDim.slice(1);
+  };
 
   return (
     <div className="min-h-screen bg-[#F8FAF8] text-[#0F172A] flex font-sans selection:bg-[#005F60] selection:text-white">
@@ -109,11 +123,11 @@ const DashboardPage = () => {
         />
 
         {/* Dashboard Main Container */}
-        <main className="p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6 flex-1">
+        <main className="p-4 sm:p-6 md:p-8 max-w-5xl w-full mx-auto space-y-6 flex-1">
           
           {/* SECTION 1: WELCOME HEADER */}
-          <section className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-7 shadow-2xs space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <section className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs">
+            <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <div className="inline-flex items-center space-x-2 text-xs font-bold text-[#005F60] bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
                   <GraduationCap className="w-3.5 h-3.5" />
@@ -127,15 +141,6 @@ const DashboardPage = () => {
                   Here's what you can work on today.
                 </p>
               </div>
-
-              <button
-                type="button"
-                onClick={() => setIsEditDrawerOpen(true)}
-                className="inline-flex items-center space-x-1.5 bg-[#F8FAF8] hover:bg-teal-50 text-slate-700 hover:text-[#005F60] border border-slate-200 hover:border-teal-200 font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition-all self-start sm:self-auto cursor-pointer"
-              >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>Edit profile</span>
-              </button>
             </div>
           </section>
 
@@ -151,10 +156,10 @@ const DashboardPage = () => {
                 {!isAssessmentComplete ? (
                   <>
                     <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                      Discover your strengths
+                      Discover your strengths and interests
                     </h2>
                     <p className="text-xs sm:text-sm text-teal-100/90 font-medium leading-relaxed">
-                      Take a short assessment to understand the subjects, activities and career areas that may suit you.
+                      Complete your Career Discovery Assessment to understand which education and career directions may suit you.
                     </p>
                   </>
                 ) : !isGoalSelected ? (
@@ -163,16 +168,25 @@ const DashboardPage = () => {
                       Explore options that fit you
                     </h2>
                     <p className="text-xs sm:text-sm text-teal-100/90 font-medium leading-relaxed">
-                      Based on your assessment responses showing alignment with <span className="font-extrabold text-white underline decoration-[#F97316]">{assessmentResult.primary_stream_recommendation}</span>, explore pathways that match your goals.
+                      Your assessment shows strong alignment with <span className="font-extrabold text-white underline decoration-[#F97316]">{assessmentResult.primary_stream_recommendation}</span>. Explore pathways that match your interests and goals.
+                    </p>
+                  </>
+                ) : !isRoadmapStarted ? (
+                  <>
+                    <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                      Build your career roadmap
+                    </h2>
+                    <p className="text-xs sm:text-sm text-teal-100/90 font-medium leading-relaxed">
+                      Your active goal: <span className="font-extrabold text-white underline decoration-[#F97316]">{activeGoal.goal_title}</span>
                     </p>
                   </>
                 ) : (
                   <>
                     <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                      Keep moving toward your goal
+                      Continue your roadmap
                     </h2>
                     <p className="text-xs sm:text-sm text-teal-100/90 font-medium leading-relaxed">
-                      You are currently working toward <span className="font-extrabold text-white underline decoration-[#F97316]">{activeGoal.goal_title}</span>. Continue with your next milestone.
+                      Continue working through the milestones for your selected goal.
                     </p>
                   </>
                 )}
@@ -181,136 +195,130 @@ const DashboardPage = () => {
               <button
                 type="button"
                 onClick={() => {
-                  if (!isAssessmentComplete) navigate('/assessment');
+                  if (!isAssessmentComplete) navigate('/assessment?mode=take');
                   else if (!isGoalSelected) navigate('/pathways');
                   else navigate('/my-roadmap');
                 }}
                 className="bg-[#F97316] hover:bg-orange-500 text-white font-black text-xs px-6 py-3.5 rounded-xl transition-all shadow-md flex items-center space-x-2 shrink-0 cursor-pointer"
               >
                 <span>
-                  {!isAssessmentComplete ? 'Start assessment' : !isGoalSelected ? 'Explore pathways' : 'Continue your plan'}
+                  {!isAssessmentComplete ? 'Start Assessment →' : !isGoalSelected ? 'Explore Pathways →' : !isRoadmapStarted ? 'View My Roadmap →' : 'Continue Roadmap →'}
                 </span>
-                <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           </section>
 
           {/* SECTION 3: YOUR PROGRESS OVERVIEW */}
-          <section className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs space-y-3">
+          <section className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-xs font-black uppercase tracking-wider text-[#005F60] flex items-center space-x-1.5">
                 <CheckCircle2 className="w-4 h-4" />
-                <span>Your progress</span>
+                <span>Your Progress</span>
               </h3>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-xs">
-              {/* Profile Status */}
-              <div className="bg-[#F8FAF8] border border-slate-200/70 rounded-xl p-3 space-y-1">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Profile</span>
-                <div className="flex items-center justify-between">
-                  <span className="font-extrabold text-[#0F172A]">Academic Info</span>
-                  <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full flex items-center space-x-1">
-                    <Check className="w-3 h-3" />
-                    <span>Complete</span>
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 py-2">
+              {/* Step 1: Profile */}
+              <div className="flex items-center space-x-3 w-full md:w-auto">
+                <div className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center font-extrabold shrink-0">
+                  <Check className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block leading-tight">Profile</span>
+                  <span className="font-extrabold text-[#0F172A] text-xs">Complete</span>
+                </div>
+              </div>
+
+              <div className="hidden md:block flex-1 h-0.5 bg-slate-200"></div>
+
+              {/* Step 2: Assessment */}
+              <div className="flex items-center space-x-3 w-full md:w-auto">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-extrabold shrink-0 border ${
+                  isAssessmentComplete 
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-600' 
+                    : 'bg-slate-50 border-slate-200 text-slate-400'
+                }`}>
+                  {isAssessmentComplete ? <Check className="w-4 h-4" /> : <span className="text-xs">2</span>}
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block leading-tight">Assessment</span>
+                  <span className={`font-extrabold text-xs ${isAssessmentComplete ? 'text-[#0F172A]' : 'text-slate-500'}`}>
+                    {isAssessmentComplete ? 'Completed' : 'Pending'}
                   </span>
                 </div>
               </div>
 
-              {/* Assessment Status */}
-              <div className="bg-[#F8FAF8] border border-slate-200/70 rounded-xl p-3 space-y-1">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Assessment</span>
-                <div className="flex items-center justify-between">
-                  <span className="font-extrabold text-[#0F172A]">Aptitude Test</span>
-                  {isAssessmentComplete ? (
-                    <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full flex items-center space-x-1">
-                      <Check className="w-3 h-3" />
-                      <span>Completed</span>
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-extrabold text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-full">
-                      Not completed
-                    </span>
-                  )}
+              <div className={`hidden md:block flex-1 h-0.5 ${isAssessmentComplete ? 'bg-slate-200' : 'bg-slate-100'}`}></div>
+
+              {/* Step 3: Career Direction */}
+              <div className="flex items-center space-x-3 w-full md:w-auto">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-extrabold shrink-0 border ${
+                  isAssessmentComplete 
+                    ? 'bg-teal-50 border-teal-200 text-[#005F60]' 
+                    : 'bg-slate-50 border-slate-200 text-slate-300'
+                }`}>
+                  {isAssessmentComplete ? <Check className="w-4 h-4" /> : <span className="text-xs">3</span>}
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block leading-tight">Career Direction</span>
+                  <span className={`font-extrabold text-xs ${isAssessmentComplete ? 'text-[#0F172A]' : 'text-slate-400'}`}>
+                    {isAssessmentComplete ? 'Available' : 'Locked'}
+                  </span>
                 </div>
               </div>
 
-              {/* Direction / Insights Status */}
-              <div className="bg-[#F8FAF8] border border-slate-200/70 rounded-xl p-3 space-y-1">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Career options</span>
-                <div className="flex items-center justify-between">
-                  <span className="font-extrabold text-[#0F172A]">Insights</span>
-                  {isAssessmentComplete ? (
-                    <span className="text-[10px] font-extrabold text-teal-800 bg-teal-100/80 px-2 py-0.5 rounded-full">
-                      Career insights available
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-bold text-slate-400 bg-slate-200/60 px-2 py-0.5 rounded-full">
-                      Locked
-                    </span>
-                  )}
+              <div className={`hidden md:block flex-1 h-0.5 ${isAssessmentComplete ? 'bg-slate-200' : 'bg-slate-100'}`}></div>
+
+              {/* Step 4: Goal */}
+              <div className="flex items-center space-x-3 w-full md:w-auto">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-extrabold shrink-0 border ${
+                  isGoalSelected 
+                    ? 'bg-teal-50 border-teal-200 text-[#005F60]' 
+                    : 'bg-slate-50 border-slate-200 text-slate-300'
+                }`}>
+                  {isGoalSelected ? <Check className="w-4 h-4" /> : <span className="text-xs">4</span>}
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block leading-tight">Goal</span>
+                  <span className={`font-extrabold text-xs ${isGoalSelected ? 'text-[#0F172A]' : 'text-slate-400'}`}>
+                    {isGoalSelected ? 'Selected' : 'Not selected'}
+                  </span>
                 </div>
               </div>
 
-              {/* Goal Status */}
-              <div className="bg-[#F8FAF8] border border-slate-200/70 rounded-xl p-3 space-y-1">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Goal</span>
-                <div className="flex items-center justify-between">
-                  <span className="font-extrabold text-[#0F172A]">Target Track</span>
-                  {isGoalSelected ? (
-                    <span className="text-[10px] font-extrabold text-teal-800 bg-teal-100/80 px-2 py-0.5 rounded-full">
-                      Selected
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-bold text-slate-500 bg-slate-200/60 px-2 py-0.5 rounded-full">
-                      Not selected
-                    </span>
-                  )}
-                </div>
-              </div>
+              <div className={`hidden md:block flex-1 h-0.5 ${isGoalSelected ? 'bg-slate-200' : 'bg-slate-100'}`}></div>
 
-              {/* Plan / Roadmap Status */}
-              <div className="bg-[#F8FAF8] border border-slate-200/70 rounded-xl p-3 space-y-1 col-span-2 sm:col-span-1">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Plan</span>
-                <div className="flex items-center justify-between">
-                  <span className="font-extrabold text-[#0F172A]">Roadmap</span>
-                  {isGoalSelected ? (
-                    <span className="text-[10px] font-extrabold text-orange-800 bg-orange-100/80 px-2 py-0.5 rounded-full">
-                      In progress ({activeGoal?.progress?.percentage}%)
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-bold text-slate-400 bg-slate-200/60 px-2 py-0.5 rounded-full">
-                      Not started
-                    </span>
-                  )}
+              {/* Step 5: Roadmap */}
+              <div className="flex items-center space-x-3 w-full md:w-auto">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-extrabold shrink-0 border ${
+                  isGoalSelected 
+                    ? 'bg-orange-50 border-orange-200 text-[#F97316]' 
+                    : 'bg-slate-50 border-slate-200 text-slate-300'
+                }`}>
+                  {isGoalSelected ? <span className="text-xs">✓</span> : <span className="text-xs">5</span>}
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block leading-tight">Roadmap</span>
+                  <span className={`font-extrabold text-xs ${isGoalSelected ? 'text-[#F97316]' : 'text-slate-400'}`}>
+                    {isGoalSelected ? `In progress (${activeGoal?.progress?.percentage}%)` : 'Not started'}
+                  </span>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* SECTION 4: YOUR STRENGTHS & INTERESTS (CAREER INSIGHTS) */}
+          {/* SECTION 4: YOUR STRENGTHS & INTERESTS */}
           <section className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 space-y-5 shadow-2xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 gap-2">
               <div>
                 <div className="inline-flex items-center space-x-1.5 text-[10px] font-black uppercase tracking-wider bg-teal-50 text-[#005F60] px-2.5 py-0.5 rounded-full border border-teal-200 mb-1">
                   <Compass className="w-3.5 h-3.5" />
-                  <span>Exploration Guidance</span>
+                  <span>Your Strengths & Interests</span>
                 </div>
                 <h3 className="text-lg font-black text-[#0F172A] tracking-tight">
-                  Your strengths & interests
+                  Career Guidance Summary
                 </h3>
               </div>
-
-              {isAssessmentComplete && (
-                <button
-                  type="button"
-                  onClick={() => navigate('/pathways')}
-                  className="inline-flex items-center space-x-1.5 text-xs font-extrabold text-[#005F60] hover:underline self-start sm:self-auto cursor-pointer"
-                >
-                  <span>Explore options</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              )}
             </div>
 
             {/* Assessment Loading Skeleton */}
@@ -323,44 +331,54 @@ const DashboardPage = () => {
 
             {/* Assessment Completed Screen */}
             {!assessmentLoading && assessmentResult && (
-              <div className="bg-[#F8FAF8] border border-teal-200/80 rounded-2xl p-5 sm:p-6 space-y-4">
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-bold text-slate-600">Primary Direction:</span>
-                    <span className="text-xs font-black text-[#005F60] bg-teal-100/90 border border-teal-300/80 px-3 py-1 rounded-xl">
-                      Your responses show strong alignment with {assessmentResult.primary_stream_recommendation} pathways
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-4 bg-[#F8FAF8] border border-slate-200/60 rounded-xl space-y-1">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Primary Direction</span>
+                    <span className="font-extrabold text-[#005F60] text-xs block">
+                      {assessmentResult.primary_stream_recommendation}
                     </span>
                   </div>
 
-                  {assessmentResult.top_career_match && (
-                    <div className="flex flex-wrap items-center gap-2 pt-1">
-                      <span className="text-xs font-bold text-slate-600">Suggested Career Area:</span>
-                      <span className="text-xs font-extrabold text-[#F97316] bg-orange-50 border border-orange-200 px-3 py-0.5 rounded-full">
-                        {assessmentResult.top_career_match}
+                  <div className="p-4 bg-[#F8FAF8] border border-slate-200/60 rounded-xl space-y-1">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Suggested Career Area</span>
+                    <span className="font-extrabold text-[#F97316] text-xs block">
+                      {assessmentResult.top_career_match}
+                    </span>
+                  </div>
+
+                  {assessmentResult.secondary_stream_recommendation && (
+                    <div className="p-4 bg-[#F8FAF8] border border-slate-200/60 rounded-xl space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Also Worth Exploring</span>
+                      <span className="font-extrabold text-slate-700 text-xs block">
+                        {assessmentResult.secondary_stream_recommendation}
                       </span>
-                      {assessmentResult.secondary_stream_recommendation && (
-                        <span className="text-xs text-slate-500 font-medium">
-                          (Secondary: {assessmentResult.secondary_stream_recommendation})
-                        </span>
-                      )}
                     </div>
                   )}
+
+                  <div className="p-4 bg-[#F8FAF8] border border-slate-200/60 rounded-xl space-y-1">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Strongest Assessment Area</span>
+                    <span className="font-extrabold text-slate-700 text-xs block">
+                      {getStrongestDimension(assessmentResult.dimension_scores) || 'Science'}
+                    </span>
+                  </div>
                 </div>
 
-                <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                  {assessmentResult.summary_text || 'These results suggest areas you may want to explore further based on your assessment responses.'}
-                </p>
-
-                <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs">
-                  <span className="text-[11px] text-slate-400 font-medium italic">
-                    These results are guidance tools to explore options, not fixed career decisions.
-                  </span>
+                <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
                   <button
                     type="button"
                     onClick={() => navigate('/assessment')}
-                    className="text-[#005F60] hover:underline font-bold text-xs cursor-pointer"
+                    className="text-[#005F60] hover:underline font-extrabold text-xs cursor-pointer"
                   >
-                    Retake assessment
+                    Review Assessment
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/pathways')}
+                    className="text-[#005F60] hover:underline font-extrabold text-xs flex items-center space-x-1 cursor-pointer"
+                  >
+                    <span>Explore Options</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
@@ -377,7 +395,7 @@ const DashboardPage = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={() => navigate('/assessment')}
+                  onClick={() => navigate('/assessment?mode=take')}
                   className="bg-[#005F60] hover:bg-teal-800 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-xs shrink-0 cursor-pointer"
                 >
                   Discover your strengths
@@ -386,27 +404,25 @@ const DashboardPage = () => {
             )}
           </section>
 
-          {/* SECTION 5: YOUR CAREER PLAN */}
+          {/* SECTION 5: CAREER GOAL */}
           <section className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 space-y-5 shadow-2xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 gap-2">
               <div>
                 <div className="inline-flex items-center space-x-1.5 text-[10px] font-black uppercase tracking-wider bg-orange-50 text-[#F97316] px-2.5 py-0.5 rounded-full border border-orange-200 mb-1">
                   <Target className="w-3.5 h-3.5" />
-                  <span>Target Goal</span>
+                  <span>{isGoalSelected ? 'Your Active Goal' : 'Career Goal'}</span>
                 </div>
                 <h3 className="text-lg font-black text-[#0F172A] tracking-tight">
-                  {isGoalSelected ? 'Your career plan' : 'Choose a career direction'}
+                  {isGoalSelected ? 'Selected Pathway Track' : 'Choose a career direction'}
                 </h3>
               </div>
-
               {isGoalSelected && (
                 <button
                   type="button"
-                  onClick={() => navigate('/my-roadmap')}
-                  className="inline-flex items-center space-x-1.5 text-xs font-extrabold text-[#005F60] hover:underline self-start sm:self-auto cursor-pointer"
+                  onClick={() => navigate('/pathways')}
+                  className="text-xs font-bold text-[#005F60] hover:underline cursor-pointer"
                 >
-                  <span>View full plan</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  Change goal
                 </button>
               )}
             </div>
@@ -422,26 +438,34 @@ const DashboardPage = () => {
             {/* Active Goal State */}
             {!goalLoading && activeGoal && (
               <div className="bg-[#F8FAF8] border border-slate-200/80 rounded-2xl p-5 sm:p-6 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Goal</span>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
                     <h4 className="text-base font-black text-[#0F172A]">{activeGoal.goal_title}</h4>
-                    <p className="text-xs text-slate-500">
-                      Pathway: <span className="font-bold text-[#005F60]">{activeGoal.pathway_title}</span>
-                    </p>
+                    <div className="text-xs text-slate-600 space-y-0.5">
+                      <div>
+                        <span className="font-bold text-slate-500">Pathway:</span>{' '}
+                        <span className="font-extrabold text-[#005F60]">{activeGoal.pathway_title}</span>
+                      </div>
+                      <div>
+                        <span className="font-bold text-slate-500">Education Stage:</span>{' '}
+                        <span className="font-extrabold text-slate-700">{profile?.current_level || 'Class 10'}</span>
+                      </div>
+                    </div>
                   </div>
 
-                  <span className="text-xs font-black text-[#F97316] bg-orange-100/80 px-3 py-1 rounded-full border border-orange-200/80 self-start sm:self-auto">
-                    {activeGoal.progress.completed} of {activeGoal.progress.total} Milestones Complete ({activeGoal.progress.percentage}%)
-                  </span>
+                  <div className="text-right shrink-0">
+                    <span className="text-xs font-black text-[#F97316] bg-orange-50 border border-orange-200 px-3 py-1 rounded-full inline-block">
+                      {activeGoal.progress?.percentage || 0}% Complete
+                    </span>
+                  </div>
                 </div>
 
                 {/* Progress Bar */}
                 <div className="space-y-1">
-                  <div className="w-full bg-slate-200/80 rounded-full h-2.5 overflow-hidden border border-slate-300/40">
+                  <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
                     <div 
                       className="bg-gradient-to-r from-[#005F60] to-[#F97316] h-full rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min(activeGoal.progress.percentage, 100)}%` }}
+                      style={{ width: `${Math.min(activeGoal.progress?.percentage || 0, 100)}%` }}
                     ></div>
                   </div>
                 </div>
@@ -457,9 +481,9 @@ const DashboardPage = () => {
                   <button
                     type="button"
                     onClick={() => navigate('/my-roadmap')}
-                    className="bg-[#005F60] hover:bg-teal-800 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-xs flex items-center justify-center space-x-1.5 self-start sm:self-auto cursor-pointer"
+                    className="bg-[#005F60] hover:bg-teal-800 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all shadow-xs flex items-center justify-center space-x-1.5 cursor-pointer"
                   >
-                    <span>Continue your plan</span>
+                    <span>View My Roadmap</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -473,7 +497,9 @@ const DashboardPage = () => {
                   <Target className="w-5 h-5" />
                 </div>
                 <div className="space-y-1 max-w-md mx-auto">
-                  <h4 className="font-extrabold text-sm text-[#0F172A]">You haven't selected a career goal yet</h4>
+                  <p className="text-xs text-slate-600">
+                    You haven't selected a career goal yet.
+                  </p>
                   <p className="text-xs text-slate-500">
                     Explore education and career pathways based on your interests and academic background.
                   </p>
@@ -483,61 +509,13 @@ const DashboardPage = () => {
                   onClick={() => navigate('/pathways')}
                   className="bg-[#005F60] hover:bg-teal-800 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-xs inline-flex items-center space-x-1.5 cursor-pointer"
                 >
-                  <Compass className="w-4 h-4" />
-                  <span>Explore pathways</span>
+                  <span>Explore Pathways</span>
                 </button>
               </div>
             )}
           </section>
 
-          {/* SECTION 6: QUICK ACTIONS */}
-          <section className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs space-y-3">
-            <div className="border-b border-slate-100 pb-3">
-              <h3 className="text-xs font-black uppercase tracking-wider text-[#005F60]">
-                Quick actions
-              </h3>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-              <button
-                type="button"
-                onClick={() => navigate('/assessment')}
-                className="p-3.5 rounded-xl border border-slate-200 hover:border-teal-300 bg-[#F8FAF8] hover:bg-teal-50/50 flex items-center justify-between text-slate-700 font-extrabold transition-all group cursor-pointer"
-              >
-                <div className="flex items-center space-x-2.5">
-                  <Sparkles className="w-4 h-4 text-[#005F60]" />
-                  <span>Discover your strengths</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#005F60] transition-colors" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate('/pathways')}
-                className="p-3.5 rounded-xl border border-slate-200 hover:border-teal-300 bg-[#F8FAF8] hover:bg-teal-50/50 flex items-center justify-between text-slate-700 font-extrabold transition-all group cursor-pointer"
-              >
-                <div className="flex items-center space-x-2.5">
-                  <Compass className="w-4 h-4 text-[#005F60]" />
-                  <span>Explore pathways</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#005F60] transition-colors" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate('/my-roadmap')}
-                className="p-3.5 rounded-xl border border-slate-200 hover:border-teal-300 bg-[#F8FAF8] hover:bg-teal-50/50 flex items-center justify-between text-slate-700 font-extrabold transition-all group cursor-pointer"
-              >
-                <div className="flex items-center space-x-2.5">
-                  <Map className="w-4 h-4 text-[#005F60]" />
-                  <span>View my plan</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-[#005F60] transition-colors" />
-              </button>
-            </div>
-          </section>
-
-          {/* SECTION 7: ACADEMIC PROFILE */}
+          {/* SECTION 6: ACADEMIC PROFILE */}
           <section className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 space-y-5 shadow-2xs">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 gap-2">
               <div>
@@ -637,12 +615,6 @@ const DashboardPage = () => {
           </section>
 
         </main>
-
-        {/* Footer */}
-        <footer className="border-t border-slate-200/80 bg-white py-4 px-8 text-center text-xs text-slate-500">
-          Udaan AI — Student Career Guidance Dashboard
-        </footer>
-
       </div>
 
       {/* Edit Profile Drawer */}

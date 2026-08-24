@@ -83,9 +83,6 @@ const MyCareerRoadmapPage = () => {
     }
   };
 
-  const hasAssessment = !!assessmentResult;
-  const hasPathways = pathways.length > 0;
-
   return (
     <div className="min-h-screen bg-[#F8FAF8] text-[#0F172A] flex font-sans selection:bg-[#005F60] selection:text-white">
       {/* Sidebar */}
@@ -111,13 +108,13 @@ const MyCareerRoadmapPage = () => {
               <div>
                 <div className="inline-flex items-center space-x-1.5 text-[10px] uppercase font-extrabold tracking-wider bg-orange-100 text-[#F97316] px-2.5 py-0.5 rounded-full border border-orange-200 mb-2">
                   <Sparkles className="w-3 h-3 text-[#F97316]" />
-                  <span>PERSONALIZED CAREER ROADMAP</span>
+                  <span>YOUR CAREER PLAN</span>
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-black text-[#0F172A] tracking-tight">
-                  My Career Goal & Milestones
+                  My Career Roadmap & Milestones
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                  Track progress towards your target career goal using PostgreSQL-persisted milestone records.
+                  Track progress towards your target career goal and complete milestone action steps.
                 </p>
               </div>
 
@@ -141,7 +138,7 @@ const MyCareerRoadmapPage = () => {
                 <div>
                   <div className="flex items-center space-x-2">
                     <span className="font-black text-sm text-[#0F172A]">
-                      {profile?.full_name || user?.full_name || 'Authenticated Student'}
+                      {profile?.full_name || user?.full_name || 'Student'}
                     </span>
                     <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
                       Profile Active
@@ -172,11 +169,6 @@ const MyCareerRoadmapPage = () => {
                   </div>
                 </div>
               </div>
-
-              <div className="text-right text-[11px] text-slate-500 border-t md:border-t-0 md:border-l border-slate-200 pt-2 md:pt-0 md:pl-5 flex md:flex-col items-center md:items-end justify-between">
-                <span>Persisted Goal Database</span>
-                <span className="font-mono font-bold text-[#005F60]">roadmap.student_goals</span>
-              </div>
             </div>
           </div>
 
@@ -197,7 +189,7 @@ const MyCareerRoadmapPage = () => {
               </div>
               <button
                 onClick={loadData}
-                className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center space-x-1.5 transition-colors"
+                className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center space-x-1.5 transition-colors cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 <span>Retry</span>
@@ -232,7 +224,7 @@ const MyCareerRoadmapPage = () => {
                     </button>
                   </div>
 
-                  {/* Real Calculated Progress Bar */}
+                  {/* Calculated Progress Bar */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-extrabold text-teal-200">
@@ -273,7 +265,7 @@ const MyCareerRoadmapPage = () => {
                 </section>
               )}
 
-              {/* Persisted Milestone Progress Timeline */}
+              {/* Milestone Progress Timeline */}
               {studentGoal && studentGoal.milestones && studentGoal.milestones.length > 0 && (
                 <section className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xs">
                   <div className="border-b border-slate-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -282,7 +274,7 @@ const MyCareerRoadmapPage = () => {
                         Milestone Action Checklist
                       </h2>
                       <p className="text-xs text-slate-500">
-                        Mark milestones as completed to unlock next steps and advance your career readiness score.
+                        Mark milestones as completed to unlock next steps and advance your career plan.
                       </p>
                     </div>
                     <span className="text-xs font-extrabold text-[#005F60] bg-teal-50 border border-teal-200 px-3 py-1 rounded-full self-start sm:self-auto">
@@ -294,7 +286,6 @@ const MyCareerRoadmapPage = () => {
                     {studentGoal.milestones.map((m) => {
                       const isCompleted = m.status === 'COMPLETED';
                       const isAvailable = m.status === 'AVAILABLE';
-                      const isLocked = m.status === 'LOCKED';
                       const isCompleting = completingMilestoneId === m.id;
 
                       return (

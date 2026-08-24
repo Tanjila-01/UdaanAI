@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getPathwaysApi, getPathwayDetailApi, createStudentGoalApi } from '../api/client';
 import Sidebar from '../components/Sidebar';
@@ -28,25 +28,55 @@ import {
   Loader2
 } from 'lucide-react';
 
+const normalizeEducationLevel = (lvl) => {
+  if (!lvl) return 'ALL';
+  const clean = lvl.trim();
+  if (clean === 'PUC 1' || clean === 'PUC 2' || clean === 'PUC') return 'PUC';
+  return clean;
+};
+
 const PathwaysPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { profile, loading: authLoading } = useAuth();
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
 
   // Filters state pre-populated directly from student profile if available
-  const [selectedLevel, setSelectedLevel] = useState(() => profile?.current_level || 'ALL');
+  const [selectedLevel, setSelectedLevel] = useState(() => normalizeEducationLevel(profile?.current_level));
   const [selectedStream, setSelectedStream] = useState(() => profile?.stream || 'ALL');
 
-  // Track if profile filters have been initialized
+  // Track if profile filters or URL parameters have been initialized
   const hasSyncedProfileRef = useRef(Boolean(profile?.current_level));
+  const targetPathwayIdRef = useRef(null);
+
+  // Sync filters with URL search parameters (e.g. from top search bar navigation)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const streamParam = params.get('stream');
+    const levelParam = params.get('level');
+    const pathwayIdParam = params.get('pathway_id') || params.get('id');
+
+    if (streamParam) {
+      setSelectedStream(streamParam);
+      hasSyncedProfileRef.current = true;
+    }
+    if (levelParam) {
+      setSelectedLevel(normalizeEducationLevel(levelParam));
+      hasSyncedProfileRef.current = true;
+    }
+    if (pathwayIdParam) {
+      targetPathwayIdRef.current = pathwayIdParam;
+      setSelectedPathwayId(pathwayIdParam);
+    }
+  }, [location.search]);
 
   // Sync profile defaults when profile becomes available from AuthContext
   useEffect(() => {
     if (profile && !hasSyncedProfileRef.current) {
       if (profile.current_level) {
-        setSelectedLevel(profile.current_level);
+        setSelectedLevel(normalizeEducationLevel(profile.current_level));
       }
       if (profile.stream) {
         setSelectedStream(profile.stream);
@@ -89,7 +119,11 @@ const PathwaysPage = () => {
       navigate('/my-roadmap');
     } catch (err) {
       console.error('Failed to create goal:', err);
-      setGoalError(err.response?.data?.detail || 'Failed to confirm goal. Please try again.');
+      const rawDetail = err.response?.data?.detail;
+      const userMessage = (rawDetail && typeof rawDetail === 'string' && rawDetail !== 'Not Found')
+        ? rawDetail
+        : "We couldn't save your career goal. Please try again.";
+      setGoalError(userMessage);
     } finally {
       setSubmittingGoal(false);
     }
@@ -113,15 +147,16 @@ const PathwaysPage = () => {
       setPathways(data.pathways || []);
       setTotalPathways(data.total || 0);
 
-      // Auto-select first pathway for split detail view if available
+      // Auto-select target pathway or current selection or first pathway for split detail view if available
       if (data.pathways && data.pathways.length > 0) {
-        // If current selection is still in list, keep it, else pick first
-        const found = data.pathways.find(p => p.id === selectedPathwayId);
+        const targetId = targetPathwayIdRef.current || selectedPathwayId;
+        const found = data.pathways.find(p => p.id === targetId);
         if (found) {
           fetchPathwayDetail(found.id);
         } else {
           fetchPathwayDetail(data.pathways[0].id);
         }
+        targetPathwayIdRef.current = null;
       } else {
         setSelectedPathwayId(null);
         setSelectedPathwayDetail(null);
@@ -172,8 +207,7 @@ const PathwaysPage = () => {
     { value: 'Class 8', label: 'Class 8' },
     { value: 'Class 9', label: 'Class 9' },
     { value: 'Class 10', label: 'Class 10 (SSLC)' },
-    { value: 'PUC 1', label: 'PUC 1 (11th)' },
-    { value: 'PUC 2', label: 'PUC 2 (12th)' },
+    { value: 'PUC', label: 'PUC (11th–12th)' },
     { value: 'Diploma', label: 'Polytechnic Diploma' },
     { value: 'ITI', label: 'ITI Vocational' },
   ];
@@ -343,7 +377,7 @@ const PathwaysPage = () => {
                   No pathways are currently seeded for <span className="font-extrabold text-[#005F60]">{selectedLevel === 'ALL' ? 'selected level' : selectedLevel}</span> {selectedStream !== 'ALL' ? `with ${selectedStream} stream` : ''}.
                 </p>
                 <p className="text-xs text-slate-400">
-                  Select <button onClick={() => { setSelectedLevel('Class 10'); setSelectedStream('ALL'); }} className="text-[#005F60] font-bold underline cursor-pointer">Class 10</button> or <button onClick={() => { setSelectedLevel('PUC 2'); setSelectedStream('Science'); }} className="text-[#005F60] font-bold underline cursor-pointer">PUC 2 Science</button> to explore active Karnataka pathways.
+                  Select <button onClick={() => { setSelectedLevel('Class 10'); setSelectedStream('ALL'); }} className="text-[#005F60] font-bold underline cursor-pointer">Class 10</button> or <button onClick={() => { setSelectedLevel('PUC'); setSelectedStream('Science'); }} className="text-[#005F60] font-bold underline cursor-pointer">PUC Science</button> to explore active Karnataka pathways.
                 </p>
               </div>
               <button
