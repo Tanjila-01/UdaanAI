@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import EducationPathwayMap from '../components/product/EducationPathwayMap';
 
 // Layout & UI Components
 import Navbar from '../components/layout/Navbar';
@@ -651,208 +652,28 @@ const HomePage = () => {
 
 
         {/* ========================================================= */}
-        {/* SECTION 5: INTERACTIVE BRANCH EXPLORER */}
+        {/* SECTION 5: NEW INTERACTIVE PATHWAY MAP EXPLORER */}
         {/* ========================================================= */}
         <section id="pathways" className="py-20 bg-slate-50 border-b border-slate-200/60 scroll-mt-28">
           <Container size="xl">
 
-            <div className="text-center max-w-2xl mx-auto mb-12">
+            <div className="text-center max-w-3xl mx-auto mb-12">
               <Badge variant="primary" size="md" dot className="mb-3">
-                Interactive Branch Explorer
+                Interactive Career Map
               </Badge>
               <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight">
-                Explore Karnataka Education Streams
+                Explore Where Each Path Can Take You
               </h2>
               <p className="text-sm sm:text-base text-slate-700 mt-3 font-semibold">
-                Click any education stream below to view sub-tracks, entrance exams, and career outcomes.
+                Start from Class 10 and interactively explore Karnataka's PUC, Polytechnic Diploma and ITI routes, subject combinations, courses, entrance exams, higher-education opportunities and career directions.
               </p>
             </div>
 
-            {/* Interactive Stream Tabs */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-10 max-w-4xl mx-auto p-2 bg-white rounded-2xl border border-slate-200 shadow-2xs">
-              {[
-                { id: 'science', label: 'PUC Science' },
-                { id: 'commerce', label: 'PUC Commerce' },
-                { id: 'arts', label: 'PUC Arts' },
-                { id: 'diploma', label: 'Polytechnic Diploma' },
-                { id: 'iti', label: 'ITI Trades' },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveBranch(tab.id)}
-                  className={`w-full py-2.5 px-3 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer select-none flex items-center justify-center text-center ${activeBranch === tab.id
-                    ? 'bg-[#005F60] text-white shadow-xs'
-                    : 'text-slate-800 hover:bg-slate-100'
-                    }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Expanded Active Branch Showcase */}
-            {branchData[activeBranch] && (
-              <div className="bg-white rounded-3xl border border-slate-200 p-8 sm:p-10 shadow-md max-w-5xl mx-auto">
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6 pb-6 border-b border-slate-200">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-2xl font-bold text-slate-950">
-                        {branchData[activeBranch].title}
-                      </h3>
-                      <Badge variant="primary" size="sm">
-                        {branchData[activeBranch].badge}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-slate-700 font-semibold">
-                      {branchData[activeBranch].subtitle}
-                    </p>
-                  </div>
-
-                  <Link to={user ? "/dashboard" : "/register"}>
-                    <Button variant="secondary" size="md" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                      Explore All Pathways
-                    </Button>
-                  </Link>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-                  {/* Specialization Sub-Tracks */}
-                  <div className="md:col-span-2 space-y-3">
-                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      Key Specialization Streams:
-                    </h4>
-                    {branchData[activeBranch].subTracks.map((sub, i) => (
-                      <div key={i} className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                        <span className="text-sm font-bold text-slate-950 block mb-1">{sub.name}</span>
-                        <span className="text-xs text-slate-700 leading-relaxed font-medium">{sub.desc}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Right Column: Exams & Outcomes */}
-                  <div className="space-y-6">
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                        Key Entrance Exams:
-                      </h4>
-                      <div className="flex flex-wrap gap-1.5">
-                        {branchData[activeBranch].entranceExams.map((exam, i) => (
-                          <Badge key={i} variant="neutral" size="sm">
-                            {exam}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                        Target Career Outcomes:
-                      </h4>
-                      <div className="flex flex-wrap gap-1.5">
-                        {branchData[activeBranch].careerOutcomes.map((career, i) => (
-                          <Tag key={i} className="text-xs font-bold">
-                            {career}
-                          </Tag>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-            )}
-
-          </Container>
-        </section>
-
-
-        {/* ========================================================= */}
-        {/* SECTION 6: STREAMLINED YOUR PERSONALIZED CAREER ROADMAP */}
-        {/* (Refactored 6 Steps with Interactive Milestone Timeline) */}
-        {/* ========================================================= */}
-        <section id="roadmap" className="py-20 bg-white border-b border-slate-100 scroll-mt-28">
-          <Container size="xl">
-
-            <div className="text-center max-w-2xl mx-auto mb-14">
-              <Badge variant="primary" size="md" dot className="mb-3">
-                Intelligent Personalization
-              </Badge>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight">
-                Your Personalized Career Roadmap
-              </h2>
-              <p className="text-sm sm:text-base text-slate-700 mt-3 font-semibold">
-                How Udaan AI dynamically generates your step-by-step career path from profile to opportunity.
-              </p>
-            </div>
-
-            {/* Interactive 6-Step Timeline Container */}
-            <div className="max-w-5xl mx-auto bg-slate-50 p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-md">
-
-              {/* Timeline Sequence Nodes */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-center mb-8">
-                {roadmapSteps.map((item, index) => (
-                  <button
-                    key={index}
-                    type="button"
-                    onClick={() => setActiveRoadmapStep(index)}
-                    className={`p-3.5 rounded-xl border flex flex-col justify-between items-center gap-1.5 transition-all cursor-pointer text-left ${activeRoadmapStep === index
-                      ? 'bg-[#005F60] text-white border-[#005F60] shadow-md ring-2 ring-teal-600/30'
-                      : 'bg-white border-slate-200 hover:border-teal-400 text-slate-800'
-                      }`}
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <span className={`text-[10px] font-bold uppercase ${activeRoadmapStep === index ? 'text-teal-200' : 'text-slate-500'
-                        }`}>
-                        Step {item.step}
-                      </span>
-                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${activeRoadmapStep === index ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
-                        }`}>
-                        {item.badge}
-                      </span>
-                    </div>
-
-                    <span className="text-xs font-bold leading-tight my-1">{item.title}</span>
-                    <span className={`text-[9px] font-medium ${activeRoadmapStep === index ? 'text-teal-100' : 'text-slate-500'
-                      }`}>
-                      {item.subtitle}
-                    </span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Selected Step Detail Card */}
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-[#005F60] bg-teal-50 px-2 py-0.5 rounded">
-                      Step {roadmapSteps[activeRoadmapStep].step} Focus
-                    </span>
-                    <h4 className="text-base font-bold text-slate-950">
-                      {roadmapSteps[activeRoadmapStep].title}
-                    </h4>
-                  </div>
-                  <p className="text-xs text-slate-700 font-medium">
-                    {roadmapSteps[activeRoadmapStep].detail}
-                  </p>
-                </div>
-
-                <Link to={user ? "/dashboard" : "/register"} className="shrink-0">
-                  <Button variant="secondary" size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
-                    Generate Your Roadmap
-                  </Button>
-                </Link>
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-800 font-bold">
-                <span className="flex items-center gap-2">
-                  <CheckCircle className="w-4.5 h-4.5 text-[#005F60]" />
-                  Roadmaps dynamically update as you submit SSLC marks and milestone targets.
-                </span>
-                <span className="text-[#005F60]">6 Verified Milestone Stages</span>
-              </div>
-
+            <div className="max-w-7xl mx-auto bg-white/40 border border-slate-200/80 p-4 sm:p-6 rounded-3xl shadow-sm">
+              <EducationPathwayMap 
+                mode="PublicPreview" 
+                onSelectGoal={() => navigate(user ? '/dashboard' : '/register')} 
+              />
             </div>
 
           </Container>

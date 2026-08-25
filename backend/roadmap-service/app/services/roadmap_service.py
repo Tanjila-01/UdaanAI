@@ -73,6 +73,7 @@ class RoadmapService:
                     category=p_data["category"],
                     duration=p_data.get("duration"),
                     description=p_data["description"],
+                    parent_id=p_data.get("parent_id"),
                 )
                 for opt in p_data.get("options", []):
                     pathway.options.append(
@@ -102,6 +103,7 @@ class RoadmapService:
                 pathway.category = p_data["category"]
                 pathway.duration = p_data.get("duration")
                 pathway.description = p_data["description"]
+                pathway.parent_id = p_data.get("parent_id")
 
                 # Update or append options
                 existing_opts = {opt.display_order: opt for opt in pathway.options}

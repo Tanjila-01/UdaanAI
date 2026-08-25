@@ -59,8 +59,8 @@ def test_list_pathways_no_filters():
     data = response.json()
     assert "total" in data
     assert "pathways" in data
-    assert data["total"] == 6
-    assert len(data["pathways"]) == 6
+    assert data["total"] == 22
+    assert len(data["pathways"]) == 22
     
     # Verify response contract and field types
     p = data["pathways"][0]
@@ -109,10 +109,10 @@ def test_list_pathways_filter_puc2_science():
     response = client.get("/roadmaps/pathways?education_level=PUC%202&stream=Science")
     assert response.status_code == 200
     data = response.json()
-    assert data["total"] == 1
+    assert data["total"] == 4
     assert data["education_level"] == "PUC 2"
     assert data["stream"] == "Science"
-    assert data["pathways"][0]["id"] == "puc-science-eng"
+    assert data["pathways"][0]["id"] == "puc-science"
 
 
 def test_list_pathways_no_matches():

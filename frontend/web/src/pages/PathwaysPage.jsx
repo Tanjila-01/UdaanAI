@@ -5,6 +5,7 @@ import { getPathwaysApi, getPathwayDetailApi, createStudentGoalApi } from '../ap
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import EditProfileDrawer from '../components/EditProfileDrawer';
+import EducationPathwayMap from '../components/product/EducationPathwayMap';
 import { 
   Compass, 
   ArrowLeft, 
@@ -134,32 +135,23 @@ const PathwaysPage = () => {
     setLoading(true);
     setError(null);
     try {
-      const params = {};
-      if (selectedLevel !== 'ALL') {
-        params.education_level = selectedLevel;
-      }
-      if (selectedStream !== 'ALL') {
-        params.stream = selectedStream;
-      }
-      const data = await getPathwaysApi(params);
+      const data = await getPathwaysApi(); // Fetch all pathways for tree construction
       if (shouldCancel()) return;
 
       setPathways(data.pathways || []);
       setTotalPathways(data.total || 0);
 
-      // Auto-select target pathway or current selection or first pathway for split detail view if available
       if (data.pathways && data.pathways.length > 0) {
         const targetId = targetPathwayIdRef.current || selectedPathwayId;
         const found = data.pathways.find(p => p.id === targetId);
         if (found) {
-          fetchPathwayDetail(found.id);
+          setSelectedPathwayId(found.id);
         } else {
-          fetchPathwayDetail(data.pathways[0].id);
+          setSelectedPathwayId(data.pathways[0].id);
         }
         targetPathwayIdRef.current = null;
       } else {
         setSelectedPathwayId(null);
-        setSelectedPathwayDetail(null);
       }
     } catch (err) {
       if (shouldCancel()) return;
@@ -173,10 +165,9 @@ const PathwaysPage = () => {
     }
   };
 
-  // Trigger fetch once session and profile filters are ready, avoiding initial unfiltered race condition
+  // Trigger fetch once session is ready
   useEffect(() => {
     if (authLoading) return;
-    if (profile?.current_level && !hasSyncedProfileRef.current) return;
 
     let isCancelled = false;
     fetchPathways(() => isCancelled);
@@ -184,7 +175,7 @@ const PathwaysPage = () => {
     return () => {
       isCancelled = true;
     };
-  }, [selectedLevel, selectedStream, authLoading, profile]);
+  }, [authLoading]);
 
   // Fetch single pathway detail
   const fetchPathwayDetail = async (id) => {
@@ -390,101 +381,19 @@ const PathwaysPage = () => {
             </div>
           )}
 
-          {/* Main Content Layout: Responsive Split (Desktop 2-Col) / Inline Mobile */}
+          {/* Main Content Layout: Interactive visual metro-style map */}
           {!loading && !error && pathways.length > 0 && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-              
-              {/* Left Column: Pathway List (5 cols on lg) */}
-              <div className="lg:col-span-5 space-y-4">
-                <div className="flex items-center justify-between px-1">
-                  <span className="text-xs font-extrabold text-[#005F60] uppercase tracking-wider">
-                    Available Pathways ({totalPathways})
-                  </span>
-                  <span className="text-[11px] text-slate-400 font-medium">
-                    Click to inspect details
-                  </span>
-                </div>
-
-                <div className="space-y-3">
-                  {pathways.map((pathway) => {
-                    const isSelected = pathway.id === selectedPathwayId;
-
-                    return (
-                      <React.Fragment key={pathway.id}>
-                        {/* Pathway Card */}
-                        <div
-                          onClick={() => fetchPathwayDetail(pathway.id)}
-                          className={`p-5 rounded-2xl border transition-all cursor-pointer space-y-3 ${
-                            isSelected
-                              ? 'bg-teal-50/70 border-[#005F60] ring-2 ring-[#005F60]/20 shadow-xs'
-                              : 'bg-white border-slate-200/80 hover:border-teal-300 hover:bg-[#F8FAF8]'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="space-y-1">
-                              <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-teal-100 text-[#005F60] inline-block">
-                                {pathway.category}
-                              </span>
-                              <h3 className="font-extrabold text-sm sm:text-base text-[#0F172A] leading-snug">
-                                {pathway.title}
-                              </h3>
-                            </div>
-                            {pathway.duration && (
-                              <span className="text-[11px] font-bold text-[#F97316] bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full flex-shrink-0">
-                                {pathway.duration}
-                              </span>
-                            )}
-                          </div>
-
-                          <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-                            {pathway.description}
-                          </p>
-
-                          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                            <div className="flex items-center space-x-3">
-                              <span className="flex items-center space-x-1 font-bold text-slate-700">
-                                <Layers className="w-3.5 h-3.5 text-[#005F60]" />
-                                <span>{pathway.options?.length || 0} Options</span>
-                              </span>
-                              <span className="flex items-center space-x-1 font-bold text-slate-700">
-                                <Award className="w-3.5 h-3.5 text-[#F97316]" />
-                                <span>{pathway.milestones?.length || 0} Steps</span>
-                              </span>
-                            </div>
-
-                            <ChevronRight className={`w-4 h-4 transition-transform ${isSelected ? 'text-[#005F60] translate-x-1' : 'text-slate-300'}`} />
-                          </div>
-                        </div>
-
-                        {/* Mobile-Only Inline Detail Section (renders directly under selected card on mobile) */}
-                        {isSelected && (
-                          <div className="block lg:hidden my-3">
-                            <PathwayDetailView 
-                              detail={selectedPathwayDetail}
-                              loading={detailLoading}
-                              error={detailError}
-                              onRetry={() => fetchPathwayDetail(pathway.id)}
-                              onSelectGoal={(p, opt) => handleOpenGoalModal(p, opt)}
-                            />
-                          </div>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Right Column: Desktop Split-View Detail Panel (7 cols on lg) */}
-              <div className="hidden lg:block lg:col-span-7 sticky top-24">
-                <PathwayDetailView 
-                  detail={selectedPathwayDetail}
-                  loading={detailLoading}
-                  error={detailError}
-                  onRetry={() => selectedPathwayId && fetchPathwayDetail(selectedPathwayId)}
-                  onSelectGoal={(p, opt) => handleOpenGoalModal(p, opt)}
-                />
-              </div>
-
+            <div className="bg-white border border-slate-200/80 rounded-3xl p-4 sm:p-6 shadow-sm">
+              <EducationPathwayMap 
+                mode="FullExplorer" 
+                pathwaysData={pathways} 
+                onSelectGoal={(pathway, option) => handleOpenGoalModal(pathway, option)}
+                studentProfile={{
+                  current_level: selectedLevel !== 'ALL' ? selectedLevel : profile?.current_level,
+                  stream: selectedStream !== 'ALL' ? selectedStream : profile?.stream,
+                  class_or_year: profile?.class_or_year
+                }}
+              />
             </div>
           )}
 

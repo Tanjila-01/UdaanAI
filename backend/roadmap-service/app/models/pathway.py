@@ -31,6 +31,10 @@ class Pathway(Base):
     duration = Column(String(50), nullable=True)
     description = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    
+    parent_id = Column(String(50), ForeignKey(fk_target, ondelete="SET NULL"), nullable=True)
+
+    parent = relationship("Pathway", remote_side=[id], backref="children")
 
     options = relationship(
         "PathwayOption",

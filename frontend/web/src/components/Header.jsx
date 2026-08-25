@@ -243,11 +243,10 @@ export const Header = ({ onMenuClick, onEditProfileClick }) => {
 
       {/* Right Controls */}
       <div className="flex items-center space-x-3 sm:space-x-4 shrink-0">
-        {/* Student Profile Trigger Button */}
-        <button
-          onClick={onEditProfileClick}
-          className="flex items-center space-x-3 p-1.5 rounded-xl hover:bg-teal-50/50 transition-colors border border-transparent hover:border-teal-200 cursor-pointer"
-          title="View & Edit Student Profile"
+        {/* Student Profile Info (Read-only to prevent duplicate edit action) */}
+        <div
+          className="flex items-center space-x-3 p-1.5 rounded-xl border border-transparent"
+          title="Student Profile"
         >
           <div className="w-8 h-8 rounded-full bg-[#005F60] text-white flex items-center justify-center font-black text-xs shadow-xs">
             {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'S'}
@@ -260,7 +259,7 @@ export const Header = ({ onMenuClick, onEditProfileClick }) => {
               {profile?.current_level || 'Class 10'} {profile?.stream ? `• ${profile.stream}` : ''}
             </span>
           </div>
-        </button>
+        </div>
       </div>
     </header>
   );

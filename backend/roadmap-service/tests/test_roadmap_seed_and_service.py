@@ -49,10 +49,10 @@ def test_seed_idempotency_and_update_behavior():
 
     # First seed run
     count1 = RoadmapService.seed_initial_data(db)
-    assert count1 == 6
-    assert db.query(Pathway).count() == 6
-    assert db.query(PathwayOption).count() == 18
-    assert db.query(PathwayMilestone).count() == 18
+    assert count1 == 22
+    assert db.query(Pathway).count() == 22
+    assert db.query(PathwayOption).count() == 53
+    assert db.query(PathwayMilestone).count() == 39
 
     # Verify initial seed data content
     c10_puc = db.query(Pathway).filter(Pathway.id == "c10-puc").first()
@@ -61,10 +61,10 @@ def test_seed_idempotency_and_update_behavior():
 
     # Second seed run (must maintain exact same counts without duplicates)
     count2 = RoadmapService.seed_initial_data(db)
-    assert count2 == 6
-    assert db.query(Pathway).count() == 6
-    assert db.query(PathwayOption).count() == 18
-    assert db.query(PathwayMilestone).count() == 18
+    assert count2 == 22
+    assert db.query(Pathway).count() == 22
+    assert db.query(PathwayOption).count() == 53
+    assert db.query(PathwayMilestone).count() == 39
 
     # Verify update-or-insert (upsert) in-place modification
     c10_puc.title = "Temporary Modified Title"
@@ -74,7 +74,7 @@ def test_seed_idempotency_and_update_behavior():
     # Re-running seed restores the authoritative title in-place
     RoadmapService.seed_initial_data(db)
     assert db.query(Pathway).filter(Pathway.id == "c10-puc").first().title == "Pre-University College (PUC)"
-    assert db.query(Pathway).count() == 6
+    assert db.query(Pathway).count() == 22
 
     db.close()
 
@@ -85,9 +85,9 @@ def test_seed_runner_execution(monkeypatch):
     assert exit_code == 0
 
     db = TestingSessionLocal()
-    assert db.query(Pathway).count() == 6
-    assert db.query(PathwayOption).count() == 18
-    assert db.query(PathwayMilestone).count() == 18
+    assert db.query(Pathway).count() == 22
+    assert db.query(PathwayOption).count() == 53
+    assert db.query(PathwayMilestone).count() == 39
     db.close()
 
 
@@ -95,9 +95,9 @@ def test_service_queries_and_filtering():
     db = TestingSessionLocal()
     RoadmapService.seed_initial_data(db)
 
-    # 1. No filters -> returns all 6 pathways
+    # 1. No filters -> returns all 22 pathways
     all_pathways = RoadmapService.get_pathways(db)
-    assert len(all_pathways) == 6
+    assert len(all_pathways) == 22
 
     # 2. Query post-Class 10 pathways -> returns 3 pathways
     class10_pathways = RoadmapService.get_pathways(db, education_level="Class 10")
@@ -113,19 +113,20 @@ def test_service_queries_and_filtering():
 
     # 4. Query PUC 2 Science pathway
     puc_science = RoadmapService.get_pathways(db, education_level="PUC 2", stream="Science")
-    assert len(puc_science) == 1
-    assert puc_science[0].id == "puc-science-eng"
-    assert puc_science[0].title == "Engineering & Technology Degrees (B.E / B.Tech)"
+    assert len(puc_science) == 4
+    puc_science_ids = [p.id for p in puc_science]
+    assert "puc-science" in puc_science_ids
+    assert "puc-science-pcmb" in puc_science_ids
 
     # 5. Query PUC 2 Commerce pathway
     puc_commerce = RoadmapService.get_pathways(db, education_level="PUC 2", stream="Commerce")
-    assert len(puc_commerce) == 1
-    assert puc_commerce[0].id == "puc-commerce-fin"
+    assert len(puc_commerce) == 2
+    assert puc_commerce[0].id == "puc-commerce"
 
     # 6. Query PUC 2 Arts pathway
     puc_arts = RoadmapService.get_pathways(db, education_level="PUC 2", stream="Arts")
-    assert len(puc_arts) == 1
-    assert puc_arts[0].id == "puc-arts-hum"
+    assert len(puc_arts) == 2
+    assert puc_arts[0].id == "puc-arts"
 
     # 7. Valid filter with zero matching pathways -> returns empty list without error
     empty_result = RoadmapService.get_pathways(db, education_level="Diploma")
@@ -195,7 +196,7 @@ def test_pydantic_schema_serialization():
     assert schema_detail.id == "c10-diploma"
     assert schema_detail.education_level == "Class 10"
     assert schema_detail.category == "Technical"
-    assert len(schema_detail.options) == 3
+    assert len(schema_detail.options) == 4
     assert len(schema_detail.milestones) == 3
 
     opt1 = schema_detail.options[0]
@@ -222,7 +223,7 @@ def test_pydantic_schema_serialization():
         milestones_count=len(pathway_orm.milestones),
     )
     assert summary.id == "c10-diploma"
-    assert summary.options_count == 3
+    assert summary.options_count == 4
     assert summary.milestones_count == 3
 
     # 3. Test PathwayListResponse container validation

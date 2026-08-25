@@ -40,6 +40,7 @@ class PathwayBase(BaseModel):
     category: str
     duration: Optional[str] = None
     description: str
+    parent_id: Optional[str] = None
 
 
 class PathwaySummaryResponse(PathwayBase):
