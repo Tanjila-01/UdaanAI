@@ -174,8 +174,18 @@ export const getAssessmentsApi = async () => {
   return response.data;
 };
 
+export const getMyAssignedAssessmentApi = async () => {
+  const response = await apiClient.get('/api/v1/assessments/my-assessment');
+  return response.data;
+};
+
 export const getAssessmentDetailApi = async (assessmentId) => {
   const response = await apiClient.get(`/api/v1/assessments/${encodeURIComponent(assessmentId)}`);
+  return response.data;
+};
+
+export const startAutoAssessmentAttemptApi = async () => {
+  const response = await apiClient.post('/api/v1/assessments/attempts');
   return response.data;
 };
 

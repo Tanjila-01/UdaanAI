@@ -33,6 +33,17 @@ def get_my_latest_result(
     return AssessmentService.get_my_latest_result(db, user_id)
 
 
+@router.get("/my-assessment", response_model=AssessmentDetailResponse)
+def get_my_assessment(
+    claims: dict = Depends(get_current_user_claims),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: Session = Depends(get_db)
+):
+    user_id = claims.get("sub")
+    token = credentials.credentials if credentials else None
+    return AssessmentService.resolve_assessment_for_student(db, user_id, token)
+
+
 @router.get("/{assessment_id}", response_model=AssessmentDetailResponse)
 def get_assessment(
     assessment_id: str,

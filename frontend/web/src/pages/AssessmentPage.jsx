@@ -25,6 +25,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import {
+  getMyAssignedAssessmentApi,
   getAssessmentsApi,
   getAssessmentDetailApi,
   startAssessmentAttemptApi,
@@ -87,17 +88,15 @@ export const AssessmentPage = () => {
         return;
       }
 
-      // 2. Fetch active assessments for quiz attempt
-      const assessmentsList = await getAssessmentsApi();
-      if (!assessmentsList || assessmentsList.length === 0) {
-        setError('No active career assessments available at this time.');
+      // 2. Fetch the student's assigned level/stream-specific assessment
+      const assignedAssessment = await getMyAssignedAssessmentApi();
+      if (!assignedAssessment) {
+        setError('No active career assessment found for your education level.');
         setLoading(false);
         return;
       }
 
-      const defaultAssessmentId = assessmentsList[0].id;
-      const detail = await getAssessmentDetailApi(defaultAssessmentId);
-      setAssessment(detail);
+      setAssessment(assignedAssessment);
       setStep('intro');
       setLoading(false);
     } catch (err) {

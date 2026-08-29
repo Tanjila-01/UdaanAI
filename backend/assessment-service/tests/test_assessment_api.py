@@ -327,3 +327,36 @@ def test_cannot_submit_to_unrelated_attempt():
         headers=headers_user2
     )
     assert ans_resp.status_code == 404
+
+
+def test_get_my_assessment_all_education_levels():
+    global CURRENT_MOCK_PROFILE
+    token = create_test_token(USER_1_ID)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    test_cases = [
+        ("Class 8", None, "karnataka-class-8-9-exploration-v1"),
+        ("Class 9", None, "karnataka-class-8-9-exploration-v1"),
+        ("Class 10", None, "karnataka-class-10-pathway-exploration-v1"),
+        ("PUC 1", "Science", "karnataka-puc-science-direction-v1"),
+        ("PUC 2", "Science", "karnataka-puc-science-direction-v1"),
+        ("PUC 1", "Commerce", "karnataka-puc-commerce-direction-v1"),
+        ("PUC 2", "Commerce", "karnataka-puc-commerce-direction-v1"),
+        ("PUC 1", "Arts", "karnataka-puc-arts-direction-v1"),
+        ("PUC 2", "Arts", "karnataka-puc-arts-direction-v1"),
+        ("Diploma", None, "karnataka-diploma-direction-v1"),
+        ("ITI", None, "karnataka-iti-direction-v1"),
+    ]
+
+    for level, stream, expected_assessment_id in test_cases:
+        CURRENT_MOCK_PROFILE = {
+            "current_level": level,
+            "stream": stream,
+            "is_complete": True
+        }
+        resp = client.get("/assessments/my-assessment", headers=headers)
+        assert resp.status_code == 200, f"Failed for level {level} stream {stream}: {resp.text}"
+        data = resp.json()
+        assert data["id"] == expected_assessment_id, f"Expected {expected_assessment_id} for {level}/{stream}, got {data['id']}"
+        assert len(data["questions"]) > 0
+

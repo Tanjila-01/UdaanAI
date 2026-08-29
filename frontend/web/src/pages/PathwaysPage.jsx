@@ -114,6 +114,19 @@ const PathwaysPage = () => {
   const [submittingGoal, setSubmittingGoal] = useState(false);
   const [goalError, setGoalError] = useState(null);
 
+  const getEducationStageLabel = (pathway, option) => {
+    if (!option) {
+      return profile?.current_level || pathway.education_level || 'Class 10';
+    }
+    if (pathway.id === 'c10-diploma') return 'Class 10 → Diploma';
+    if (pathway.id === 'c10-iti') return 'Class 10 → ITI';
+    if (pathway.id === 'c10-puc') return 'Class 10 → PUC';
+    if (pathway.id.startsWith('puc-science') || pathway.id.startsWith('puc-commerce') || pathway.id.startsWith('puc-arts')) {
+      return 'PUC → Specialization';
+    }
+    return `${pathway.education_level || 'PUC'} → Option`;
+  };
+
   const handleOpenGoalModal = (pathway, option = null) => {
     const realPathway = pathways.find(p => p.id === pathway.id || (pathway.pathwayId && p.id === pathway.pathwayId));
     if (!realPathway) {
@@ -390,7 +403,7 @@ const PathwaysPage = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500 font-medium">Education Stage</span>
-                <span className="font-extrabold text-[#F97316]">{profile?.current_level || goalModalData.pathway.education_level}</span>
+                <span className="font-extrabold text-[#F97316]">{getEducationStageLabel(goalModalData.pathway, goalModalData.option)}</span>
               </div>
               {goalModalData.option?.eligibility && (
                 <div className="pt-2 border-t border-slate-200/60 text-[11px] text-slate-600">
