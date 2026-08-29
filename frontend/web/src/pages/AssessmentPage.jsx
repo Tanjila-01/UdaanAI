@@ -31,6 +31,8 @@ import {
   submitAssessmentAnswerApi,
   completeAssessmentAttemptApi,
   getMyLatestAssessmentResultApi,
+  generateRecommendationsApi,
+  getLatestRecommendationsApi,
 } from '../api/client';
 
 export const AssessmentPage = () => {
@@ -54,6 +56,9 @@ export const AssessmentPage = () => {
   const [selectedAnswers, setSelectedAnswers] = useState({}); // { question_id: selected_option_id }
   const [result, setResult] = useState(null);
   const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false);
+  const [recommendations, setRecommendations] = useState(null);
+  const [isGeneratingRecs, setIsGeneratingRecs] = useState(false);
+  const [recommendationError, setRecommendationError] = useState(null);
 
   useEffect(() => {
     fetchInitialData();
@@ -68,6 +73,16 @@ export const AssessmentPage = () => {
       if (latestResult && !forceTakeMode) {
         setResult(latestResult);
         setStep('result');
+        // Fetch existing recommendations
+        setIsGeneratingRecs(true);
+        try {
+          const recRes = await getLatestRecommendationsApi();
+          setRecommendations(recRes);
+        } catch (recErr) {
+          console.error('Failed to load existing recommendations:', recErr);
+        } finally {
+          setIsGeneratingRecs(false);
+        }
         setLoading(false);
         return;
       }
@@ -149,14 +164,42 @@ export const AssessmentPage = () => {
   const handleCompleteAssessment = async () => {
     if (!attempt) return;
     setStep('submitting');
+    setRecommendationError(null);
+    setRecommendations(null);
     try {
       const res = await completeAssessmentAttemptApi(attempt.id);
       setResult(res);
       setStep('result');
+      
+      // Try generating recommendations in the background
+      setIsGeneratingRecs(true);
+      try {
+        const recRes = await generateRecommendationsApi();
+        setRecommendations(recRes);
+      } catch (recErr) {
+        console.error('Failed to generate career recommendations:', recErr);
+        setRecommendationError('Your assessment is saved, but personalised recommendations could not be generated right now.');
+      } finally {
+        setIsGeneratingRecs(false);
+      }
     } catch (err) {
       console.error('Failed to complete assessment:', err);
       setError(err.response?.data?.detail || 'Failed to calculate assessment result.');
       setStep('quiz');
+    }
+  };
+
+  const handleRetryGenerateRecommendations = async () => {
+    setRecommendationError(null);
+    setIsGeneratingRecs(true);
+    try {
+      const recRes = await generateRecommendationsApi();
+      setRecommendations(recRes);
+    } catch (recErr) {
+      console.error('Failed to generate career recommendations:', recErr);
+      setRecommendationError('Your assessment is saved, but personalised recommendations could not be generated right now.');
+    } finally {
+      setIsGeneratingRecs(false);
     }
   };
 
@@ -576,20 +619,60 @@ export const AssessmentPage = () => {
                       What would you like to do next?
                     </h3>
 
-                    <div className="space-y-2.5">
-                      <button
-                        type="button"
-                        onClick={() => navigate('/pathways')}
-                        className="w-full bg-[#005F60] hover:bg-teal-800 text-white font-extrabold text-xs py-3 px-4 rounded-xl transition-all shadow-xs flex items-center justify-between cursor-pointer"
-                      >
-                        <span>Explore pathways</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
+                    <div className="space-y-3">
+                      {/* Recommendations Loading State */}
+                      {isGeneratingRecs && (
+                        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs flex items-center space-x-2 text-slate-600 animate-pulse font-sans">
+                          <Loader2 className="w-4 h-4 animate-spin text-[#005F60] shrink-0" />
+                          <span className="font-bold">Generating personalized recommendations...</span>
+                        </div>
+                      )}
+
+                      {/* Recommendations Success State */}
+                      {!isGeneratingRecs && recommendations && recommendations.recommendations && recommendations.recommendations.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => navigate('/pathways')}
+                          className="w-full bg-[#F97316] hover:bg-orange-500 text-white font-extrabold text-xs py-3 px-4 rounded-xl transition-all shadow-md flex items-center justify-between cursor-pointer font-sans"
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <Sparkles className="w-4 h-4 text-white" />
+                            <span>View My Recommended Pathways</span>
+                          </span>
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                      )}
+
+                      {/* Recommendations Error State */}
+                      {!isGeneratingRecs && recommendationError && (
+                        <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl space-y-2 text-xs text-amber-900 font-sans">
+                          <p className="font-semibold">{recommendationError}</p>
+                          <button
+                            type="button"
+                            onClick={handleRetryGenerateRecommendations}
+                            className="bg-[#005F60] hover:bg-teal-800 text-white font-extrabold px-3 py-1.5 rounded-lg transition cursor-pointer"
+                          >
+                            Retry Generating Recommendations
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Default Explore Pathways Button */}
+                      {(!recommendations || !recommendations.recommendations || recommendations.recommendations.length === 0) && !isGeneratingRecs && !recommendationError && (
+                        <button
+                          type="button"
+                          onClick={() => navigate('/pathways')}
+                          className="w-full bg-[#005F60] hover:bg-teal-800 text-white font-extrabold text-xs py-3 px-4 rounded-xl transition-all shadow-xs flex items-center justify-between cursor-pointer font-sans"
+                        >
+                          <span>Explore pathways</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </button>
+                      )}
 
                       <button
                         type="button"
                         onClick={handleRetakeAssessment}
-                        className="w-full text-center text-xs font-bold text-[#005F60] hover:underline pt-2 cursor-pointer flex items-center justify-center space-x-1.5"
+                        className="w-full text-center text-xs font-bold text-[#005F60] hover:underline pt-2 cursor-pointer flex items-center justify-center space-x-1.5 font-sans"
                       >
                         <RefreshCw className="w-3.5 h-3.5" />
                         <span>Retake assessment</span>

@@ -9,6 +9,7 @@ INITIAL_PATHWAYS_DATA = [
     # -------------------------------------------------------------
     {
         "id": "c10-puc",
+        "recommendation_dimensions": ['science', 'commerce', 'arts'],
         "education_level": "Class 10",
         "stream": None,
         "title": "Pre-University College (PUC)",
@@ -62,6 +63,7 @@ INITIAL_PATHWAYS_DATA = [
     },
     {
         "id": "c10-diploma",
+        "recommendation_dimensions": ['diploma'],
         "education_level": "Class 10",
         "stream": None,
         "title": "Polytechnic Diploma",
@@ -122,6 +124,7 @@ INITIAL_PATHWAYS_DATA = [
     },
     {
         "id": "c10-iti",
+        "recommendation_dimensions": ['iti'],
         "education_level": "Class 10",
         "stream": None,
         "title": "ITI Vocational Trades",
@@ -179,6 +182,7 @@ INITIAL_PATHWAYS_DATA = [
     # -------------------------------------------------------------
     {
         "id": "puc-science",
+        "recommendation_dimensions": ['science'],
         "education_level": "PUC 1",
         "stream": "Science",
         "title": "PUC Science Stream",
@@ -226,6 +230,7 @@ INITIAL_PATHWAYS_DATA = [
     },
     {
         "id": "puc-commerce",
+        "recommendation_dimensions": ['commerce'],
         "education_level": "PUC 1",
         "stream": "Commerce",
         "title": "PUC Commerce Stream",
@@ -260,6 +265,7 @@ INITIAL_PATHWAYS_DATA = [
     },
     {
         "id": "puc-arts",
+        "recommendation_dimensions": ['arts'],
         "education_level": "PUC 1",
         "stream": "Arts",
         "title": "PUC Arts & Humanities",
@@ -291,6 +297,7 @@ INITIAL_PATHWAYS_DATA = [
     # -------------------------------------------------------------
     {
         "id": "puc-science-pcmb",
+        "recommendation_dimensions": ['science'],
         "education_level": "PUC 2",
         "stream": "Science",
         "title": "PUC Science PCMB Pathways",
@@ -338,6 +345,7 @@ INITIAL_PATHWAYS_DATA = [
     },
     {
         "id": "puc-science-pcmc",
+        "recommendation_dimensions": ['science'],
         "education_level": "PUC 2",
         "stream": "Science",
         "title": "PUC Science PCMC Pathways",
@@ -385,6 +393,7 @@ INITIAL_PATHWAYS_DATA = [
     },
     {
         "id": "puc-science-pcme",
+        "recommendation_dimensions": ['science'],
         "education_level": "PUC 2",
         "stream": "Science",
         "title": "PUC Science PCME Pathways",
@@ -412,6 +421,7 @@ INITIAL_PATHWAYS_DATA = [
     },
     {
         "id": "puc-commerce-fin",
+        "recommendation_dimensions": ['commerce'],
         "education_level": "PUC 2",
         "stream": "Commerce",
         "title": "PUC Commerce Finance Pathways",
@@ -459,6 +469,7 @@ INITIAL_PATHWAYS_DATA = [
     },
     {
         "id": "puc-arts-hum",
+        "recommendation_dimensions": ['arts'],
         "education_level": "PUC 2",
         "stream": "Arts",
         "title": "PUC Arts Humanities Pathways",
@@ -497,6 +508,7 @@ INITIAL_PATHWAYS_DATA = [
     # -------------------------------------------------------------
     {
         "id": "puc-science-eng",
+        "recommendation_dimensions": ['science'],
         "education_level": "Undergraduate",
         "stream": "Science",
         "title": "Engineering & Technology (B.E / B.Tech)",
@@ -557,6 +569,7 @@ INITIAL_PATHWAYS_DATA = [
     },
     {
         "id": "puc-science-med",
+        "recommendation_dimensions": ['science'],
         "education_level": "Undergraduate",
         "stream": "Science",
         "title": "Medicine & Health Sciences",
@@ -604,6 +617,7 @@ INITIAL_PATHWAYS_DATA = [
     },
     {
         "id": "puc-science-pure",
+        "recommendation_dimensions": ['science'],
         "education_level": "Undergraduate",
         "stream": "Science",
         "title": "Pure & Applied Sciences (B.Sc)",
@@ -638,6 +652,7 @@ INITIAL_PATHWAYS_DATA = [
     },
     {
         "id": "puc-science-pharm",
+        "recommendation_dimensions": ['science'],
         "education_level": "Undergraduate",
         "stream": "Science",
         "title": "Pharmacy Education (B.Pharm / D.Pharm)",
@@ -672,6 +687,7 @@ INITIAL_PATHWAYS_DATA = [
     },
     {
         "id": "puc-science-agri",
+        "recommendation_dimensions": ['science'],
         "education_level": "Undergraduate",
         "stream": "Science",
         "title": "Agriculture & Allied Sciences",
@@ -706,6 +722,7 @@ INITIAL_PATHWAYS_DATA = [
     },
     {
         "id": "puc-science-comp",
+        "recommendation_dimensions": ['science'],
         "education_level": "Undergraduate",
         "stream": "Science",
         "title": "Computer Applications & IT",
@@ -740,6 +757,7 @@ INITIAL_PATHWAYS_DATA = [
     },
     {
         "id": "puc-science-arch",
+        "recommendation_dimensions": ['science'],
         "education_level": "Undergraduate",
         "stream": "Science",
         "title": "Architecture & Spatial Planning",
@@ -777,6 +795,7 @@ INITIAL_PATHWAYS_DATA = [
     # -------------------------------------------------------------
     {
         "id": "cross-law",
+        "recommendation_dimensions": ['commerce', 'arts', 'science'],
         "education_level": "Undergraduate",
         "stream": None,
         "title": "Integrated Law Programs (5-Year)",
@@ -823,6 +842,7 @@ INITIAL_PATHWAYS_DATA = [
     },
     {
         "id": "cross-design",
+        "recommendation_dimensions": ['arts', 'science'],
         "education_level": "Undergraduate",
         "stream": None,
         "title": "Design & Creative Programs",
@@ -863,6 +883,7 @@ INITIAL_PATHWAYS_DATA = [
     },
     {
         "id": "cross-hospitality",
+        "recommendation_dimensions": ['commerce', 'arts'],
         "education_level": "Undergraduate",
         "stream": None,
         "title": "Hospitality & Tourism Management",
@@ -901,6 +922,7 @@ INITIAL_PATHWAYS_DATA = [
     # -------------------------------------------------------------
     {
         "id": "puc-science-cse-careers",
+        "recommendation_dimensions": ['science'],
         "education_level": "Career",
         "stream": "Science",
         "title": "Computing & Software Careers",

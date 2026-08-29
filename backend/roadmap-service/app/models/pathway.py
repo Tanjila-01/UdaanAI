@@ -8,6 +8,7 @@ from sqlalchemy import (
     ForeignKey,
     UniqueConstraint,
     func,
+    JSON,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -30,6 +31,7 @@ class Pathway(Base):
     category = Column(String(50), nullable=False)
     duration = Column(String(50), nullable=True)
     description = Column(Text, nullable=False)
+    recommendation_dimensions = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     
     parent_id = Column(String(50), ForeignKey(fk_target, ondelete="SET NULL"), nullable=True)

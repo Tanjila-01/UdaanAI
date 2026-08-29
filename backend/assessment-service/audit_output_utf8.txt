@@ -1,0 +1,368 @@
+================ ASSESSMENT CONTENT AUDIT ================
+
+1. Assessment ID: karnataka-class-8-9-exploration-v1
+   Level: Class 8-9 | Stream: None
+   Number of Questions: 8
+   Q1: What kind of activities do you enjoy most in your free time?
+      Option [A]: "Solving puzzles, logic games, or reading science articles" -> science (+3)
+      Option [B]: "Tinkering with electronic gadgets, toys, or basic block coding" -> diploma (+3)
+      Option [C]: "Running a small game stall, managing school event expenses, or budgeting" -> commerce (+3)
+      Option [D]: "Drawing, painting, writing stories, or participating in school plays" -> arts (+3)
+   Q2: How do you prefer to work on class science projects?
+      Option [A]: "Finding out why things work using textbooks and research" -> science (+3)
+      Option [B]: "Building a working physical model or model layout" -> diploma (+3)
+      Option [C]: "Presenting the project cost and explaining its practical uses" -> commerce (+3)
+      Option [D]: "Repairing classroom tools or doing hands-on assembly" -> iti (+3)
+   Q3: Which school subjects do you find most interesting?
+      Option [A]: "Science and Mathematics" -> science (+3)
+      Option [B]: "Computer Science and Technical Drawing" -> diploma (+3)
+      Option [C]: "Social Sciences, History, and Languages" -> arts (+3)
+      Option [D]: "Practical Crafts, Work Experience, or DIY workshops" -> iti (+3)
+   Q4: What type of environment would you like to work in in the future?
+      Option [A]: "A clean office, computer software company, or research lab" -> science (+3)
+      Option [B]: "An engineering department, robotics workshop, or design lab" -> diploma (+3)
+      Option [C]: "A bank, retail market business, or corporate finance team" -> commerce (+3)
+      Option [D]: "A modern factory, green energy solar plant, or industrial facility" -> iti (+3)
+   Q5: If you had a computer, what would you want to learn first?
+      Option [A]: "How computer programs, apps, and artificial intelligence work" -> science (+3)
+      Option [B]: "How to design digital graphics, interfaces, or websites" -> arts (+3)
+      Option [C]: "How to use software to track business sales and accounts" -> commerce (+3)
+      Option [D]: "How computer hardware is assembled and connected" -> iti (+3)
+   Q6: When you read a story book or watch a movie, what captures your interest?
+      Option [A]: "The scientific mysteries, logic puzzles, or futuristic technology" -> science (+3)
+      Option [B]: "The relationships, historical settings, and creative stories" -> arts (+3)
+      Option [C]: "How people build businesses, manage money, or lead others" -> commerce (+3)
+      Option [D]: "How machines, vehicles, and complex systems are constructed" -> diploma (+3)
+   Q7: How do you prefer to spend a holiday afternoon?
+      Option [A]: "Doing science experiments at home or playing math games" -> science (+3)
+      Option [B]: "Drawing cartoons, coding a simple script, or creating crafts" -> arts (+3)
+      Option [C]: "Visiting a local market to see how shops sell goods" -> commerce (+3)
+      Option [D]: "Helping repair a bicycle, household appliance, or furniture" -> iti (+3)
+   Q8: Which of these talks at school would you attend?
+      Option [A]: "Space exploration and how life evolved on earth" -> science (+3)
+      Option [B]: "How robots and automated machines work in fields" -> diploma (+3)
+      Option [C]: "How successful companies grew from small startups" -> commerce (+3)
+      Option [D]: "How solar power panels produce electrical energy" -> iti (+3)
+   --- MAX ACHIEVABLE SCORES PER DIMENSION ---
+      * science: 24 (OK)
+      * commerce: 21 (OK)
+      * arts: 15 (OK)
+      * diploma: 18 (OK)
+      * iti: 18 (OK)
+   Status: Every required dimension has meaningful scoring coverage.
+
+2. Assessment ID: karnataka-class-10-pathway-exploration-v1
+   Level: Class 10 | Stream: None
+   Number of Questions: 10
+   Q1: Which subject or topic do you enjoy studying the most in school?
+      Option [A]: "Mathematics, Physics & Computer Science" -> science (+3)
+      Option [B]: "Practical Technical Circuits, Robotics & Coding" -> diploma (+3)
+      Option [C]: "Business Studies, Economics & Accountancy" -> commerce (+3)
+      Option [D]: "Social Studies, History & Creative Writing" -> arts (+3)
+   Q2: How do you prefer solving complex real-world problems?
+      Option [A]: "Using mathematical formulas, logic, and scientific theories" -> science (+3)
+      Option [B]: "Building hardware tools, microcontrollers, or practical prototypes" -> diploma (+3)
+      Option [C]: "Analyzing financial budgets, data spreadsheets, and market trends" -> commerce (+3)
+      Option [D]: "Hands-on electrical wiring, motor repair, and machine assembly" -> iti (+3)
+   Q3: What type of career environment appeals to you most?
+      Option [A]: "High-tech software company or AI research laboratory" -> science (+3)
+      Option [B]: "Engineering workshop, robotics lab, or tech startup" -> diploma (+3)
+      Option [C]: "Corporate finance office, bank, or auditing firm" -> commerce (+3)
+      Option [D]: "Industrial automation plant, solar power site, or field workshop" -> iti (+3)
+   Q4: What is your primary goal after completing Class 10 (SSLC)?
+      Option [A]: "2-Year PUC Science to prepare for KCET / JEE entrance exams" -> science (+3)
+      Option [B]: "3-Year Polytechnic Diploma with direct B.Tech lateral entry" -> diploma (+3)
+      Option [C]: "2-Year PUC Commerce for CA Foundation or Banking degrees" -> commerce (+3)
+      Option [D]: "1-2 Year ITI Trade for immediate industrial technical skills" -> iti (+3)
+   Q5: How do you feel about Artificial Intelligence and modern technology?
+      Option [A]: "Enthusiastic about learning AI algorithms and writing software code" -> science (+3)
+      Option [B]: "Excited to integrate AI into robotics, IoT devices, and web applications" -> diploma (+3)
+      Option [C]: "Interested in using AI tools for business analytics and marketing" -> commerce (+3)
+      Option [D]: "Keen on learning automated industrial machinery and solar energy tech" -> iti (+3)
+   Q6: When working on a group project, what role do you naturally take?
+      Option [A]: "The Lead Researcher & Technical Architect" -> science (+3)
+      Option [B]: "The Hands-on Developer & Prototype Builder" -> diploma (+3)
+      Option [C]: "The Budget Manager & Resource Planner" -> commerce (+3)
+      Option [D]: "The Creative Storyteller & Presenter" -> arts (+3)
+   Q7: How do you react when you face a challenging math or science problem?
+      Option [A]: "I enjoy spending time analyzing step-by-step logic to find the answer" -> science (+3)
+      Option [B]: "I prefer applying practical diagrams, CAD models, or code simulations" -> diploma (+3)
+      Option [C]: "I prefer calculations involving money, statistics, and business percentages" -> commerce (+3)
+      Option [D]: "I prefer visual, written, or conceptual explanations over numbers" -> arts (+3)
+   Q8: Which of these extracurricular activities interests you most?
+      Option [A]: "Coding competitions, Science Olympiad, and Math clubs" -> science (+3)
+      Option [B]: "Robotics workshops, electronics tinkering, and Maker Faires" -> diploma (+3)
+      Option [C]: "Debate, Mock Stock market, and Entrepreneurship clubs" -> commerce (+3)
+      Option [D]: "Technical trade workshops, solar installations, or carpentry" -> iti (+3)
+   Q9: What is your preferred learning style?
+      Option [A]: "Theoretical lectures combined with lab experiments and problem solving" -> science (+3)
+      Option [B]: "Project-based learning with 70% practical shop floor & lab work" -> diploma (+3)
+      Option [C]: "Case studies, ledger practice, and business simulation games" -> commerce (+3)
+      Option [D]: "Direct industrial apprenticeship and hands-on tool usage" -> iti (+3)
+   Q10: Where do you see yourself 5 years after high school?
+      Option [A]: "Graduating with B.E. / B.Tech or M.Sc in Artificial Intelligence" -> science (+3)
+      Option [B]: "Working as a Software Developer or entering B.Tech via Lateral Entry" -> diploma (+3)
+      Option [C]: "Working as a Chartered Accountant, Financial Analyst, or Business Lead" -> commerce (+3)
+      Option [D]: "Certified Industrial Specialist running solar energy or technical services" -> iti (+3)
+   --- MAX ACHIEVABLE SCORES PER DIMENSION ---
+      * science: 30 (OK)
+      * commerce: 30 (OK)
+      * arts: 9 (OK)
+      * diploma: 30 (OK)
+      * iti: 21 (OK)
+   Status: Every required dimension has meaningful scoring coverage.
+
+3. Assessment ID: karnataka-puc-science-direction-v1
+   Level: PUC | Stream: Science
+   Number of Questions: 8
+   Q1: Which advanced topic in your Science class interests you most?
+      Option [A]: "Algorithms, coding software programs, or data structures" -> science (+3)
+      Option [B]: "Microcontrollers, embedded systems, and IoT networks" -> diploma (+3)
+      Option [C]: "Biotechnology, human clinical biology, or life sciences" -> science (+3)
+      Option [D]: "Numerical statistics, quantitative business data analysis" -> commerce (+2)
+   Q2: What type of project would you choose for a Science exhibition?
+      Option [A]: "An AI application, software chatbot, or web utility" -> science (+3)
+      Option [B]: "A working automation prototype, smart robot, or solar tracker" -> diploma (+3)
+      Option [C]: "A chemical synthesis project or molecular biology research poster" -> science (+3)
+      Option [D]: "A mathematical model for business stock trades or sales forecast" -> commerce (+2)
+   Q3: Which career track fits your long-term goal?
+      Option [A]: "Software Engineering, Cybersecurity, or Cloud Architecture" -> science (+3)
+      Option [B]: "Medical doctor, dental specialist, clinical pharmacology expert" -> science (+3)
+      Option [C]: "Robotics developer, hardware engineer, or network lead" -> diploma (+3)
+      Option [D]: "UI/UX interface designer, game artist, or digital creator" -> arts (+2)
+   Q4: How do you prefer to analyze data in a laboratory?
+      Option [A]: "Developing python scripts to analyze scientific data" -> science (+3)
+      Option [B]: "Connecting sensors and checking digital oscilloscope waveforms" -> diploma (+3)
+      Option [C]: "Recording clinical observations, medical symptoms, or biological cell growth" -> science (+3)
+      Option [D]: "Preparing cost charts, supply logs, and business plans for lab setups" -> commerce (+2)
+   Q5: What type of college courses appeal to you?
+      Option [A]: "Four-year B.E. or B.Tech engineering degree in CS, IT, or ECE" -> science (+3)
+      Option [B]: "MBBS, B.Pharm, or agricultural sciences degree" -> science (+3)
+      Option [C]: "B.Sc or M.Sc in computer science, statistics, or biotechnology" -> diploma (+2)
+      Option [D]: "Integrated 5-Year Law program or digital design course" -> arts (+2)
+   Q6: If you could visit a workplace for a day, which would you pick?
+      Option [A]: "An IT park or software company engineering lab" -> science (+3)
+      Option [B]: "A multispecialty hospital, research clinic, or pharmacy lab" -> science (+3)
+      Option [C]: "An automation factory or hardware design shop" -> diploma (+3)
+      Option [D]: "A corporate banking center or financial investment office" -> commerce (+2)
+   Q7: How do you feel about coding or software development?
+      Option [A]: "Highly interested; I enjoy writing logical code, algorithms, and apps" -> science (+3)
+      Option [B]: "Interested in applying scripts to manage hardware, databases, and microcontrollers" -> diploma (+3)
+      Option [C]: "Prefer using computer tools for data plotting, report making, or editing" -> commerce (+2)
+      Option [D]: "Not interested in coding; I prefer creative design, writing, or arts" -> arts (+2)
+   Q8: What type of challenge excites you?
+      Option [A]: "Solving abstract equations, calculus, or physics word problems" -> science (+3)
+      Option [B]: "Troubleshooting electronic circuits, mechanical assemblies, or software bugs" -> diploma (+3)
+      Option [C]: "Understanding how financial markets, trade logic, or company stock values work" -> commerce (+2)
+      Option [D]: "Designing a visual concept map, poster presentation, or creative interface" -> arts (+2)
+   --- MAX ACHIEVABLE SCORES PER DIMENSION ---
+      * science: 24 (OK)
+      * commerce: 12 (OK)
+      * arts: 8 (OK)
+      * diploma: 23 (OK)
+      * iti: 0 (MISSING)
+   Status: WARNING! Missing coverage for dimensions: ['iti']
+
+4. Assessment ID: karnataka-puc-commerce-direction-v1
+   Level: PUC | Stream: Commerce
+   Number of Questions: 8
+   Q1: Which area of your business studies interests you most?
+      Option [A]: "Double-entry bookkeeping, final ledger sheets, and auditing" -> commerce (+3)
+      Option [B]: "Financial economics, banking regulations, and supply-demand theory" -> commerce (+3)
+      Option [C]: "Using computers to run financial database systems and spreadsheets" -> commerce (+3)
+      Option [D]: "Creative marketing campaigns, product design, or PR writing" -> arts (+2)
+   Q2: What type of simulation game would you play?
+      Option [A]: "Stock market trading simulation to optimize investments" -> commerce (+3)
+      Option [B]: "Management simulation running a startup company budget" -> commerce (+3)
+      Option [C]: "Designing a building layout using CAD modeling systems" -> diploma (+2)
+      Option [D]: "Writing logic code to build a game database engine" -> science (+2)
+   Q3: Which career milestone track fits your long-term plan?
+      Option [A]: "Passing the Chartered Accountant (CA) or Company Secretary (CS) exams" -> commerce (+3)
+      Option [B]: "Working as an investment analyst, corporate banker, or audit lead" -> commerce (+3)
+      Option [C]: "Integrated 5-Year corporate law degree (B.Com LL.B or BBA LL.B)" -> commerce (+3)
+      Option [D]: "Becoming a hospitality or hotel manager running global branches" -> arts (+2)
+   Q4: How do you prefer to handle quantitative data?
+      Option [A]: "Using mathematical statistics, ledger balances, and corporate accounts" -> commerce (+3)
+      Option [B]: "Analyzing macro-economic indicators, inflation data, and market graphs" -> commerce (+3)
+      Option [C]: "Writing math algorithms or computer program loops to calculate scores" -> science (+2)
+      Option [D]: "Visualizing cost data using infographics and creative presentations" -> arts (+2)
+   Q5: If you could manage a budget, what would you focus on?
+      Option [A]: "Maximizing returns by cutting costs and auditing accounts" -> commerce (+3)
+      Option [B]: "Allocating capital to fund new business ideas and advertising" -> commerce (+3)
+      Option [C]: "Allocating resources to build technical hardware pipelines" -> diploma (+2)
+      Option [D]: "Sponsoring creative art installations and design exhibitions" -> arts (+2)
+   Q6: Which corporate project sounds most interesting?
+      Option [A]: "Preparing the annual tax and audit report for a public company" -> commerce (+3)
+      Option [B]: "Planning the marketing and rollout strategy for a new app" -> commerce (+3)
+      Option [C]: "Drafting the legal contract for corporate mergers and acquisitions" -> arts (+2)
+      Option [D]: "Designing the database structure for client sales records" -> science (+2)
+   Q7: How do you prefer to resolve business problems?
+      Option [A]: "Analyzing transaction logs to trace lost funds" -> commerce (+3)
+      Option [B]: "Negotiating with suppliers to reduce manufacturing costs" -> commerce (+3)
+      Option [C]: "Troubleshooting database errors in accounting systems" -> science (+2)
+      Option [D]: "Conducting interviews to understand client satisfaction" -> arts (+2)
+   Q8: What type of news articles do you read first?
+      Option [A]: "Central bank interest rates changes and monetary policy reviews" -> commerce (+3)
+      Option [B]: "Startup profiles, business funding, and tech acquisitions" -> commerce (+3)
+      Option [C]: "New space telescopes, physics breakthroughs, or AI releases" -> science (+2)
+      Option [D]: "Book reviews, art awards, design projects, or policy debates" -> arts (+2)
+   --- MAX ACHIEVABLE SCORES PER DIMENSION ---
+      * science: 10 (OK)
+      * commerce: 24 (OK)
+      * arts: 14 (OK)
+      * diploma: 4 (OK)
+      * iti: 0 (MISSING)
+   Status: WARNING! Missing coverage for dimensions: ['iti']
+
+5. Assessment ID: karnataka-puc-arts-direction-v1
+   Level: PUC | Stream: Arts
+   Number of Questions: 8
+   Q1: Which topic in your Humanities classes interests you most?
+      Option [A]: "Political theories, constitutional law, and public policy structures" -> arts (+3)
+      Option [B]: "Sociology case studies, human relations, and social systems" -> arts (+3)
+      Option [C]: "Historical economics, business trade networks, and taxation history" -> commerce (+2)
+      Option [D]: "Scientific method in archaeological dating or logic models" -> science (+2)
+   Q2: What type of project would you choose for a humanities seminar?
+      Option [A]: "A study on human rights cases or political debates in history" -> arts (+3)
+      Option [B]: "A creative visual design portfolio, poster presentation, or infographic" -> arts (+3)
+      Option [C]: "A proposal for a village tourism development or event budget" -> commerce (+2)
+      Option [D]: "A study on the technology infrastructure of ancient civilisations" -> diploma (+2)
+   Q3: Which career track fits your long-term goal?
+      Option [A]: "Integrated 5-Year Law program (BA LL.B) to practice as an advocate" -> arts (+3)
+      Option [B]: "UI/UX interface designer, product designer, or creative artist" -> arts (+3)
+      Option [C]: "Corporate management, retail logistics lead, or business planner" -> commerce (+2)
+      Option [D]: "Industrial safety inspector or trade workshop controller" -> iti (+2)
+   Q4: How do you prefer to gather facts for an argument?
+      Option [A]: "Reading court judgments, policy drafts, and legal history" -> arts (+3)
+      Option [B]: "Conducting interviews, user surveys, and recording stories" -> arts (+3)
+      Option [C]: "Analyzing market sales data spreadsheets and business indices" -> commerce (+2)
+      Option [D]: "Reviewing blueprints, electrical lines, and machine data logs" -> iti (+2)
+   Q5: If you could write an article for a local newspaper, what would you choose?
+      Option [A]: "A critical analysis of central government policies and laws" -> arts (+3)
+      Option [B]: "A feature on local cultural arts, design projects, and murals" -> arts (+3)
+      Option [C]: "A review of how local trade cooperatives manage credit budgets" -> commerce (+2)
+      Option [D]: "An explanation of solar panel installations and trade careers" -> iti (+2)
+   Q6: Which type of challenge is most satisfying?
+      Option [A]: "Participating in structured debate tournaments and moot court trials" -> arts (+3)
+      Option [B]: "Designing a visual poster, logo, or website interface from scratch" -> arts (+3)
+      Option [C]: "Organizing a school fair and tracking the profit margins of each booth" -> commerce (+2)
+      Option [D]: "Diagnosing a mechanical glitch in a school printer or audio console" -> diploma (+2)
+   Q7: What type of community project would you lead?
+      Option [A]: "A legal literacy camp explaining citizen rights and court options" -> arts (+3)
+      Option [B]: "An art project designing posters and creative layouts for public spaces" -> arts (+3)
+      Option [C]: "A credit society helping local women secure small business capital" -> commerce (+2)
+      Option [D]: "A workshop teaching local youth basic household wiring safety" -> iti (+2)
+   Q8: Which of these courses sounds most appealing?
+      Option [A]: "Bachelor of Law (LL.B) with legal advocacy training" -> arts (+3)
+      Option [B]: "Bachelor of Design (B.Des) in UI/UX or Communication Design" -> arts (+3)
+      Option [C]: "Bachelor of Hotel Management (BHM) or Business Administration (BBA)" -> commerce (+2)
+      Option [D]: "Bachelor of Arts in Economics/Political Science with statistics focus" -> arts (+2)
+   --- MAX ACHIEVABLE SCORES PER DIMENSION ---
+      * science: 2 (OK)
+      * commerce: 16 (OK)
+      * arts: 24 (OK)
+      * diploma: 4 (OK)
+      * iti: 8 (OK)
+   Status: Every required dimension has meaningful scoring coverage.
+
+6. Assessment ID: karnataka-diploma-direction-v1
+   Level: Diploma | Stream: None
+   Number of Questions: 8
+   Q1: Which practical domain in your Engineering Diploma interests you most?
+      Option [A]: "Software architecture, database admin, and system coding" -> diploma (+3)
+      Option [B]: "Integrated circuits, semiconductor chips, and electronic boards" -> diploma (+3)
+      Option [C]: "CAD/CAM mechanical designing, thermodynamics, and robotics" -> diploma (+3)
+      Option [D]: "Scientific physics, algorithms, and advanced mathematics" -> science (+2)
+   Q2: What type of capstone project do you prefer for your Diploma final year?
+      Option [A]: "Building a full-stack web app, mobile software utility, or cloud setup" -> diploma (+3)
+      Option [B]: "Designing an IoT smart automation device or micro-robotic arm" -> diploma (+3)
+      Option [C]: "Constructing a model solar tracker or automated conveyor system" -> diploma (+3)
+      Option [D]: "Writing a theoretical research thesis on structural materials and physics" -> science (+2)
+   Q3: What is your main goal after completing your Polytechnic Diploma?
+      Option [A]: "Direct lateral entry into 2nd year B.E / B.Tech via DCET entrance" -> diploma (+3)
+      Option [B]: "Immediate technical placement in an industrial software or engineering park" -> diploma (+3)
+      Option [C]: "Starting a technical consultancy service or engineering repair trade shop" -> iti (+2)
+      Option [D]: "Pursuing corporate MBA and management courses after graduation" -> commerce (+2)
+   Q4: Which workplace environment appeals to you?
+      Option [A]: "An IT team designing algorithms, network firewalls, and cloud databases" -> diploma (+3)
+      Option [B]: "An R&D department designing embedded hardware circuit boards" -> diploma (+3)
+      Option [C]: "A manufacturing plant workshop overseeing robotic conveyor systems" -> diploma (+3)
+      Option [D]: "An industrial shop floor running manual lathe work and solar power tools" -> iti (+2)
+   Q5: How do you prefer to troubleshoot a hardware fault?
+      Option [A]: "Using digital software debuggers, logic analyzers, and logs" -> diploma (+3)
+      Option [B]: "Testing electronic pins with digital multimeters and oscilloscope waves" -> diploma (+3)
+      Option [C]: "Applying scientific physics calculations to check load parameters" -> science (+2)
+      Option [D]: "Rewiring connections manually and replacing structural trade fuses" -> iti (+2)
+   Q6: If you could take an additional certification, which would you pick?
+      Option [A]: "Full-stack software developer, AWS Cloud Architect, or database lead" -> diploma (+3)
+      Option [B]: "Embedded systems designer, IoT programmer, or VLSI hardware architect" -> diploma (+3)
+      Option [C]: "CAD/CAM mechanical designer, Autodesk Inventor, or industrial designer" -> diploma (+3)
+      Option [D]: "Project management framework certification (PMP) or business analytics" -> commerce (+2)
+   Q7: What type of laboratory activity is most satisfying?
+      Option [A]: "Writing code modules to run server databases and APIs" -> diploma (+3)
+      Option [B]: "Wiring electronic microcontrollers and checking circuit responses" -> diploma (+3)
+      Option [C]: "Measuring structural stress loads on beams and testing motors" -> diploma (+3)
+      Option [D]: "Splicing optical fibers, installing switchboards, or mechanical alignment" -> iti (+2)
+   Q8: Which subject in school did you feel set your foundation?
+      Option [A]: "Applied Sciences and Physics logic" -> science (+3)
+      Option [B]: "Technical Drawing and Practical workshop" -> diploma (+3)
+      Option [C]: "Commercial Arithmetic and basic economics" -> commerce (+2)
+      Option [D]: "Basic crafts, metalwork, or carpentry skills" -> iti (+2)
+   --- MAX ACHIEVABLE SCORES PER DIMENSION ---
+      * science: 9 (OK)
+      * commerce: 6 (OK)
+      * arts: 0 (MISSING)
+      * diploma: 24 (OK)
+      * iti: 10 (OK)
+   Status: WARNING! Missing coverage for dimensions: ['arts']
+
+7. Assessment ID: karnataka-iti-direction-v1
+   Level: ITI | Stream: None
+   Number of Questions: 8
+   Q1: Which trade domain in ITI interests you most?
+      Option [A]: "Electrical wiring, power panels, motor rewinding, and solar setup" -> iti (+3)
+      Option [B]: "Electronics technician, circuit card repair, and device troubleshooting" -> iti (+3)
+      Option [C]: "Fitter trades, lathe operations, welding, and machine assembly" -> iti (+3)
+      Option [D]: "Basic computer programming, office database apps, and web tools" -> diploma (+2)
+   Q2: What type of hands-on activity do you enjoy most?
+      Option [A]: "Installing solar power panels, domestic conduits, or lighting systems" -> iti (+3)
+      Option [B]: "Soldering microchips, replacing electronic capacitors, or wiring boards" -> iti (+3)
+      Option [C]: "Operating manual drill presses, milling machines, or welding joints" -> iti (+3)
+      Option [D]: "Drafting technical layouts, schematic diagrams, or circuit designs" -> diploma (+2)
+   Q3: What is your primary goal after completing your ITI trade?
+      Option [A]: "Securing a direct industrial apprentice position (like BHEL, KSRTC)" -> iti (+3)
+      Option [B]: "Working as an electrical or solar maintenance trade specialist" -> iti (+3)
+      Option [C]: "Lateral entry into a 3-year Polytechnic Diploma course (2nd year entry)" -> diploma (+3)
+      Option [D]: "Starting a commercial business selling electrical or hardware supplies" -> commerce (+2)
+   Q4: Which work environment would you find most satisfying?
+      Option [A]: "An industrial plant floor running automated solar generators" -> iti (+3)
+      Option [B]: "A field site installing solar grids, domestic wires, and panels" -> iti (+3)
+      Option [C]: "A maintenance workshop repairing mechanical lathe engines" -> iti (+3)
+      Option [D]: "A software team testing application scripts and database loops" -> science (+2)
+   Q5: How do you prefer to learn new trade skills?
+      Option [A]: "Direct shop floor apprenticeship with hands-on machinery usage" -> iti (+3)
+      Option [B]: "Structured wiring tutorials, schematic reviews, and bench tests" -> iti (+3)
+      Option [C]: "Watching video demonstrations of mechanical fitters welding joints" -> iti (+3)
+      Option [D]: "Reading classroom textbooks and solving science physics equations" -> science (+2)
+   Q6: If you could purchase a tool set, what would it contain?
+      Option [A]: "Insulated screwdrivers, wire strippers, multimeters, and conduit tools" -> iti (+3)
+      Option [B]: "Soldering irons, magnifying lenses, circuit testers, and desoldering pumps" -> iti (+3)
+      Option [C]: "Wrenches, calipers, welding torches, and manual machine clamps" -> iti (+3)
+      Option [D]: "Software database licenses and computer programming textbooks" -> diploma (+2)
+   Q7: Which industrial sector seems most stable and growing?
+      Option [A]: "Solar energy generation, green power grids, and electrical utilities" -> iti (+3)
+      Option [B]: "Automotive assembly lines, heavy machinery fitter workshops" -> iti (+3)
+      Option [C]: "Consumer electronics manufacturing and circuit repairing shops" -> iti (+3)
+      Option [D]: "Digital retail sales, corporate banking, and trade economics" -> commerce (+2)
+   Q8: What type of manual task gives you satisfaction?
+      Option [A]: "Wiring a domestic building switchboard and checking it lights up" -> iti (+3)
+      Option [B]: "Soldering an electronic kit and seeing the LED pulse properly" -> iti (+3)
+      Option [C]: "Filing a metal block to exact millimeter specifications" -> iti (+3)
+      Option [D]: "Creating a spreadsheet to calculate family business monthly expenses" -> commerce (+2)
+   --- MAX ACHIEVABLE SCORES PER DIMENSION ---
+      * science: 4 (OK)
+      * commerce: 6 (OK)
+      * arts: 0 (MISSING)
+      * diploma: 9 (OK)
+      * iti: 24 (OK)
+   Status: WARNING! Missing coverage for dimensions: ['arts']

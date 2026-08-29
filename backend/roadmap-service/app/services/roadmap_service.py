@@ -59,9 +59,9 @@ class RoadmapService:
     def seed_initial_data(db: Session) -> int:
         """
         Idempotent database seeding method (upsert strategy).
-        Inserts missing pathways, options, and milestones or updates existing entries in-place without creating duplicates.
-        Returns total count of pathways in database.
+        Uses a two-pass strategy to prevent foreign key violations on self-referential parent_id.
         """
+        # Pass 1: Upsert all pathways and their components without setting parent_id
         for p_data in INITIAL_PATHWAYS_DATA:
             pathway = db.query(Pathway).filter(Pathway.id == p_data["id"]).first()
             if not pathway:
@@ -73,7 +73,8 @@ class RoadmapService:
                     category=p_data["category"],
                     duration=p_data.get("duration"),
                     description=p_data["description"],
-                    parent_id=p_data.get("parent_id"),
+                    parent_id=None,
+                    recommendation_dimensions=p_data.get("recommendation_dimensions"),
                 )
                 for opt in p_data.get("options", []):
                     pathway.options.append(
@@ -103,7 +104,7 @@ class RoadmapService:
                 pathway.category = p_data["category"]
                 pathway.duration = p_data.get("duration")
                 pathway.description = p_data["description"]
-                pathway.parent_id = p_data.get("parent_id")
+                pathway.recommendation_dimensions = p_data.get("recommendation_dimensions")
 
                 # Update or append options
                 existing_opts = {opt.display_order: opt for opt in pathway.options}
@@ -142,6 +143,14 @@ class RoadmapService:
                                 key_action=ms_data.get("key_action"),
                             )
                         )
+        db.commit()
+
+        # Pass 2: Setup parent_id references now that all pathways exist in database
+        for p_data in INITIAL_PATHWAYS_DATA:
+            if p_data.get("parent_id"):
+                pathway = db.query(Pathway).filter(Pathway.id == p_data["id"]).first()
+                if pathway:
+                    pathway.parent_id = p_data["parent_id"]
 
         db.commit()
         return db.query(Pathway).count()

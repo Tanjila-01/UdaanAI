@@ -232,4 +232,16 @@ export const completeMilestoneApi = async (milestoneId) => {
   return response.data;
 };
 
+// --- Career Recommendation APIs ---
+
+export const generateRecommendationsApi = async () => {
+  const response = await apiClient.post('/api/v1/career-intelligence/recommendations/generate');
+  return response.data;
+};
+
+export const getLatestRecommendationsApi = async () => {
+  const response = await apiClient.get('/api/v1/career-intelligence/recommendations/me');
+  return response.data;
+};
+
 

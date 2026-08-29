@@ -3,7 +3,8 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.orm import Session
 from app.db.session import get_db
-from app.core.security import get_current_user_claims
+from fastapi.security import HTTPAuthorizationCredentials
+from app.core.security import get_current_user_claims, security
 from app.schemas.assessment import (
     AssessmentSummaryResponse,
     AssessmentDetailResponse,
@@ -40,13 +41,27 @@ def get_assessment(
     return AssessmentService.get_assessment_by_id(db, assessment_id)
 
 
+@router.post("/attempts", response_model=AttemptCreateResponse, status_code=status.HTTP_201_CREATED)
+def start_attempt_auto(
+    claims: dict = Depends(get_current_user_claims),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: Session = Depends(get_db)
+):
+    user_id = claims.get("sub")
+    token = credentials.credentials if credentials else None
+    return AssessmentService.start_assessment_attempt_auto(db, user_id, token)
+
+
 @router.post("/{assessment_id}/attempts", response_model=AttemptCreateResponse, status_code=status.HTTP_201_CREATED)
 def start_attempt(
     assessment_id: str,
     claims: dict = Depends(get_current_user_claims),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db)
 ):
     user_id = claims.get("sub")
+    token = credentials.credentials if credentials else None
+    AssessmentService.validate_assessment_for_student(db, user_id, assessment_id, token)
     return AssessmentService.start_assessment_attempt(db, user_id, assessment_id)
 
 

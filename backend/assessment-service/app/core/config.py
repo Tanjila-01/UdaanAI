@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     DB_SCHEMA: str = "assessment"
     JWT_SECRET_KEY: str = "dev_secret_key_udaan_ai_phase2_change_in_prod"
     JWT_ALGORITHM: str = "HS256"
+    STUDENT_SERVICE_URL: str = "http://localhost:8002"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

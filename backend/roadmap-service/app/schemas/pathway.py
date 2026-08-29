@@ -41,6 +41,7 @@ class PathwayBase(BaseModel):
     duration: Optional[str] = None
     description: str
     parent_id: Optional[str] = None
+    recommendation_dimensions: Optional[List[str]] = None
 
 
 class PathwaySummaryResponse(PathwayBase):

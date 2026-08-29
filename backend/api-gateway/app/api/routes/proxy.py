@@ -193,3 +193,41 @@ async def proxy_assessments_options(path: str, request: Request, credentials: Op
     return await _proxy_assessments(path, request)
 
 
+# --- AI Career Service Proxy Routes ---
+
+async def _proxy_career(path: str, request: Request) -> Response:
+    clean_path = f"/{path.lstrip('/')}" if path else ""
+    target_url = f"{settings.AI_CAREER_SERVICE_URL.rstrip('/')}/career-intelligence{clean_path}"
+    return await forward_request(target_url, request, error_detail="AI Career service is temporarily unavailable.")
+
+
+@router.get("/career-intelligence/{path:path}", operation_id="proxy_career_get", tags=["Career Intelligence"])
+async def proxy_career_get(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_career(path, request)
+
+
+@router.post("/career-intelligence/{path:path}", operation_id="proxy_career_post", tags=["Career Intelligence"])
+async def proxy_career_post(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_career(path, request)
+
+
+@router.put("/career-intelligence/{path:path}", operation_id="proxy_career_put", tags=["Career Intelligence"])
+async def proxy_career_put(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_career(path, request)
+
+
+@router.delete("/career-intelligence/{path:path}", operation_id="proxy_career_delete", tags=["Career Intelligence"])
+async def proxy_career_delete(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_career(path, request)
+
+
+@router.patch("/career-intelligence/{path:path}", operation_id="proxy_career_patch", tags=["Career Intelligence"])
+async def proxy_career_patch(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_career(path, request)
+
+
+@router.options("/career-intelligence/{path:path}", operation_id="proxy_career_options", tags=["Career Intelligence"])
+async def proxy_career_options(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_career(path, request)
+
+

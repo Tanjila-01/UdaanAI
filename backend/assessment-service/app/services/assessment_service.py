@@ -14,6 +14,7 @@ from app.models.assessment import (
     AssessmentResult,
 )
 from app.schemas.assessment import AnswerSubmitRequest
+from app.services.student_client import StudentClient
 
 
 class AssessmentService:
@@ -139,6 +140,62 @@ class AssessmentService:
         return new_answer
 
     @staticmethod
+    def resolve_assessment_for_student(db: Session, user_id: str, token: str) -> Assessment:
+        profile = StudentClient.get_student_profile(token)
+
+        current_level = profile.get("current_level")
+        stream = profile.get("stream")
+        is_complete = profile.get("is_complete")
+
+        if not is_complete:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Student profile is incomplete. Please complete your profile first."
+            )
+
+        if current_level in ["Class 8", "Class 9"]:
+            target_level = "Class 8-9"
+        elif current_level in ["PUC 1", "PUC 2"]:
+            target_level = "PUC"
+        else:
+            target_level = current_level
+
+        query = db.query(Assessment).filter(
+            Assessment.target_level == target_level,
+            Assessment.is_active == True
+        )
+
+        if target_level == "PUC":
+            if not stream:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Academic stream is required for PUC assessment selection."
+                )
+            query = query.filter(Assessment.target_stream == stream)
+
+        assessment = query.first()
+        if not assessment:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No active assessment found for level '{current_level}'" + (f" and stream '{stream}'" if stream else "") + "."
+            )
+        return assessment
+
+    @staticmethod
+    def validate_assessment_for_student(db: Session, user_id: str, assessment_id: str, token: str) -> None:
+        target_assessment = AssessmentService.resolve_assessment_for_student(db, user_id, token)
+        if target_assessment.id != assessment_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Assessment '{assessment_id}' is not appropriate for your level and stream."
+            )
+
+    @staticmethod
+    def start_assessment_attempt_auto(db: Session, user_id: str, token: str) -> AssessmentAttempt:
+        assessment = AssessmentService.resolve_assessment_for_student(db, user_id, token)
+        return AssessmentService.start_assessment_attempt(db, user_id, assessment.id)
+
+    @staticmethod
     def complete_assessment(db: Session, user_id: str, attempt_id: UUID) -> AssessmentResult:
         user_uuid = uuid.UUID(str(user_id))
 
@@ -161,16 +218,40 @@ class AssessmentService:
                 detail="Assessment attempt is already completed."
             )
 
+        # Fetch all questions for this assessment
+        questions = db.query(AssessmentQuestion).filter(
+            AssessmentQuestion.assessment_id == attempt.assessment_id
+        ).all()
+        total_required = len(questions)
+
         # Fetch all answers for this attempt
         answers = db.query(AssessmentAnswer).filter(
             AssessmentAnswer.attempt_id == attempt.id
         ).all()
 
-        if not answers:
+        answered_count = len(answers)
+        if answered_count < total_required:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot complete assessment without answering any questions."
+                detail=f"Cannot complete assessment. You have answered {answered_count} out of {total_required} required questions."
             )
+
+        # Calculate maximum possible score for each dimension dynamically
+        max_scores = {
+            "science": 0,
+            "commerce": 0,
+            "arts": 0,
+            "diploma": 0,
+            "iti": 0
+        }
+        for q in questions:
+            q_max = {}
+            for opt in q.options:
+                dim = opt.weight_dimension.lower()
+                if opt.weight_score > q_max.get(dim, 0):
+                    q_max[dim] = opt.weight_score
+            for dim, score in q_max.items():
+                max_scores[dim] = max_scores.get(dim, 0) + score
 
         # Deterministic Rule-Based Scoring across dimensions (science, commerce, arts, diploma, iti)
         dimension_scores = {
@@ -187,8 +268,17 @@ class AssessmentService:
                 dim = opt.weight_dimension.lower()
                 dimension_scores[dim] = dimension_scores.get(dim, 0) + opt.weight_score
 
-        # Sort dimensions by score descending
-        sorted_dims = sorted(dimension_scores.items(), key=lambda x: x[1], reverse=True)
+        # Normalize raw scores to integers out of 100
+        normalized_scores = {}
+        for dim, raw_score in dimension_scores.items():
+            max_val = max_scores.get(dim, 0)
+            if max_val > 0:
+                normalized_scores[dim] = int(round((raw_score / max_val) * 100.0))
+            else:
+                normalized_scores[dim] = 0
+
+        # Sort dimensions by normalized score descending to find the top recommendation
+        sorted_dims = sorted(normalized_scores.items(), key=lambda x: x[1], reverse=True)
         top_dim, top_score = sorted_dims[0]
         second_dim, second_score = sorted_dims[1]
 
@@ -218,10 +308,13 @@ class AssessmentService:
             id=uuid.uuid4(),
             attempt_id=attempt.id,
             user_id=user_uuid,
+            assessment_id=attempt.assessment_id,
+            assessment_version=attempt.assessment.assessment_version,
+            scoring_version=attempt.assessment.scoring_version,
             primary_stream_recommendation=primary_recommendation,
             secondary_stream_recommendation=secondary_recommendation,
             top_career_match=top_career,
-            dimension_scores=dimension_scores,
+            dimension_scores=normalized_scores,
             summary_text=summary_text,
             created_at=datetime.now(timezone.utc)
         )

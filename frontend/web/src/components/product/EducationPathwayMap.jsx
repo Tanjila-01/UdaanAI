@@ -16,78 +16,78 @@ import {
   RefreshCw,
   MapPin,
   Lock,
-  BookOpen
+  BookOpen,
+  Sparkles
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 
 // Pre-defined static visual structures for all stations/nodes
+// Pre-defined static visual structures for all stations/nodes
 const SKELETON_NODES = {
-  'c10': { id: 'c10', label: 'Class 10 / SSLC', col: 0, row: 3, type: 'root', color: '#005F60', isCareer: false, desc: 'Starting stage for all high school students in Karnataka.' },
+  'c10': { id: 'c10', label: 'Class 10 / SSLC', col: 0, row: 3, type: 'root', color: '#005F60', isCareer: false, desc: 'Starting stage for all high school students in Karnataka.', pathwayId: null },
   
   // Level 1: Routes
-  'puc': { id: 'puc', label: 'PUC (11th & 12th)', parentId: 'c10', col: 1, row: 1.5, type: 'route', color: '#005F60', isCareer: false, desc: '2-year Pre-University Course academic stream, preparing for general and professional university degrees.' },
-  'diploma': { id: 'diploma', label: 'Polytechnic Diploma', parentId: 'c10', col: 1, row: 3.5, type: 'route', color: '#0EA5E9', isCareer: false, desc: '3-year practical engineering technical program leading to early employment or direct 2nd-year B.E lateral entry.' },
-  'iti': { id: 'iti', label: 'ITI Trades', parentId: 'c10', col: 1, row: 5, type: 'route', color: '#10B981', isCareer: false, desc: '1-to-2 year skill-focused vocational trade certificates targeting quick industry entry and apprenticeships.' },
+  'puc': { id: 'puc', label: 'PUC (11th & 12th)', parentId: 'c10', col: 1, row: 1.5, type: 'route', color: '#005F60', isCareer: false, desc: '2-year Pre-University Course academic stream, preparing for general and professional university degrees.', pathwayId: 'c10-puc' },
+  'diploma': { id: 'diploma', label: 'Polytechnic Diploma', parentId: 'c10', col: 1, row: 3.5, type: 'route', color: '#0EA5E9', isCareer: false, desc: '3-year practical engineering technical program leading to early employment or direct 2nd-year B.E lateral entry.', pathwayId: 'c10-diploma' },
+  'iti': { id: 'iti', label: 'ITI Trades', parentId: 'c10', col: 1, row: 5, type: 'route', color: '#10B981', isCareer: false, desc: '1-to-2 year skill-focused vocational trade certificates targeting quick industry entry and apprenticeships.', pathwayId: 'c10-iti' },
   
   // Level 2: Streams & Trades
-  'puc-science': { id: 'puc-science', label: 'Science Stream', parentId: 'puc', col: 2, row: 0.8, type: 'stream', color: '#005F60', isCareer: false, desc: 'Focused on Physics, Chemistry, Maths, Biology, and Computer electives. Leads to STEM and medical fields.' },
-  'puc-commerce': { id: 'puc-commerce', label: 'Commerce Stream', parentId: 'puc', col: 2, row: 1.6, type: 'stream', color: '#F97316', isCareer: false, desc: 'Focused on Accountancy, Business, Economics, and Statistics. Ideal for financial, corporate management, and CA tracks.' },
-  'puc-arts': { id: 'puc-arts', label: 'Arts & Humanities', parentId: 'puc', col: 2, row: 2.3, type: 'stream', color: '#8B5CF6', isCareer: false, desc: 'Focused on History, Economics, Political Science, and Sociology. Leads to civil services, law, journalism, and public services.' },
+  'puc-science': { id: 'puc-science', label: 'Science Stream', parentId: 'puc', col: 2, row: 0.8, type: 'stream', color: '#005F60', isCareer: false, desc: 'Focused on Physics, Chemistry, Maths, Biology, and Computer electives. Leads to STEM and medical fields.', pathwayId: 'puc-science' },
+  'puc-commerce': { id: 'puc-commerce', label: 'Commerce Stream', parentId: 'puc', col: 2, row: 1.6, type: 'stream', color: '#F97316', isCareer: false, desc: 'Focused on Accountancy, Business, Economics, and Statistics. Ideal for financial, corporate management, and CA tracks.', pathwayId: 'puc-commerce' },
+  'puc-arts': { id: 'puc-arts', label: 'Arts & Humanities', parentId: 'puc', col: 2, row: 2.3, type: 'stream', color: '#8B5CF6', isCareer: false, desc: 'Focused on History, Economics, Political Science, and Sociology. Leads to civil services, law, journalism, and public services.', pathwayId: 'puc-arts' },
   
-  'dip-cse': { id: 'dip-cse', label: 'Diploma CS & IT', parentId: 'diploma', col: 2, row: 3, type: 'branch', color: '#0EA5E9', isCareer: false, desc: 'Practical software engineering, database, web development, and networking diploma.' },
-  'dip-ece': { id: 'dip-ece', label: 'Diploma ECE / EEE', parentId: 'diploma', col: 2, row: 3.5, type: 'branch', color: '#0EA5E9', isCareer: false, desc: 'Practical electrical circuits, IoT, microcontrollers, and communication systems diploma.' },
-  'dip-mech': { id: 'dip-mech', label: 'Diploma Mech / Civil', parentId: 'diploma', col: 2, row: 4, type: 'branch', color: '#0EA5E9', isCareer: false, desc: 'Practical workshop mechanical processes, building drawings, surveying, and machine CAD design.' },
+  'dip-cse': { id: 'dip-cse', label: 'Diploma CS & IT', parentId: 'diploma', col: 2, row: 3, type: 'branch', color: '#0EA5E9', isCareer: false, desc: 'Practical software engineering, database, web development, and networking diploma.', pathwayId: null },
+  'dip-ece': { id: 'dip-ece', label: 'Diploma ECE / EEE', parentId: 'diploma', col: 2, row: 3.5, type: 'branch', color: '#0EA5E9', isCareer: false, desc: 'Practical electrical circuits, IoT, microcontrollers, and communication systems diploma.', pathwayId: null },
+  'dip-mech': { id: 'dip-mech', label: 'Diploma Mech / Civil', parentId: 'diploma', col: 2, row: 4, type: 'branch', color: '#0EA5E9', isCareer: false, desc: 'Practical workshop mechanical processes, building drawings, surveying, and machine CAD design.', pathwayId: null },
 
-  'iti-elec': { id: 'iti-elec', label: 'Electrician Trade', parentId: 'iti', col: 2, row: 4.6, type: 'trade', color: '#10B981', isCareer: false, desc: 'Practical home and industrial electrical wiring, power generation and drives repair.' },
-  'iti-fit': { id: 'iti-fit', label: 'Fitter / Turner Trade', parentId: 'iti', col: 2, row: 5.1, type: 'trade', color: '#10B981', isCareer: false, desc: 'Industrial machinery components precision machining, bench fitting, and lathe tools.' },
-  'iti-copa': { id: 'iti-copa', label: 'COPA Trade', parentId: 'iti', col: 2, row: 5.6, type: 'trade', color: '#10B981', isCareer: false, desc: 'Computer Operator and Programming Assistant trade certificate covering basic IT tools, databases, and web.' },
+  'iti-elec': { id: 'iti-elec', label: 'Electrician Trade', parentId: 'iti', col: 2, row: 4.6, type: 'trade', color: '#10B981', isCareer: false, desc: 'Practical home and industrial electrical wiring, power generation and drives repair.', pathwayId: null },
+  'iti-fit': { id: 'iti-fit', label: 'Fitter / Turner Trade', parentId: 'iti', col: 2, row: 5.1, type: 'trade', color: '#10B981', isCareer: false, desc: 'Industrial machinery components precision machining, bench fitting, and lathe tools.', pathwayId: null },
+  'iti-copa': { id: 'iti-copa', label: 'COPA Trade', parentId: 'iti', col: 2, row: 5.6, type: 'trade', color: '#10B981', isCareer: false, desc: 'Computer Operator and Programming Assistant trade certificate covering basic IT tools, databases, and web.', pathwayId: null },
 
   // Level 3: Subject combinations & intermediate milestones
-  'puc-science-pcmb': { id: 'puc-science-pcmb', label: 'PCMB Comb.', parentId: 'puc-science', col: 3, row: 0.4, type: 'combination', color: '#005F60', isCareer: false, desc: 'Physics, Chemistry, Mathematics, Biology combination. Opens up medical, pharmacy, and biological science paths.' },
-  'puc-science-pcmc': { id: 'puc-science-pcmc', label: 'PCMC Comb.', parentId: 'puc-science', col: 3, row: 0.8, type: 'combination', color: '#005F60', isCareer: false, desc: 'Physics, Chemistry, Mathematics, Computer Science combination. The standard route for B.E/B.Tech and software tracks.' },
-  'puc-science-pcme': { id: 'puc-science-pcme', label: 'PCME Comb.', parentId: 'puc-science', col: 3, row: 1.2, type: 'combination', color: '#005F60', isCareer: false, desc: 'Physics, Chemistry, Mathematics, Electronics combination. Direct route for electrical hardware, microcontrollers, and IoT B.E.' },
+  'puc-science-pcmb': { id: 'puc-science-pcmb', label: 'PCMB Comb.', parentId: 'puc-science', col: 3, row: 0.4, type: 'combination', color: '#005F60', isCareer: false, desc: 'Physics, Chemistry, Mathematics, Biology combination. Opens up medical, pharmacy, and biological science paths.', pathwayId: 'puc-science-pcmb' },
+  'puc-science-pcmc': { id: 'puc-science-pcmc', label: 'PCMC Comb.', parentId: 'puc-science', col: 3, row: 0.8, type: 'combination', color: '#005F60', isCareer: false, desc: 'Physics, Chemistry, Mathematics, Computer Science combination. The standard route for B.E/B.Tech and software tracks.', pathwayId: 'puc-science-pcmc' },
+  'puc-science-pcme': { id: 'puc-science-pcme', label: 'PCME Comb.', parentId: 'puc-science', col: 3, row: 1.2, type: 'combination', color: '#005F60', isCareer: false, desc: 'Physics, Chemistry, Mathematics, Electronics combination. Direct route for electrical hardware, microcontrollers, and IoT B.E.', pathwayId: 'puc-science-pcme' },
   
-  'puc-commerce-ceba': { id: 'puc-commerce-ceba', label: 'CEBA Comb.', parentId: 'puc-commerce', col: 3, row: 1.6, type: 'combination', color: '#F97316', isCareer: false, desc: 'Computer Application, Economics, Business, Accountancy. Merges financial skills with programming frameworks.' },
-  'puc-commerce-seba': { id: 'puc-commerce-seba', label: 'SEBA Comb.', parentId: 'puc-commerce', col: 3, row: 2, type: 'combination', color: '#F97316', isCareer: false, desc: 'Statistics, Economics, Business, Accountancy. Focuses on statistical analytics, actuarial science, and financial audits.' },
+  'puc-commerce-ceba': { id: 'puc-commerce-ceba', label: 'CEBA Comb.', parentId: 'puc-commerce', col: 3, row: 1.6, type: 'combination', color: '#F97316', isCareer: false, desc: 'Computer Application, Economics, Business, Accountancy. Merges financial skills with programming frameworks.', pathwayId: 'puc-commerce-fin' },
+  'puc-commerce-seba': { id: 'puc-commerce-seba', label: 'SEBA Comb.', parentId: 'puc-commerce', col: 3, row: 2, type: 'combination', color: '#F97316', isCareer: false, desc: 'Statistics, Economics, Business, Accountancy. Focuses on statistical analytics, actuarial science, and financial audits.', pathwayId: 'puc-commerce-fin' },
   
-  'puc-arts-heps': { id: 'puc-arts-heps', label: 'HEPS Comb.', parentId: 'puc-arts', col: 3, row: 2.3, type: 'combination', color: '#8B5CF6', isCareer: false, desc: 'History, Economics, Political Science, Sociology. Strong base for civil services (UPSC/KPSC) and social law.' },
+  'puc-arts-heps': { id: 'puc-arts-heps', label: 'HEPS Comb.', parentId: 'puc-arts', col: 3, row: 2.3, type: 'combination', color: '#8B5CF6', isCareer: false, desc: 'History, Economics, Political Science, Sociology. Strong base for civil services (UPSC/KPSC) and social law.', pathwayId: 'puc-arts-hum' },
 
-  'dip-prog-he': { id: 'dip-prog-he', label: 'DCET Lateral Entry', parentId: 'dip-cse', col: 3, row: 3.2, type: 'milestone', color: '#0EA5E9', isCareer: false, desc: 'Karnataka Diploma CET exam enables eligible candidates direct entry into 2nd year B.E / B.Tech.' },
-  'iti-prog-dip': { id: 'iti-prog-dip', label: 'Diploma Progression', parentId: 'iti-elec', col: 3, row: 4.8, type: 'milestone', color: '#10B981', isCareer: false, desc: 'Advanced vocational training or direct admission to polytechnic diploma streams.' },
+  'dip-prog-he': { id: 'dip-prog-he', label: 'DCET Lateral Entry', parentId: 'dip-cse', col: 3, row: 3.2, type: 'milestone', color: '#0EA5E9', isCareer: false, desc: 'Karnataka Diploma CET exam enables eligible candidates direct entry into 2nd year B.E / B.Tech.', pathwayId: null },
+  'iti-prog-dip': { id: 'iti-prog-dip', label: 'Diploma Progression', parentId: 'iti-elec', col: 3, row: 4.8, type: 'milestone', color: '#10B981', isCareer: false, desc: 'Advanced vocational training or direct admission to polytechnic diploma streams.', pathwayId: null },
 
   // Level 4: Higher education families
-  'he-eng': { id: 'he-eng', label: 'Engineering & Tech', parentId: 'puc-science-pcmc', col: 4, row: 0.8, type: 'family', color: '#005F60', isCareer: false, desc: 'Professional B.E / B.Tech engineering families. Unlocks CSE, IS, ECE, Mechanical, and Civil specialities.' },
-  'he-med': { id: 'he-med', label: 'Medicine & Health', parentId: 'puc-science-pcmb', col: 4, row: 0.1, type: 'family', color: '#D946EF', isCareer: false, desc: 'Medical clinical sciences (MBBS, BDS, alternate therapy BAMS) requiring competitive NEET-UG rank.' },
-  'he-pure': { id: 'he-pure', label: 'Pure Sciences (B.Sc)', parentId: 'puc-science-pcmb', col: 4, row: 0.4, type: 'family', color: '#A855F7', isCareer: false, desc: 'Basic science degree streams (B.Sc Physics, Math, Chemistry, Biotech, Microbiology). Paths to research.' },
-  'he-pharm': { id: 'he-pharm', label: 'Pharmacy (B.Pharm)', parentId: 'puc-science-pcmb', col: 4, row: 1.2, type: 'family', color: '#10B981', isCareer: false, desc: 'Study of formulations, compounding, drugs research, quality controls, and pharma stores management.' },
-  'he-agri': { id: 'he-agri', label: 'Agri-Sciences', parentId: 'puc-science-pcmb', col: 4, row: 1.5, type: 'family', color: '#84CC16', isCareer: false, desc: 'B.Sc Agriculture, forestry, agricultural technology, and crop sciences in state universities.' },
+  'he-eng': { id: 'he-eng', label: 'Engineering & Tech', parentId: 'puc-science-pcmc', col: 4, row: 0.8, type: 'family', color: '#005F60', isCareer: false, desc: 'Professional B.E / B.Tech engineering families. Unlocks CSE, IS, ECE, Mechanical, and Civil specialities.', pathwayId: 'puc-science-eng' },
+  'he-med': { id: 'he-med', label: 'Medicine & Health', parentId: 'puc-science-pcmb', col: 4, row: 0.1, type: 'family', color: '#D946EF', isCareer: false, desc: 'Medical clinical sciences (MBBS, BDS, alternate therapy BAMS) requiring competitive NEET-UG rank.', pathwayId: 'puc-science-med' },
+  'he-pure': { id: 'he-pure', label: 'Pure Sciences (B.Sc)', parentId: 'puc-science-pcmb', col: 4, row: 0.4, type: 'family', color: '#A855F7', isCareer: false, desc: 'Basic science degree streams (B.Sc Physics, Math, Chemistry, Biotech, Microbiology). Paths to research.', pathwayId: 'puc-science-pure' },
+  'he-pharm': { id: 'he-pharm', label: 'Pharmacy (B.Pharm)', parentId: 'puc-science-pcmb', col: 4, row: 1.2, type: 'family', color: '#10B981', isCareer: false, desc: 'Study of formulations, compounding, drugs research, quality controls, and pharma stores management.', pathwayId: 'puc-science-pharm' },
+  'he-agri': { id: 'he-agri', label: 'Agri-Sciences', parentId: 'puc-science-pcmb', col: 4, row: 1.5, type: 'family', color: '#84CC16', isCareer: false, desc: 'B.Sc Agriculture, forestry, agricultural technology, and crop sciences in state universities.', pathwayId: 'puc-science-agri' },
   
-  'he-biz': { id: 'he-biz', label: 'Biz & Accounting', parentId: 'puc-commerce-ceba', col: 4, row: 1.8, type: 'family', color: '#F97316', isCareer: false, desc: 'Commerce and business undergraduate programs: B.Com, BBA, B.Com Honours.' },
-  'he-arts': { id: 'he-arts', label: 'Humanities & Media', parentId: 'puc-arts-heps', col: 4, row: 2.3, type: 'family', color: '#8B5CF6', isCareer: false, desc: 'Liberal arts degrees (B.A. Economics, History) and media/communication channels.' },
-
-  // Cross-stream Opportunities (Multiple parents)
-  'he-law': { id: 'he-law', label: 'Law Degrees (5-Yr)', parentId: 'puc-arts-heps', col: 4, row: 3.5, type: 'cross-stream', color: '#EC4899', isCareer: false, desc: 'Integrated professional law programs (BA LLB, BBA LLB, B.Com LLB) under KSLU or National Law Schools.' },
-  'he-design': { id: 'he-design', label: 'Design & Creative', parentId: 'puc-science', col: 4, row: 4.2, type: 'cross-stream', color: '#F43F5E', isCareer: false, desc: 'Visual graphics, product model layout design, UI/UX interaction screens, animation, and fine arts.' },
-  'he-hospitality': { id: 'he-hospitality', label: 'Hospitality & Tourism', parentId: 'puc-commerce', col: 4, row: 5, type: 'cross-stream', color: '#06B6D4', isCareer: false, desc: 'Professional 4-year BHM (Hotel Management) or travel agency operations.' },
+  'he-biz': { id: 'he-biz', label: 'Biz & Accounting', parentId: 'puc-commerce-ceba', col: 4, row: 1.8, type: 'family', color: '#F97316', isCareer: false, desc: 'Commerce and business undergraduate programs: B.Com, BBA, B.Com Honours.', pathwayId: 'puc-commerce-fin' },
+  'he-arts': { id: 'he-arts', label: 'Humanities & Media', parentId: 'puc-arts-heps', col: 4, row: 2.3, type: 'family', color: '#8B5CF6', isCareer: false, desc: 'Liberal arts degrees (B.A. Economics, History) and media/communication channels.', pathwayId: 'puc-arts-hum' },
+  'he-law': { id: 'he-law', label: 'Law Degrees (5-Yr)', parentId: 'puc-arts-heps', col: 4, row: 3.5, type: 'cross-stream', color: '#EC4899', isCareer: false, desc: 'Integrated professional law programs (BA LLB, BBA LLB, B.Com LLB) under KSLU or National Law Schools.', pathwayId: 'cross-law' },
+  'he-design': { id: 'he-design', label: 'Design & Creative', parentId: 'puc-science', col: 4, row: 4.2, type: 'cross-stream', color: '#F43F5E', isCareer: false, desc: 'Visual graphics, product model layout design, UI/UX interaction screens, animation, and fine arts.', pathwayId: 'cross-design' },
+  'he-hospitality': { id: 'he-hospitality', label: 'Hospitality & Tourism', parentId: 'puc-commerce', col: 4, row: 5, type: 'cross-stream', color: '#06B6D4', isCareer: false, desc: 'Professional 4-year BHM (Hotel Management) or travel agency operations.', pathwayId: 'cross-hospitality' },
 
   // Level 5: Specific Courses/Specializations
-  'cse': { id: 'cse', label: 'CSE / AI & ML', parentId: 'he-eng', col: 5, row: 0.6, type: 'course', color: '#005F60', isCareer: false, desc: 'Computer Science, Artificial Intelligence, Data Engineering, Software Architecture.' },
-  'ece': { id: 'ece', label: 'ECE / Embedded', parentId: 'he-eng', col: 5, row: 1, type: 'course', color: '#005F60', isCareer: false, desc: 'Electronics & Communication, VLSI designs, embedded microcontrollers, IoT devices.' },
-  'mbbs': { id: 'mbbs', label: 'MBBS / BDS Clinical', parentId: 'he-med', col: 5, row: 0, type: 'course', color: '#D946EF', isCareer: false, desc: 'Professional clinical medicine & dental sciences programs.' },
-  'bsc': { id: 'bsc', label: 'B.Sc / Bio-Science', parentId: 'he-pure', col: 5, row: 0.3, type: 'course', color: '#A855F7', isCareer: false, desc: 'Undergraduate science degree specialities (Physics, Math, Bio-tech).' },
+  'cse': { id: 'cse', label: 'CSE / AI & ML', parentId: 'he-eng', col: 5, row: 0.6, type: 'course', color: '#005F60', isCareer: false, desc: 'Computer Science, Artificial Intelligence, Data Engineering, Software Architecture.', pathwayId: null },
+  'ece': { id: 'ece', label: 'ECE / Embedded', parentId: 'he-eng', col: 5, row: 1, type: 'course', color: '#005F60', isCareer: false, desc: 'Electronics & Communication, VLSI designs, embedded microcontrollers, IoT devices.', pathwayId: null },
+  'mbbs': { id: 'mbbs', label: 'MBBS / BDS Clinical', parentId: 'he-med', col: 5, row: 0, type: 'course', color: '#D946EF', isCareer: false, desc: 'Professional clinical medicine & dental sciences programs.', pathwayId: null },
+  'bsc': { id: 'bsc', label: 'B.Sc / Bio-Science', parentId: 'he-pure', col: 5, row: 0.3, type: 'course', color: '#A855F7', isCareer: false, desc: 'Undergraduate science degree specialities (Physics, Math, Bio-tech).', pathwayId: null },
   
-  'bcom': { id: 'bcom', label: 'B.Com / BBA', parentId: 'he-biz', col: 5, row: 1.6, type: 'course', color: '#F97316', isCareer: false, desc: 'Standard business and finance undergraduate qualifications.' },
-  'ca': { id: 'ca', label: 'CA / CS Certification', parentId: 'he-biz', col: 5, row: 2, type: 'professional-course', color: '#E11D48', isCareer: false, desc: 'Chartered Accountancy statutory certification route. Covers audits, taxation, laws, and company secretary rules.' },
+  'bcom': { id: 'bcom', label: 'B.Com / BBA', parentId: 'he-biz', col: 5, row: 1.6, type: 'course', color: '#F97316', isCareer: false, desc: 'Standard business and finance undergraduate qualifications.', pathwayId: null },
+  'ca': { id: 'ca', label: 'CA / CS Certification', parentId: 'he-biz', col: 5, row: 2, type: 'professional-course', color: '#E11D48', isCareer: false, desc: 'Chartered Accountancy statutory certification route. Covers audits, taxation, laws, and company secretary rules.', pathwayId: null },
   
-  'ba-llb': { id: 'ba-llb', label: 'BA / BBA LL.B', parentId: 'he-law', col: 5, row: 3.5, type: 'course', color: '#EC4899', isCareer: false, desc: 'Integrated 5-year legal degree program.' },
-  'ui-ux': { id: 'ui-ux', label: 'Product / UI UX', parentId: 'he-design', col: 5, row: 4.2, type: 'course', color: '#F43F5E', isCareer: false, desc: 'Digital interfaces, mockups, design thinking, and product layout models.' },
+  'ba-llb': { id: 'ba-llb', label: 'BA / BBA LL.B', parentId: 'he-law', col: 5, row: 3.5, type: 'course', color: '#EC4899', isCareer: false, desc: 'Integrated 5-year legal degree program.', pathwayId: null },
+  'ui-ux': { id: 'ui-ux', label: 'Product / UI UX', parentId: 'he-design', col: 5, row: 4.2, type: 'course', color: '#F43F5E', isCareer: false, desc: 'Digital interfaces, mockups, design thinking, and product layout models.', pathwayId: null },
 
   // Level 6: Careers
-  'software-dev': { id: 'software-dev', label: 'Software Engineer', parentId: 'cse', col: 6, row: 0.6, type: 'career', color: '#005F60', isCareer: true, desc: 'Build frontend apps, backend microservices, configure databases, and cloud scripts.', salary: '₹4.5L - ₹14L' },
-  'doctor': { id: 'doctor', label: 'Practicing Doctor', parentId: 'mbbs', col: 6, row: 0, type: 'career', color: '#D946EF', isCareer: true, desc: 'Hospital clinical diagnosis, health practitioner, surgery consultant, or research fields.', salary: '₹8.0L - ₹25L' },
-  'cfo': { id: 'cfo', label: 'Chartered Accountant', parentId: 'ca', col: 6, row: 2, type: 'career', color: '#E11D48', isCareer: true, desc: 'Corporate tax audits, legal financial filings, investment strategy analyst.', salary: '₹6.5L - ₹20L' },
-  'lawyer': { id: 'lawyer', label: 'Advocate / Lawyer', parentId: 'ba-llb', col: 6, row: 3.5, type: 'career', color: '#EC4899', isCareer: true, desc: 'Litigation advocacy, corporate counsel advisor, judiciary administrative fields.', salary: '₹4.0L - ₹15L' },
-  'designer': { id: 'designer', label: 'UI/UX Designer', parentId: 'ui-ux', col: 6, row: 4.2, type: 'career', color: '#F43F5E', isCareer: true, desc: 'User flows mapper, application screen prototype builder, usability auditor.', salary: '₹4.2L - ₹12L' }
+  'software-dev': { id: 'software-dev', label: 'Software Engineer', parentId: 'cse', col: 6, row: 0.6, type: 'career', color: '#005F60', isCareer: true, desc: 'Build frontend apps, backend microservices, configure databases, and cloud scripts.', salary: '₹4.5L - ₹14L', pathwayId: 'puc-science-cse-careers' },
+  'doctor': { id: 'doctor', label: 'Practicing Doctor', parentId: 'mbbs', col: 6, row: 0, type: 'career', color: '#D946EF', isCareer: true, desc: 'Hospital clinical diagnosis, health practitioner, surgery consultant, or research fields.', salary: '₹8.0L - ₹25L', pathwayId: null },
+  'cfo': { id: 'cfo', label: 'Chartered Accountant', parentId: 'ca', col: 6, row: 2, type: 'career', color: '#E11D48', isCareer: true, desc: 'Corporate tax audits, legal financial filings, investment strategy analyst.', salary: '₹6.5L - ₹20L', pathwayId: null },
+  'lawyer': { id: 'lawyer', label: 'Advocate / Lawyer', parentId: 'ba-llb', col: 6, row: 3.5, type: 'career', color: '#EC4899', isCareer: true, desc: 'Litigation advocacy, corporate counsel advisor, judiciary administrative fields.', salary: '₹4.0L - ₹15L', pathwayId: null },
+  'designer': { id: 'designer', label: 'UI/UX Designer', parentId: 'ui-ux', col: 6, row: 4.2, type: 'career', color: '#F43F5E', isCareer: true, desc: 'User flows mapper, application screen prototype builder, usability auditor.', salary: '₹4.2L - ₹12L', pathwayId: null }
 };
 
 // Responsive placement calculation based on viewport dimensions
@@ -204,15 +204,42 @@ const getInitialFraming = (W, H) => {
   };
 };
 
-const EducationPathwayMap = ({ 
-  mode = 'PublicPreview', // 'PublicPreview', 'FullExplorer', 'Personalized'
-  pathwaysData = [],       // Dynamic pathways array fetched from backend
-  activeGoal = null,      // Current active goal from backend
+export const EducationPathwayMap = ({
+  mode = 'FullExplorer',
+  pathwaysData = [],
   onSelectGoal = null,    // Callback function when user chooses a goal
-  studentProfile = null   // Logged-in student profile for recommendations
+  studentProfile = null,   // Logged-in student profile for recommendations
+  recommendations = null,
+  initialSelectedNodeId = null
 }) => {
   const [selectedNode, setSelectedNode] = useState('c10');
   const [activePath, setActivePath] = useState(['c10']);
+
+  // Handle initial node selection matching URL query parameter or student profile stage
+  useEffect(() => {
+    if (initialSelectedNodeId) {
+      setSelectedNode(initialSelectedNodeId);
+      return;
+    }
+
+    if (studentProfile) {
+      const level = studentProfile.current_level;
+      const stream = studentProfile.stream;
+
+      if (level === 'PUC' || level === 'PUC 1' || level === 'PUC 2') {
+        if (stream === 'Science') setSelectedNode('puc-science');
+        else if (stream === 'Commerce') setSelectedNode('puc-commerce');
+        else if (stream === 'Arts') setSelectedNode('puc-arts');
+        else setSelectedNode('puc');
+      } else if (level === 'Diploma') {
+        setSelectedNode('diploma');
+      } else if (level === 'ITI') {
+        setSelectedNode('iti');
+      } else {
+        setSelectedNode('c10');
+      }
+    }
+  }, [studentProfile, initialSelectedNodeId]);
   
   // Pan and Zoom states
   const [zoom, setZoom] = useState(1.0);
@@ -426,12 +453,11 @@ const EducationPathwayMap = ({
     const staticNode = SKELETON_NODES[selectedNode];
     if (!staticNode) return null;
 
-    const matchedPathway = pathwaysData.find(p => 
-      p.id.toLowerCase() === selectedNode.toLowerCase() || 
-      (selectedNode === 'puc-science' && p.id === 'puc-science-eng') || 
-      (selectedNode === 'puc-commerce' && p.id === 'puc-commerce-fin') ||
-      (selectedNode === 'puc-arts' && p.id === 'puc-arts-hum')
-    );
+    const matchedPathway = staticNode.pathwayId
+      ? pathwaysData.find(p => p.id.toLowerCase() === staticNode.pathwayId.toLowerCase())
+      : null;
+
+    const rec = recommendations?.recommendations?.find(r => r.pathway_id === matchedPathway?.id);
 
     return {
       ...staticNode,
@@ -440,17 +466,24 @@ const EducationPathwayMap = ({
       description: matchedPathway?.description || staticNode.desc,
       options: matchedPathway?.options || [],
       milestones: matchedPathway?.milestones || [],
-      originalPathway: matchedPathway
+      originalPathway: matchedPathway,
+      recommendation: rec
     };
   };
 
   const details = getMergedNodeDetails();
 
-  // Highlight recommended nodes based on profile
+  // Highlight recommended nodes based on actual recommendations first
   const isRecommended = (nodeId) => {
-    if (!studentProfile) return false;
     const node = SKELETON_NODES[nodeId];
     if (!node) return false;
+
+    if (node.pathwayId && recommendations?.recommendations) {
+      return recommendations.recommendations.some(r => r.pathway_id === node.pathwayId);
+    }
+
+    // Fallback to profile guessing if recommendations not loaded
+    if (!studentProfile) return false;
 
     if (nodeId === 'puc' && studentProfile.current_level?.includes('Class 10')) return true;
     if (nodeId === 'puc-science' && studentProfile.stream === 'Science') return true;
@@ -707,7 +740,7 @@ const EducationPathwayMap = ({
                             width="64"
                             height="16"
                             rx="5"
-                            fill="#005F60"
+                            fill="#F97316"
                             className="shadow-sm"
                           />
                           <text
@@ -761,6 +794,36 @@ const EducationPathwayMap = ({
                   </div>
                 )}
               </div>
+
+              {/* Why this may suit you (Recommendation Context) */}
+              {details.recommendation && (
+                <div className="bg-teal-50/60 border border-teal-100 rounded-2xl p-3.5 space-y-2 text-xs">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-[#005F60] flex items-center gap-1.5 font-sans">
+                    <Sparkles className="w-3.5 h-3.5 text-[#F97316] shrink-0" />
+                    <span>Recommended for you ({details.recommendation.match_score}% - {details.recommendation.match_label})</span>
+                  </span>
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-extrabold text-teal-900 font-sans">Why this may suit you:</p>
+                    <ul className="list-disc list-inside text-[11px] text-slate-600 font-semibold space-y-1 font-sans">
+                      {details.recommendation.reasons?.map((reason, idx) => (
+                        <li key={idx} className="leading-snug">{reason}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {/* Set Active Goal Action Button */}
+              {mode === 'FullExplorer' && onSelectGoal && details.pathwayId && (
+                <button
+                  type="button"
+                  onClick={() => onSelectGoal(details.originalPathway || details, null)}
+                  className="w-full bg-[#005F60] hover:bg-teal-800 text-white font-extrabold py-2.5 px-4 rounded-xl text-xs transition-all shadow-xs flex items-center justify-center space-x-2 cursor-pointer mt-1 font-sans"
+                >
+                  <Target className="w-4 h-4 text-[#F97316]" />
+                  <span>{details.recommendation ? 'Choose This Direction' : `Select ${details.label} Goal`}</span>
+                </button>
+              )}
 
               {/* Choices list */}
               {details.options.length > 0 && (

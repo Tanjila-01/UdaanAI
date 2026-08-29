@@ -35,6 +35,10 @@ class AssessmentSummaryResponse(BaseModel):
     category: str
     total_questions: int
     is_active: bool
+    target_level: str
+    target_stream: Optional[str] = None
+    assessment_version: str
+    scoring_version: str
     created_at: datetime
 
 
@@ -47,6 +51,10 @@ class AssessmentDetailResponse(BaseModel):
     category: str
     total_questions: int
     is_active: bool
+    target_level: str
+    target_stream: Optional[str] = None
+    assessment_version: str
+    scoring_version: str
     created_at: datetime
     questions: List[QuestionResponse] = []
 
@@ -83,6 +91,9 @@ class AssessmentResultResponse(BaseModel):
     id: UUID
     attempt_id: UUID
     user_id: UUID
+    assessment_id: str
+    assessment_version: str
+    scoring_version: str
     primary_stream_recommendation: str
     secondary_stream_recommendation: Optional[str] = None
     top_career_match: str

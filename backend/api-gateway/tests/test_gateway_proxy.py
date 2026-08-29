@@ -120,11 +120,65 @@ def test_proxy_roadmap_upstream_unavailable(mock_request):
     assert data["detail"] == "Roadmap service is temporarily unavailable."
 
 
-def test_proxy_roadmap_disallowed_method():
+@patch("httpx.AsyncClient.request")
+def test_proxy_roadmap_disallowed_method(mock_request):
+    mock_resp = httpx.Response(
+        405,
+        json={"detail": "Method Not Allowed"},
+        headers={"content-type": "application/json"}
+    )
+    mock_request.return_value = mock_resp
+
     res = client.post("/api/v1/roadmaps/pathways")
-    assert res.status_code == 405  # Method Not Allowed
+    assert res.status_code == 405
+    assert res.json() == {"detail": "Method Not Allowed"}
 
 
-def test_proxy_roadmap_unmapped_route():
+@patch("httpx.AsyncClient.request")
+def test_proxy_roadmap_unmapped_route(mock_request):
+    mock_resp = httpx.Response(
+        404,
+        json={"detail": "Not Found"},
+        headers={"content-type": "application/json"}
+    )
+    mock_request.return_value = mock_resp
+
     res = client.get("/api/v1/roadmaps/unknown-route")
-    assert res.status_code == 404  # Not Found
+    assert res.status_code == 404
+    assert res.json() == {"detail": "Not Found"}
+
+
+@patch("httpx.AsyncClient.request")
+def test_proxy_career_recommendations_generate(mock_request):
+    mock_resp = httpx.Response(
+        200,
+        json={"generated_at": "2026-08-28T12:00:00Z", "recommendations": []},
+        headers={"content-type": "application/json"}
+    )
+    mock_request.return_value = mock_resp
+
+    res = client.post("/api/v1/career-intelligence/recommendations/generate")
+    assert res.status_code == 200
+    data = res.json()
+    assert "generated_at" in data
+    call_kwargs = mock_request.call_args.kwargs
+    assert call_kwargs["method"] == "POST"
+    assert call_kwargs["url"].endswith("/career-intelligence/recommendations/generate")
+
+
+@patch("httpx.AsyncClient.request")
+def test_proxy_career_recommendations_me(mock_request):
+    mock_resp = httpx.Response(
+        200,
+        json={"recommendations": []},
+        headers={"content-type": "application/json"}
+    )
+    mock_request.return_value = mock_resp
+
+    res = client.get("/api/v1/career-intelligence/recommendations/me")
+    assert res.status_code == 200
+    data = res.json()
+    assert "recommendations" in data
+    call_kwargs = mock_request.call_args.kwargs
+    assert call_kwargs["method"] == "GET"
+    assert call_kwargs["url"].endswith("/career-intelligence/recommendations/me")

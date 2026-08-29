@@ -86,12 +86,21 @@ const QUICK_SEARCH_ITEMS = [
 
 export const Header = ({ onMenuClick, onEditProfileClick }) => {
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user, profile, logout } = useAuth();
 
   // Search State
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const searchRef = useRef(null);
+
+  // Dropdown Menu State
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   // Filter Search Results
   const filteredResults = searchQuery.trim() === ''
@@ -107,6 +116,9 @@ export const Header = ({ onMenuClick, onEditProfileClick }) => {
     const handleClickOutside = (e) => {
       if (searchRef.current && !searchRef.current.contains(e.target)) {
         setIsSearchOpen(false);
+      }
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setIsDropdownOpen(false);
       }
     };
 
@@ -242,24 +254,52 @@ export const Header = ({ onMenuClick, onEditProfileClick }) => {
       </div>
 
       {/* Right Controls */}
-      <div className="flex items-center space-x-3 sm:space-x-4 shrink-0">
-        {/* Student Profile Info (Read-only to prevent duplicate edit action) */}
-        <div
-          className="flex items-center space-x-3 p-1.5 rounded-xl border border-transparent"
-          title="Student Profile"
+      <div className="flex items-center space-x-3 sm:space-x-4 shrink-0 relative" ref={dropdownRef}>
+        {/* Student Profile Info trigger for popover */}
+        <button
+          type="button"
+          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          className="flex items-center space-x-3 p-1.5 rounded-xl border border-transparent hover:bg-slate-50 transition-all cursor-pointer text-left focus:outline-none"
+          title="Student Profile Menu"
         >
           <div className="w-8 h-8 rounded-full bg-[#005F60] text-white flex items-center justify-center font-black text-xs shadow-xs">
             {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'S'}
           </div>
-          <div className="text-left hidden md:block">
-            <span className="text-xs font-black text-[#0F172A] block leading-tight">
-              {user?.full_name || 'Student User'}
-            </span>
-            <span className="text-[10px] text-[#005F60] font-extrabold block leading-tight">
-              {profile?.current_level || 'Class 10'} {profile?.stream ? `• ${profile.stream}` : ''}
-            </span>
+          <div className="text-left hidden md:flex items-center gap-1.5">
+            <div>
+              <span className="text-xs font-black text-[#0F172A] block leading-tight">
+                {user?.full_name || 'Student User'}
+              </span>
+              <span className="text-[10px] text-[#005F60] font-extrabold block leading-tight">
+                {profile?.current_level || 'Class 10'} {profile?.stream ? `• ${profile.stream}` : ''}
+              </span>
+            </div>
+            <span className="text-[10px] text-slate-400">▼</span>
           </div>
-        </div>
+        </button>
+
+        {isDropdownOpen && (
+          <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-200 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+            <button
+              type="button"
+              onClick={() => {
+                setIsDropdownOpen(false);
+                if (onEditProfileClick) onEditProfileClick();
+              }}
+              className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-teal-50/70 hover:text-[#005F60] transition-colors"
+            >
+              Edit Profile
+            </button>
+            <hr className="border-slate-100 my-1" />
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="w-full text-left px-4 py-2.5 text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors"
+            >
+              Sign Out
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );

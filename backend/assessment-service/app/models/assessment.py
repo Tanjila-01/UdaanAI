@@ -36,6 +36,10 @@ class Assessment(Base):
     category = Column(String(50), nullable=False, default="general")
     total_questions = Column(Integer, nullable=False, default=10)
     is_active = Column(Boolean, nullable=False, default=True)
+    target_level = Column(String(50), nullable=False, default="Class 10")
+    target_stream = Column(String(50), nullable=True)
+    assessment_version = Column(String(50), nullable=False, default="v1")
+    scoring_version = Column(String(50), nullable=False, default="rule-v1")
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     questions = relationship(
@@ -142,6 +146,9 @@ class AssessmentResult(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     attempt_id = Column(UUID(as_uuid=True), ForeignKey(fk_attempts, ondelete="CASCADE"), unique=True, nullable=False)
     user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    assessment_id = Column(String(50), nullable=False, default="karnataka-sslc-interest-v1")
+    assessment_version = Column(String(50), nullable=False, default="v1")
+    scoring_version = Column(String(50), nullable=False, default="rule-v1")
     primary_stream_recommendation = Column(String(50), nullable=False)
     secondary_stream_recommendation = Column(String(50), nullable=True)
     top_career_match = Column(String(100), nullable=False)

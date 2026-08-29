@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getPathwaysApi, getPathwayDetailApi, createStudentGoalApi } from '../api/client';
+import { 
+  getPathwaysApi, 
+  getPathwayDetailApi, 
+  createStudentGoalApi,
+  getLatestRecommendationsApi
+} from '../api/client';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import EditProfileDrawer from '../components/EditProfileDrawer';
@@ -36,6 +41,22 @@ const normalizeEducationLevel = (lvl) => {
   return clean;
 };
 
+// Documented helper mapping backend pathway IDs to visual tree node IDs.
+// This decouples the visual tree structure from the backend database catalog IDs.
+export const PATHWAY_ID_TO_NODE_MAP = {
+  'puc-science-eng': 'puc-science',
+  'puc-commerce-fin': 'puc-commerce',
+  'puc-arts-hum': 'puc-arts',
+  'c10-diploma': 'diploma',
+  'c10-iti': 'iti'
+};
+
+export const getVisualNodeId = (pathwayId) => {
+  if (!pathwayId) return null;
+  const cleanId = pathwayId.trim().toLowerCase();
+  return PATHWAY_ID_TO_NODE_MAP[cleanId] || cleanId;
+};
+
 const PathwaysPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -44,47 +65,38 @@ const PathwaysPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
 
-  // Filters state pre-populated directly from student profile if available
-  const [selectedLevel, setSelectedLevel] = useState(() => normalizeEducationLevel(profile?.current_level));
-  const [selectedStream, setSelectedStream] = useState(() => profile?.stream || 'ALL');
+  const [recommendations, setRecommendations] = useState(null);
+  const [recsLoading, setRecsLoading] = useState(true);
 
-  // Track if profile filters or URL parameters have been initialized
-  const hasSyncedProfileRef = useRef(Boolean(profile?.current_level));
+  // Sync query parameters (e.g. from top search bar navigation)
   const targetPathwayIdRef = useRef(null);
 
-  // Sync filters with URL search parameters (e.g. from top search bar navigation)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const streamParam = params.get('stream');
-    const levelParam = params.get('level');
     const pathwayIdParam = params.get('pathway_id') || params.get('id');
 
-    if (streamParam) {
-      setSelectedStream(streamParam);
-      hasSyncedProfileRef.current = true;
-    }
-    if (levelParam) {
-      setSelectedLevel(normalizeEducationLevel(levelParam));
-      hasSyncedProfileRef.current = true;
-    }
     if (pathwayIdParam) {
       targetPathwayIdRef.current = pathwayIdParam;
       setSelectedPathwayId(pathwayIdParam);
     }
   }, [location.search]);
 
-  // Sync profile defaults when profile becomes available from AuthContext
+  // Fetch recommendations once authenticated
   useEffect(() => {
-    if (profile && !hasSyncedProfileRef.current) {
-      if (profile.current_level) {
-        setSelectedLevel(normalizeEducationLevel(profile.current_level));
+    if (authLoading) return;
+    const fetchRecommendations = async () => {
+      setRecsLoading(true);
+      try {
+        const recRes = await getLatestRecommendationsApi();
+        setRecommendations(recRes);
+      } catch (err) {
+        console.error('Failed to load recommendations:', err);
+      } finally {
+        setRecsLoading(false);
       }
-      if (profile.stream) {
-        setSelectedStream(profile.stream);
-      }
-      hasSyncedProfileRef.current = true;
-    }
-  }, [profile]);
+    };
+    fetchRecommendations();
+  }, [authLoading]);
 
   const [pathways, setPathways] = useState([]);
   const [totalPathways, setTotalPathways] = useState(0);
@@ -103,8 +115,13 @@ const PathwaysPage = () => {
   const [goalError, setGoalError] = useState(null);
 
   const handleOpenGoalModal = (pathway, option = null) => {
+    const realPathway = pathways.find(p => p.id === pathway.id || (pathway.pathwayId && p.id === pathway.pathwayId));
+    if (!realPathway) {
+      console.warn("Target node is visual-only or has no database backing:", pathway);
+      return;
+    }
     setGoalError(null);
-    setGoalModalData({ pathway, option });
+    setGoalModalData({ pathway: realPathway, option });
   };
 
   const handleConfirmGoal = async () => {
@@ -193,25 +210,6 @@ const PathwaysPage = () => {
     }
   };
 
-  const levelOptions = [
-    { value: 'ALL', label: 'All Levels' },
-    { value: 'Class 8', label: 'Class 8' },
-    { value: 'Class 9', label: 'Class 9' },
-    { value: 'Class 10', label: 'Class 10 (SSLC)' },
-    { value: 'PUC', label: 'PUC (11th–12th)' },
-    { value: 'Diploma', label: 'Polytechnic Diploma' },
-    { value: 'ITI', label: 'ITI Vocational' },
-  ];
-
-  const streamOptions = [
-    { value: 'ALL', label: 'All Streams' },
-    { value: 'Science', label: 'Science Stream' },
-    { value: 'Commerce', label: 'Commerce Stream' },
-    { value: 'Arts', label: 'Arts & Humanities' },
-  ];
-
-  const isMiddleSchool = selectedLevel === 'Class 8' || selectedLevel === 'Class 9';
-
   return (
     <div className="min-h-screen bg-[#F8FAF8] text-[#0F172A] flex font-sans selection:bg-[#005F60] selection:text-white">
       {/* Sidebar */}
@@ -256,71 +254,16 @@ const PathwaysPage = () => {
               </button>
             </div>
 
-            {/* Profile Context Bar & Filter Selectors */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center pt-1">
-              {/* Profile Context Active Pill */}
-              <div className="lg:col-span-4 bg-teal-50/60 border border-teal-100 rounded-2xl p-3.5 flex items-center space-x-3 text-xs">
-                <div className="w-8 h-8 rounded-xl bg-[#005F60] text-white flex items-center justify-center font-bold flex-shrink-0">
-                  <GraduationCap className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-[10px] uppercase font-extrabold tracking-wider text-[#005F60] block">
-                    Your Profile Filter
-                  </span>
-                  <span className="font-extrabold text-[#0F172A] truncate block">
-                    {profile?.current_level || 'Class 10'} {profile?.stream ? `(${profile.stream})` : ''}
-                  </span>
-                </div>
-              </div>
-
-              {/* Interactive Filter Dropdowns */}
-              <div className="lg:col-span-8 flex flex-wrap sm:flex-nowrap items-center gap-3">
-                <div className="w-full sm:w-1/2">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
-                    Education Level Filter
-                  </label>
-                  <select
-                    value={selectedLevel}
-                    onChange={(e) => setSelectedLevel(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-extrabold text-[#0F172A] focus:outline-none focus:border-[#005F60] shadow-2xs"
-                  >
-                    {levelOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="w-full sm:w-1/2">
-                  <label className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
-                    PUC Stream Filter
-                  </label>
-                  <select
-                    value={selectedStream}
-                    onChange={(e) => setSelectedStream(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-xs font-extrabold text-[#0F172A] focus:outline-none focus:border-[#005F60] shadow-2xs"
-                  >
-                    {streamOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Middle School Informational Banner */}
-            {isMiddleSchool && (
+            {/* Context message to take assessment if recommendations are missing */}
+            {!recsLoading && (!recommendations || !recommendations.recommendations || recommendations.recommendations.length === 0) && (
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start space-x-3 text-amber-900 text-xs">
                 <Info className="w-5 h-5 text-[#F97316] flex-shrink-0 mt-0.5" />
                 <div>
                   <span className="font-extrabold block text-sm text-amber-950">
-                    Middle School Guidance ({selectedLevel})
+                    Personalized Guidance Suggestion
                   </span>
-                  <p className="text-amber-800 mt-0.5 leading-relaxed">
-                    Showing future post-SSLC choices (Class 10) so middle school students can plan early for PUC Streams, Polytechnic Diplomas, and ITI trades.
+                  <p className="text-amber-800 mt-0.5 leading-relaxed font-semibold">
+                    Take the career assessment to see personalised pathway suggestions highlighted in your explorer.
                   </p>
                 </div>
               </div>
@@ -389,10 +332,12 @@ const PathwaysPage = () => {
                 pathwaysData={pathways} 
                 onSelectGoal={(pathway, option) => handleOpenGoalModal(pathway, option)}
                 studentProfile={{
-                  current_level: selectedLevel !== 'ALL' ? selectedLevel : profile?.current_level,
-                  stream: selectedStream !== 'ALL' ? selectedStream : profile?.stream,
+                  current_level: profile?.current_level,
+                  stream: profile?.stream,
                   class_or_year: profile?.class_or_year
                 }}
+                recommendations={recommendations}
+                initialSelectedNodeId={getVisualNodeId(selectedPathwayId)}
               />
             </div>
           )}
