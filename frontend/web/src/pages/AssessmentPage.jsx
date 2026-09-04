@@ -213,14 +213,12 @@ export const AssessmentPage = () => {
     try {
       let currentAssessment = assessment;
       if (!currentAssessment) {
-        const assessmentsList = await getAssessmentsApi();
-        if (!assessmentsList || assessmentsList.length === 0) {
-          setError('No active career assessments available at this time.');
+        currentAssessment = await getMyAssignedAssessmentApi();
+        if (!currentAssessment) {
+          setError('No active career assessment found for your education level.');
           setLoading(false);
           return;
         }
-        const defaultAssessmentId = assessmentsList[0].id;
-        currentAssessment = await getAssessmentDetailApi(defaultAssessmentId);
         setAssessment(currentAssessment);
       }
 

@@ -363,11 +363,20 @@ const EducationPathwayMap = ({
                 <g 
                   key={node.id} 
                   transform={`translate(${pos.x}, ${pos.y})`}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Explore ${node.label}`}
                   onClick={(e) => {
                     e.stopPropagation();
-                    onSelectNode(node.id);
+                    if (onSelectNode) onSelectNode(node.id);
                   }}
-                  className="cursor-pointer group"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      if (onSelectNode) onSelectNode(node.id);
+                    }
+                  }}
+                  className="cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-[#005F60] focus-visible:ring-offset-2 rounded-xl"
                 >
                   {/* Outer Glow for Selected Node */}
                   {isSelected && (
@@ -394,7 +403,7 @@ const EducationPathwayMap = ({
                     fill={isSelected ? '#005F60' : (isInTrail ? '#F8FAF8' : '#FFFFFF')}
                     stroke={isSelected ? '#005F60' : (isInTrail ? '#005F60' : '#E2E8F0')}
                     strokeWidth={isSelected || isInTrail ? 2 : 1}
-                    className="transition-all duration-200 shadow-2xs group-hover:stroke-[#005F60]"
+                    className="transition-all duration-200 shadow-2xs group-hover:stroke-[#005F60] group-hover:shadow-xs"
                   />
 
                   {/* Node Circle Badge */}

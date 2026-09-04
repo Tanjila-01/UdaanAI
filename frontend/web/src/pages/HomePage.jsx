@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import EducationPathwayMap from '../components/product/EducationPathwayMap';
+import EducationPathwayMap, { STRUCTURAL_NODES } from '../components/product/EducationPathwayMap';
+import ExploreAuthPrompt from '../components/product/ExploreAuthPrompt';
 
 // Layout & UI Components
 import Navbar from '../components/layout/Navbar';
@@ -55,10 +56,16 @@ import {
 
 const HomePage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
 
   // Hero visual image asset slot
   const heroImageSrc = '/hero_career_pathway.png';
+
+  // State for Public Pathway Map Preview (Section 5)
+  const [authPromptOpen, setAuthPromptOpen] = useState(false);
+  const [targetNodeLabel, setTargetNodeLabel] = useState('');
+  const [selectedPublicNodeId, setSelectedPublicNodeId] = useState('puc-science');
 
   // State for Interactive Stream Explorer (Section 5)
   const [activeBranch, setActiveBranch] = useState('science');
@@ -68,6 +75,36 @@ const HomePage = () => {
 
   // State for Personalized Roadmap Step Focus (Section 6)
   const [activeRoadmapStep, setActiveRoadmapStep] = useState(0);
+
+  // Smooth scroll to section when URL hash is present
+  useEffect(() => {
+    if (location.hash) {
+      const targetId = location.hash.replace('#', '');
+      const element = document.getElementById(targetId);
+      if (element) {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    }
+  }, [location.hash]);
+
+  // Click handler for public homepage map nodes
+  const handlePublicNodeClick = (nodeId) => {
+    const node = STRUCTURAL_NODES[nodeId];
+    const pathwayLabel = node ? node.label : 'this pathway';
+    setSelectedPublicNodeId(nodeId);
+
+    if (!user) {
+      // Logged out visitor -> Show Auth Prompt Modal
+      setTargetNodeLabel(pathwayLabel);
+      setAuthPromptOpen(true);
+    } else {
+      // Logged in user -> Navigate to /pathways with selected node context (does NOT alter profile)
+      const pathwayId = node?.pathwayId || nodeId;
+      navigate(`/pathways?pathway_id=${encodeURIComponent(pathwayId)}`);
+    }
+  };
 
   // Merged 5-Step Experience Data ("From Self-Discovery to Career Direction")
   const flowSteps = [
@@ -440,7 +477,7 @@ const HomePage = () => {
         {/* SECTION 4: MERGED INTERACTIVE EXPERIENCE */}
         {/* "From Self-Discovery to Career Direction" */}
         {/* ========================================================= */}
-        <section id="capabilities" className="py-20 bg-white border-b border-slate-100 scroll-mt-28">
+        <section id="how-it-works" className="py-20 bg-white border-b border-slate-100 scroll-mt-28">
           <Container size="xl">
 
             <div className="text-center max-w-3xl mx-auto mb-12">
@@ -652,27 +689,27 @@ const HomePage = () => {
 
 
         {/* ========================================================= */}
-        {/* SECTION 5: NEW INTERACTIVE PATHWAY MAP EXPLORER */}
+        {/* SECTION 5: PUBLIC PATHWAY MAP PREVIEW */}
         {/* ========================================================= */}
-        <section id="pathways" className="py-20 bg-slate-50 border-b border-slate-200/60 scroll-mt-28">
+        <section id="pathways" className="py-20 bg-slate-50 border-b border-slate-200/60 scroll-mt-28 font-sans">
           <Container size="xl">
 
             <div className="text-center max-w-3xl mx-auto mb-12">
               <Badge variant="primary" size="md" dot className="mb-3">
-                Interactive Career Map
+                Explore Common Routes After SSLC
               </Badge>
               <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-950 tracking-tight">
-                Explore Where Each Path Can Take You
+                Explore Karnataka Education Pathways
               </h2>
-              <p className="text-sm sm:text-base text-slate-700 mt-3 font-semibold">
-                Start from Class 10 and interactively explore Karnataka's PUC, Polytechnic Diploma and ITI routes, subject combinations, courses, entrance exams, higher-education opportunities and career directions.
+              <p className="text-sm sm:text-base text-slate-700 mt-3 font-semibold leading-relaxed">
+                See how PUC, Polytechnic Diploma, ITI, streams, and future study directions connect. Sign in to explore pathways based on your own education level.
               </p>
             </div>
 
             <div className="max-w-7xl mx-auto bg-white/40 border border-slate-200/80 p-4 sm:p-6 rounded-3xl shadow-sm">
               <EducationPathwayMap 
-                mode="PublicPreview" 
-                onSelectGoal={() => navigate(user ? '/dashboard' : '/register')} 
+                selectedNodeId={selectedPublicNodeId}
+                onSelectNode={handlePublicNodeClick}
               />
             </div>
 
@@ -898,6 +935,15 @@ const HomePage = () => {
 
       {/* GLOBAL FOOTER */}
       <Footer />
+
+      {/* Public Exploration Auth Prompt Modal */}
+      <ExploreAuthPrompt
+        isOpen={authPromptOpen}
+        onClose={() => setAuthPromptOpen(false)}
+        pathwayLabel={targetNodeLabel}
+        onSignIn={() => navigate('/login')}
+        onRegister={() => navigate('/register')}
+      />
     </div>
   );
 };

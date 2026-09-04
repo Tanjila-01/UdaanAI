@@ -81,16 +81,19 @@ const PathwaysPage = () => {
     return map;
   }, [pathways]);
 
-  // Set initial starting position based on student profile once loaded
+  // Set initial starting position based on student profile once loaded if no deep-link query parameter is present
   useEffect(() => {
-    if (profile) {
+    const params = new URLSearchParams(location.search);
+    const hasQueryParam = Boolean(params.get('pathway_id') || params.get('id') || params.get('node'));
+
+    if (profile && !hasQueryParam) {
       const initialNode = getInitialNodeFromProfile(profile);
       setSelectedStructuralNodeId(initialNode);
       setSelectedCombinationId(null);
       setSelectedCareerDirectionId(null);
       setSelectedOptionId(null);
     }
-  }, [profile]);
+  }, [profile, location.search]);
 
   // Helper to resolve deep hierarchy for search / deep-links
   const resolvePathwayHierarchy = (pathwayId) => {
@@ -134,7 +137,7 @@ const PathwaysPage = () => {
   // Sync URL query parameters if present
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const pathwayIdParam = params.get('pathway_id') || params.get('id');
+    const pathwayIdParam = params.get('pathway_id') || params.get('id') || params.get('node');
 
     if (pathwayIdParam) {
       targetPathwayIdRef.current = pathwayIdParam;

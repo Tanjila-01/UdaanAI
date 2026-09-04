@@ -30,10 +30,10 @@ export const Navbar = () => {
     navigate('/login');
   };
 
-  // Senior IA audit curated navigation anchors mapped directly to homepage sections
+  // Curated public navigation anchors mapped directly to homepage sections
   const navLinks = [
     { label: 'Pathways', href: '#pathways' },
-    { label: 'How It Works', href: '#roadmap' },
+    { label: 'How It Works', href: '#how-it-works' },
     { label: 'Workshops', href: '#workshops' },
     { label: 'For Schools', href: '#school-invitation' },
   ];
@@ -52,7 +52,7 @@ export const Navbar = () => {
           if (element) {
             element.scrollIntoView({ behavior: 'smooth' });
           }
-        }, 100);
+        }, 150);
         return;
       }
       

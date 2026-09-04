@@ -5,6 +5,7 @@ import { useSidebar } from '../context/SidebarContext';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import EditProfileDrawer from '../components/EditProfileDrawer';
+import StudentJourneyNavigator from '../components/StudentJourneyNavigator';
 import { 
   getMyLatestAssessmentResultApi, 
   getMyStudentGoalApi,
@@ -125,52 +126,6 @@ const DashboardPage = () => {
     return maxDim.charAt(0).toUpperCase() + maxDim.slice(1);
   };
 
-  const steps = [
-    {
-      id: 'profile',
-      label: 'Profile',
-      stateText: '✓ Complete',
-      isCompleted: true,
-      colorClass: 'text-emerald-600 bg-emerald-50 border-emerald-200',
-    },
-    {
-      id: 'assessment',
-      label: 'Assessment',
-      stateText: isAssessmentComplete ? '✓ Completed' : 'Pending',
-      isCompleted: isAssessmentComplete,
-      colorClass: isAssessmentComplete 
-        ? 'text-emerald-600 bg-emerald-50 border-emerald-200' 
-        : 'text-slate-400 bg-slate-50 border-slate-200',
-    },
-    {
-      id: 'direction',
-      label: 'Career Direction',
-      stateText: isAssessmentComplete ? '✓ Available' : 'Locked',
-      isCompleted: isAssessmentComplete,
-      colorClass: isAssessmentComplete 
-        ? 'text-teal-600 bg-teal-50 border-teal-200' 
-        : 'text-slate-300 bg-slate-50 border-slate-200',
-    },
-    {
-      id: 'goal',
-      label: 'Goal',
-      stateText: isGoalSelected ? '✓ Selected' : 'Not selected',
-      isCompleted: isGoalSelected,
-      colorClass: isGoalSelected 
-        ? 'text-teal-600 bg-teal-50 border-teal-200' 
-        : 'text-slate-300 bg-slate-50 border-slate-200',
-    },
-    {
-      id: 'roadmap',
-      label: 'Roadmap',
-      stateText: isGoalSelected ? 'In progress' : 'Not started',
-      isCompleted: isGoalSelected,
-      colorClass: isGoalSelected 
-        ? 'text-orange-600 bg-orange-50 border-orange-200' 
-        : 'text-slate-300 bg-slate-50 border-slate-200',
-    }
-  ];
-
   return (
     <div className="min-h-screen bg-[#F8FAF8] text-[#0F172A] flex font-sans selection:bg-[#005F60] selection:text-white">
       {/* Sidebar Navigation */}
@@ -275,62 +230,16 @@ const DashboardPage = () => {
             </div>
           </section>
 
-          {/* SECTION 3: YOUR PROGRESS OVERVIEW */}
-          <section className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-xs font-black uppercase tracking-wider text-[#005F60] flex items-center space-x-1.5 font-sans">
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Your Progress</span>
-              </h3>
-            </div>
-
-            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6 md:gap-0 py-2 relative">
-              {steps.map((step, idx) => (
-                <div key={step.id} className="flex flex-row md:flex-col items-center md:text-center gap-3 md:gap-2 flex-1 w-full relative">
-                  {/* Step circle */}
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black border shrink-0 relative z-10 font-sans ${step.colorClass}`}>
-                    {step.isCompleted ? (
-                      <Check className="w-4 h-4" />
-                    ) : (
-                      <span className="text-xs">{idx + 1}</span>
-                    )}
-                  </div>
-
-                  {/* Step Text */}
-                  <div className="text-left md:text-center">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block leading-tight font-sans">
-                      {step.label}
-                    </span>
-                    <span className={`font-extrabold text-xs block mt-0.5 font-sans ${
-                      step.isCompleted 
-                        ? 'text-[#0F172A]' 
-                        : 'text-slate-400'
-                    }`}>
-                      {step.stateText}
-                    </span>
-                  </div>
-
-                  {/* Connecting Line (Desktop: horizontal, Mobile: vertical) */}
-                  {idx < steps.length - 1 && (
-                    <>
-                      {/* Desktop Line */}
-                      <div 
-                        className={`hidden md:block absolute top-4 left-[calc(50%+16px)] right-[calc(-50%+16px)] h-0.5 z-0 transition-colors duration-300 ${
-                          step.isCompleted && steps[idx + 1].isCompleted ? 'bg-[#005F60]' : 'bg-slate-100'
-                        }`}
-                      />
-                      {/* Mobile Line */}
-                      <div 
-                        className={`md:hidden absolute left-4 top-8 bottom-[-24px] w-0.5 z-0 transition-colors duration-300 ${
-                          step.isCompleted && steps[idx + 1].isCompleted ? 'bg-[#005F60]' : 'bg-slate-100'
-                        }`}
-                      />
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
+          {/* SECTION 3: YOUR STUDENT JOURNEY NAVIGATOR */}
+          <StudentJourneyNavigator
+            profile={profile}
+            assessmentResult={assessmentResult}
+            activeGoal={activeGoal}
+            recommendations={recommendations}
+            academicContextStr={academicContextStr}
+            onEditProfile={() => setIsEditDrawerOpen(true)}
+            onNavigate={(path) => navigate(path)}
+          />
 
           {/* SECTION 4: YOUR STRENGTHS & INTERESTS */}
           <section className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 space-y-5 shadow-2xs">
