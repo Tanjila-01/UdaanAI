@@ -4,6 +4,7 @@ from sqlalchemy import (
     String,
     Text,
     Integer,
+    Boolean,
     DateTime,
     ForeignKey,
     UniqueConstraint,
@@ -46,6 +47,7 @@ class Pathway(Base):
     )
     milestones = relationship(
         "PathwayMilestone",
+        primaryjoin="and_(Pathway.id==PathwayMilestone.pathway_id, PathwayMilestone.is_active==True)",
         back_populates="pathway",
         cascade="all, delete-orphan",
         order_by="PathwayMilestone.step_number",
@@ -87,6 +89,7 @@ class PathwayMilestone(Base):
     title = Column(String(150), nullable=False)
     description = Column(Text, nullable=False)
     key_action = Column(String(255), nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
 
     pathway = relationship("Pathway", back_populates="milestones")
 

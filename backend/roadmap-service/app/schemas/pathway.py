@@ -29,6 +29,7 @@ class PathwayMilestoneBase(BaseModel):
 class PathwayMilestoneResponse(PathwayMilestoneBase):
     id: UUID
     pathway_id: str
+    is_active: bool = True
 
     model_config = ConfigDict(from_attributes=True)
 

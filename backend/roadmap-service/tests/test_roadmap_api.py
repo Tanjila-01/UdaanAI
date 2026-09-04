@@ -59,8 +59,8 @@ def test_list_pathways_no_filters():
     data = response.json()
     assert "total" in data
     assert "pathways" in data
-    assert data["total"] == 22
-    assert len(data["pathways"]) == 22
+    assert data["total"] == 36
+    assert len(data["pathways"]) == 36
     
     # Verify response contract and field types
     p = data["pathways"][0]

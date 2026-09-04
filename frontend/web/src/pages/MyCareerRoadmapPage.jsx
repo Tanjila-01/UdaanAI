@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSidebar } from '../context/SidebarContext';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import EditProfileDrawer from '../components/EditProfileDrawer';
@@ -31,8 +32,9 @@ import {
 
 const MyCareerRoadmapPage = () => {
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
-
+  const { user, profile, loading: authLoading } = useAuth();
+  const { isCollapsed } = useSidebar();
+  
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
 
@@ -92,7 +94,7 @@ const MyCareerRoadmapPage = () => {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 lg:pl-64 flex flex-col min-w-0">
+      <div className={`flex-1 ${isCollapsed ? 'lg:pl-20' : 'lg:pl-64'} transition-all duration-200 ease-in-out flex flex-col min-w-0`}>
         
         {/* Header */}
         <Header 

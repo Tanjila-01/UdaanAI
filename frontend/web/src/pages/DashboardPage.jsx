@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSidebar } from '../context/SidebarContext';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import EditProfileDrawer from '../components/EditProfileDrawer';
@@ -26,6 +27,7 @@ import {
 const DashboardPage = () => {
   const navigate = useNavigate();
   const { user, profile, loading: profileLoading } = useAuth();
+  const { isCollapsed } = useSidebar();
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
@@ -178,7 +180,7 @@ const DashboardPage = () => {
       />
 
       {/* Main Content Viewport */}
-      <div className="flex-1 lg:pl-64 flex flex-col min-w-0">
+      <div className={`flex-1 ${isCollapsed ? 'lg:pl-20' : 'lg:pl-64'} transition-all duration-200 ease-in-out flex flex-col min-w-0`}>
         
         {/* Header Bar */}
         <Header 

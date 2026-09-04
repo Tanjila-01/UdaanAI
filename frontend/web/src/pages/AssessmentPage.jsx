@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
+import { useSidebar } from '../context/SidebarContext';
 import Header from '../components/Header';
 import EditProfileDrawer from '../components/EditProfileDrawer';
 import Card, { CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/Card';
@@ -39,6 +40,7 @@ import {
 export const AssessmentPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isCollapsed } = useSidebar();
   const searchParams = new URLSearchParams(location.search);
   const forceTakeMode = searchParams.get('mode') === 'take' || searchParams.get('retake') === 'true';
 
@@ -242,7 +244,7 @@ export const AssessmentPage = () => {
       />
 
       {/* Main Content Viewport */}
-      <div className="flex-1 lg:pl-64 flex flex-col min-w-0">
+      <div className={`flex-1 ${isCollapsed ? 'lg:pl-20' : 'lg:pl-64'} transition-all duration-200 ease-in-out flex flex-col min-w-0`}>
         
         {/* Top Header Bar */}
         <Header 

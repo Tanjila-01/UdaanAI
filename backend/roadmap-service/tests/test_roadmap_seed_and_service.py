@@ -49,10 +49,10 @@ def test_seed_idempotency_and_update_behavior():
 
     # First seed run
     count1 = RoadmapService.seed_initial_data(db)
-    assert count1 == 22
-    assert db.query(Pathway).count() == 22
-    assert db.query(PathwayOption).count() == 53
-    assert db.query(PathwayMilestone).count() == 39
+    assert count1 == 36
+    assert db.query(Pathway).count() == 36
+    assert db.query(PathwayOption).count() == 82
+    assert db.query(PathwayMilestone).count() == 58
 
     # Verify initial seed data content
     c10_puc = db.query(Pathway).filter(Pathway.id == "c10-puc").first()
@@ -61,10 +61,10 @@ def test_seed_idempotency_and_update_behavior():
 
     # Second seed run (must maintain exact same counts without duplicates)
     count2 = RoadmapService.seed_initial_data(db)
-    assert count2 == 22
-    assert db.query(Pathway).count() == 22
-    assert db.query(PathwayOption).count() == 53
-    assert db.query(PathwayMilestone).count() == 39
+    assert count2 == 36
+    assert db.query(Pathway).count() == 36
+    assert db.query(PathwayOption).count() == 82
+    assert db.query(PathwayMilestone).count() == 58
 
     # Verify update-or-insert (upsert) in-place modification
     c10_puc.title = "Temporary Modified Title"
@@ -74,7 +74,7 @@ def test_seed_idempotency_and_update_behavior():
     # Re-running seed restores the authoritative title in-place
     RoadmapService.seed_initial_data(db)
     assert db.query(Pathway).filter(Pathway.id == "c10-puc").first().title == "Pre-University College (PUC)"
-    assert db.query(Pathway).count() == 22
+    assert db.query(Pathway).count() == 36
 
     db.close()
 
@@ -85,9 +85,9 @@ def test_seed_runner_execution(monkeypatch):
     assert exit_code == 0
 
     db = TestingSessionLocal()
-    assert db.query(Pathway).count() == 22
-    assert db.query(PathwayOption).count() == 53
-    assert db.query(PathwayMilestone).count() == 39
+    assert db.query(Pathway).count() == 36
+    assert db.query(PathwayOption).count() == 82
+    assert db.query(PathwayMilestone).count() == 58
     db.close()
 
 
@@ -95,9 +95,9 @@ def test_service_queries_and_filtering():
     db = TestingSessionLocal()
     RoadmapService.seed_initial_data(db)
 
-    # 1. No filters -> returns all 22 pathways
+    # 1. No filters -> returns all 36 pathways
     all_pathways = RoadmapService.get_pathways(db)
-    assert len(all_pathways) == 22
+    assert len(all_pathways) == 36
 
     # 2. Query post-Class 10 pathways -> returns 3 pathways
     class10_pathways = RoadmapService.get_pathways(db, education_level="Class 10")

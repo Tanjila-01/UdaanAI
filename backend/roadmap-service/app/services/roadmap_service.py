@@ -93,6 +93,7 @@ class RoadmapService:
                             title=ms["title"],
                             description=ms["description"],
                             key_action=ms.get("key_action"),
+                            is_active=True,
                         )
                     )
                 db.add(pathway)
@@ -126,23 +127,32 @@ class RoadmapService:
                             )
                         )
 
-                # Update or append milestones
-                existing_ms = {ms.step_number: ms for ms in pathway.milestones}
-                for ms_data in p_data.get("milestones", []):
-                    step = ms_data["step_number"]
-                    if step in existing_ms:
-                        existing_ms[step].title = ms_data["title"]
-                        existing_ms[step].description = ms_data["description"]
-                        existing_ms[step].key_action = ms_data.get("key_action")
+                # Update or append milestones & handle is_active lifecycle flag
+                seed_ms_by_step = {ms_data["step_number"]: ms_data for ms_data in p_data.get("milestones", [])}
+                db_ms_list = db.query(PathwayMilestone).filter(PathwayMilestone.pathway_id == pathway.id).all()
+                db_ms_by_step = {ms.step_number: ms for ms in db_ms_list}
+
+                for step_num, ms_data in seed_ms_by_step.items():
+                    if step_num in db_ms_by_step:
+                        db_ms_by_step[step_num].title = ms_data["title"]
+                        db_ms_by_step[step_num].description = ms_data["description"]
+                        db_ms_by_step[step_num].key_action = ms_data.get("key_action")
+                        db_ms_by_step[step_num].is_active = True
                     else:
-                        pathway.milestones.append(
+                        db.add(
                             PathwayMilestone(
-                                step_number=step,
+                                pathway_id=pathway.id,
+                                step_number=step_num,
                                 title=ms_data["title"],
                                 description=ms_data["description"],
                                 key_action=ms_data.get("key_action"),
+                                is_active=True,
                             )
                         )
+
+                for step_num, db_ms_obj in db_ms_by_step.items():
+                    if step_num not in seed_ms_by_step:
+                        db_ms_obj.is_active = False
         db.commit()
 
         # Pass 2: Setup parent_id references now that all pathways exist in database
