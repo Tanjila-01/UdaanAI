@@ -182,3 +182,50 @@ def test_proxy_career_recommendations_me(mock_request):
     call_kwargs = mock_request.call_args.kwargs
     assert call_kwargs["method"] == "GET"
     assert call_kwargs["url"].endswith("/career-intelligence/recommendations/me")
+
+
+@patch("httpx.AsyncClient.request")
+def test_proxy_workshop_requests_public(mock_request):
+    mock_resp = httpx.Response(
+        201,
+        json={"id": "b3e34b12-9c3f-4e3b-9a91-91a5db1fbb60", "status": "NEW", "created_at": "2026-09-05T15:00:00Z"},
+        headers={"content-type": "application/json"}
+    )
+    mock_request.return_value = mock_resp
+
+    payload = {
+        "institution_name": "Test College",
+        "institution_type": "degree_college",
+        "contact_name": "Test Contact",
+        "contact_phone": "9876543210",
+        "contact_email": "test@college.edu",
+        "district": "Bengaluru Urban",
+        "student_count": 150,
+        "preferred_mode": "online",
+        "preferred_topics": ["future_skills"],
+    }
+    res = client.post("/api/v1/workshops/requests", json=payload)
+    assert res.status_code == 201
+    assert res.json()["status"] == "NEW"
+    call_kwargs = mock_request.call_args.kwargs
+    assert call_kwargs["method"] == "POST"
+    assert call_kwargs["url"].endswith("/workshops/requests")
+
+
+@patch("httpx.AsyncClient.request")
+def test_proxy_workshop_admin_overview_with_auth(mock_request):
+    mock_resp = httpx.Response(
+        200,
+        json={"metrics": {"new_requests": 3, "contacted_requests": 1, "scheduled_workshops": 2, "completed_workshops": 5, "upcoming_this_week": 1}, "recent_new_requests": [], "upcoming_workshops": []},
+        headers={"content-type": "application/json"}
+    )
+    mock_request.return_value = mock_resp
+
+    headers = {"Authorization": "Bearer test-admin-jwt"}
+    res = client.get("/api/v1/workshops/admin/overview", headers=headers)
+    assert res.status_code == 200
+    call_kwargs = mock_request.call_args.kwargs
+    assert call_kwargs["method"] == "GET"
+    assert call_kwargs["url"].endswith("/workshops/admin/overview")
+    assert call_kwargs["headers"].get("authorization") == "Bearer test-admin-jwt"
+

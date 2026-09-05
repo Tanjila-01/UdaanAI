@@ -16,6 +16,9 @@ export const PublicOnlyRoute = ({ children }) => {
   }
 
   if (user) {
+    if (user.role === 'admin') {
+      return <Navigate to="/admin" replace />;
+    }
     if (!profile || !profile.is_complete) {
       return <Navigate to="/onboarding" replace />;
     }

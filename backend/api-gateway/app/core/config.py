@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     ASSESSMENT_SERVICE_URL: str = "http://localhost:8003"
     ROADMAP_SERVICE_URL: str = "http://localhost:8005"
     AI_CAREER_SERVICE_URL: str = "http://localhost:8004"
+    INSTITUTION_SERVICE_URL: str = "http://institution-service:8006"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

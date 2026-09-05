@@ -9,8 +9,14 @@ import PathwaysPage from '../pages/PathwaysPage';
 import MyCareerRoadmapPage from '../pages/MyCareerRoadmapPage';
 import AssessmentPage from '../pages/AssessmentPage';
 import DesignSystemShowcasePage from '../pages/DesignSystemShowcasePage';
+import AdminOverviewPage from '../pages/admin/AdminOverviewPage';
+import AdminRequestsPage from '../pages/admin/AdminRequestsPage';
+import AdminScheduledPage from '../pages/admin/AdminScheduledPage';
+import AdminCompletedPage from '../pages/admin/AdminCompletedPage';
+import AdminLoginPage from '../pages/admin/AdminLoginPage';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { PublicOnlyRoute } from '../components/PublicOnlyRoute';
+import { AdminRoute } from '../components/AdminRoute';
 
 const AppRoutes = () => {
   return (
@@ -71,6 +77,40 @@ const AppRoutes = () => {
           <ProtectedRoute requireProfile={true}>
             <MyCareerRoadmapPage />
           </ProtectedRoute>
+        }
+      />
+      {/* Admin Operations Routes */}
+      <Route path="/admin/login" element={<AdminLoginPage />} />
+      <Route
+        path="/admin"
+        element={
+          <AdminRoute>
+            <AdminOverviewPage />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/requests"
+        element={
+          <AdminRoute>
+            <AdminRequestsPage />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/scheduled"
+        element={
+          <AdminRoute>
+            <AdminScheduledPage />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/completed"
+        element={
+          <AdminRoute>
+            <AdminCompletedPage />
+          </AdminRoute>
         }
       />
       <Route path="*" element={<HomePage />} />

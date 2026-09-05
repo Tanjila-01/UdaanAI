@@ -231,3 +231,47 @@ async def proxy_career_options(path: str, request: Request, credentials: Optiona
     return await _proxy_career(path, request)
 
 
+# --- Institution / Workshop Service Proxy Routes ---
+
+async def _proxy_workshops(path: str, request: Request) -> Response:
+    clean_path = f"/{path.lstrip('/')}" if path else ""
+    target_url = f"{settings.INSTITUTION_SERVICE_URL.rstrip('/')}/workshops{clean_path}"
+    return await forward_request(target_url, request, error_detail="Institution Workshop service is temporarily unavailable.")
+
+
+@router.get("/workshops", operation_id="proxy_workshops_root_get", tags=["Workshops"])
+async def proxy_workshops_root_get(request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_workshops("", request)
+
+
+@router.get("/workshops/{path:path}", operation_id="proxy_workshops_get", tags=["Workshops"])
+async def proxy_workshops_get(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_workshops(path, request)
+
+
+@router.post("/workshops/{path:path}", operation_id="proxy_workshops_post", tags=["Workshops"])
+async def proxy_workshops_post(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_workshops(path, request)
+
+
+@router.put("/workshops/{path:path}", operation_id="proxy_workshops_put", tags=["Workshops"])
+async def proxy_workshops_put(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_workshops(path, request)
+
+
+@router.delete("/workshops/{path:path}", operation_id="proxy_workshops_delete", tags=["Workshops"])
+async def proxy_workshops_delete(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_workshops(path, request)
+
+
+@router.patch("/workshops/{path:path}", operation_id="proxy_workshops_patch", tags=["Workshops"])
+async def proxy_workshops_patch(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_workshops(path, request)
+
+
+@router.options("/workshops/{path:path}", operation_id="proxy_workshops_options", tags=["Workshops"])
+async def proxy_workshops_options(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_workshops(path, request)
+
+
+

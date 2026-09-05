@@ -27,7 +27,9 @@ const LoginPage = () => {
 
     try {
       const data = await login(formData.email, formData.password);
-      if (!data.profile) {
+      if (data.user?.role === 'admin') {
+        navigate('/admin');
+      } else if (!data.profile) {
         navigate('/onboarding');
       } else {
         navigate('/dashboard');

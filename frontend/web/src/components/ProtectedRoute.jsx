@@ -20,6 +20,10 @@ export const ProtectedRoute = ({ children, requireProfile = false }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  if (user.role === 'admin') {
+    return <Navigate to="/admin" replace />;
+  }
+
   if (requireProfile && (!profile || !profile.is_complete)) {
     return <Navigate to="/onboarding" replace />;
   }

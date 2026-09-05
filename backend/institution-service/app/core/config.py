@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     DATABASE_URL: str = "postgresql://udaan_user:change_me_in_dev@localhost:5432/udaan_ai"
     DB_SCHEMA: str = "institution"
+    JWT_SECRET_KEY: str = "dev_secret_key_udaan_ai_phase2_change_in_prod"
+    JWT_ALGORITHM: str = "HS256"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

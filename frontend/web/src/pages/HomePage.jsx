@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import EducationPathwayMap, { STRUCTURAL_NODES } from '../components/product/EducationPathwayMap';
 import ExploreAuthPrompt from '../components/product/ExploreAuthPrompt';
+import WorkshopRequestModal from '../components/product/WorkshopRequestModal';
 
 // Layout & UI Components
 import Navbar from '../components/layout/Navbar';
@@ -66,6 +67,7 @@ const HomePage = () => {
 
   // State for Public Pathway Map Preview (Section 5)
   const [authPromptOpen, setAuthPromptOpen] = useState(false);
+  const [workshopModalOpen, setWorkshopModalOpen] = useState(false);
   const [targetNodeLabel, setTargetNodeLabel] = useState('');
   const [selectedPublicNodeId, setSelectedPublicNodeId] = useState('puc-science');
 
@@ -974,14 +976,13 @@ const HomePage = () => {
                     </Button>
                   </Link>
 
-                  <a href="#workshops" className="w-full sm:w-auto">
-                    <button
-                      type="button"
-                      className="w-full sm:w-auto h-12 px-6 rounded-xl font-bold text-sm text-slate-200 hover:text-white bg-slate-900 border border-slate-700 hover:bg-slate-800 hover:border-slate-600 transition-all duration-200 shadow-2xs cursor-pointer flex items-center justify-center"
-                    >
-                      Request a Workshop
-                    </button>
-                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setWorkshopModalOpen(true)}
+                    className="w-full sm:w-auto h-12 px-6 rounded-xl font-bold text-sm text-slate-200 hover:text-white bg-slate-900 border border-slate-700 hover:bg-slate-800 hover:border-slate-600 transition-all duration-200 shadow-2xs cursor-pointer flex items-center justify-center"
+                  >
+                    Request a Workshop
+                  </button>
                 </div>
               </div>
 
@@ -1029,6 +1030,12 @@ const HomePage = () => {
         pathwayLabel={targetNodeLabel}
         onSignIn={() => navigate('/login')}
         onRegister={() => navigate('/register')}
+      />
+
+      {/* Institutional Workshop Request Form Modal */}
+      <WorkshopRequestModal
+        isOpen={workshopModalOpen}
+        onClose={() => setWorkshopModalOpen(false)}
       />
     </div>
   );

@@ -259,4 +259,58 @@ export const getLatestRecommendationsApi = async () => {
   return response.data;
 };
 
+// --- Workshop Operations APIs ---
+
+export const submitWorkshopRequestApi = async (data) => {
+  const response = await apiClient.post('/api/v1/workshops/requests', data);
+  return response.data;
+};
+
+export const getAdminWorkshopOverviewApi = async () => {
+  const response = await apiClient.get('/api/v1/workshops/admin/overview');
+  return response.data;
+};
+
+export const getAdminWorkshopRequestsApi = async (params = {}) => {
+  const cleanParams = {};
+  if (params.status && params.status !== 'ALL') cleanParams.status = params.status;
+  if (params.district && params.district !== 'ALL') cleanParams.district = params.district;
+  if (params.mode && params.mode !== 'ALL') cleanParams.mode = params.mode;
+  if (params.search && params.search.trim()) cleanParams.search = params.search.trim();
+
+  const response = await apiClient.get('/api/v1/workshops/admin/requests', { params: cleanParams });
+  return response.data;
+};
+
+export const getAdminWorkshopRequestDetailApi = async (requestId) => {
+  const response = await apiClient.get(`/api/v1/workshops/admin/requests/${encodeURIComponent(requestId)}`);
+  return response.data;
+};
+
+export const markWorkshopContactedApi = async (requestId) => {
+  const response = await apiClient.post(`/api/v1/workshops/admin/requests/${encodeURIComponent(requestId)}/contact`);
+  return response.data;
+};
+
+export const scheduleWorkshopApi = async (requestId, data) => {
+  const response = await apiClient.post(`/api/v1/workshops/admin/requests/${encodeURIComponent(requestId)}/schedule`, data);
+  return response.data;
+};
+
+export const updateWorkshopScheduleApi = async (requestId, data) => {
+  const response = await apiClient.patch(`/api/v1/workshops/admin/requests/${encodeURIComponent(requestId)}/schedule`, data);
+  return response.data;
+};
+
+export const completeWorkshopApi = async (requestId, data) => {
+  const response = await apiClient.post(`/api/v1/workshops/admin/requests/${encodeURIComponent(requestId)}/complete`, data);
+  return response.data;
+};
+
+export const cancelWorkshopApi = async (requestId, data) => {
+  const response = await apiClient.post(`/api/v1/workshops/admin/requests/${encodeURIComponent(requestId)}/cancel`, data);
+  return response.data;
+};
+
+
 
