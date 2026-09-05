@@ -13,16 +13,20 @@ class RoadmapService:
     def get_pathways(
         db: Session,
         education_level: Optional[str] = None,
-        stream: Optional[str] = None
+        stream: Optional[str] = None,
+        ids: Optional[List[str]] = None,
     ) -> List[Pathway]:
         """
-        Query pathways from database filtered by education_level and stream.
+        Query pathways from database filtered by education_level, stream, or explicit list of ids.
         Uses selectinload to eagerly load options and milestones in 2 efficient queries (preventing N+1).
         """
         query = db.query(Pathway).options(
             selectinload(Pathway.options),
             selectinload(Pathway.milestones)
         )
+
+        if ids:
+            query = query.filter(Pathway.id.in_(ids))
 
         if education_level:
             level_clean = education_level.strip()

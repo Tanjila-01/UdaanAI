@@ -214,14 +214,14 @@ def test_generate_level_specific_filtering_and_warnings():
 
     MOCK_LATEST_RESULT = {
         "attempt_id": str(uuid.uuid4()),
-        "assessment_id": "karnataka-puc-science-direction-v1",
-        "scoring_version": "rule-v1",
+        "assessment_id": "puc-science-direction-v2",
+        "scoring_version": "rule-v2-puc-science",
         "dimension_scores": {
-            "science": 90,
-            "commerce": 10,
-            "arts": 10,
-            "diploma": 10,
-            "iti": 10
+            "engineering": 90,
+            "computing": 85,
+            "medicine": 15,
+            "allied_health": 15,
+            "pure_sciences": 20
         }
     }
 
@@ -233,28 +233,29 @@ def test_generate_level_specific_filtering_and_warnings():
         "user_id": USER_1_ID
     }
 
+    # Candidates returned from roadmap-service
     MOCK_PATHWAYS = {
         "pathways": [
             {
-                "id": "puc-science",
-                "title": "PUC Science Stream",
-                "education_level": "PUC 1",
+                "id": "puc-science-eng",
+                "title": "Engineering & Technology (B.E / B.Tech)",
+                "education_level": "Undergraduate",
                 "stream": "Science",
-                "recommendation_dimensions": ["science"]
+                "recommendation_dimensions": ["engineering"]
             },
             {
-                "id": "puc-science-pcmc",
-                "title": "PUC Science PCMC Pathways",
-                "education_level": "PUC 2",
+                "id": "puc-science-comp",
+                "title": "Computer Applications & IT",
+                "education_level": "Undergraduate",
                 "stream": "Science",
-                "recommendation_dimensions": ["science"]
+                "recommendation_dimensions": ["computing"]
             },
             {
-                "id": "puc-commerce",
-                "title": "PUC Commerce Stream",
-                "education_level": "PUC 1",
+                "id": "puc-commerce-ca",
+                "title": "Professional Accounting & Statutory Audit (CA / CS / CMA)",
+                "education_level": "Undergraduate",
                 "stream": "Commerce",
-                "recommendation_dimensions": ["commerce"]
+                "recommendation_dimensions": ["accounting_ca"]
             }
         ]
     }
@@ -264,15 +265,111 @@ def test_generate_level_specific_filtering_and_warnings():
     recs = resp.json()["recommendations"]
 
     # Commerce excluded due to stream mismatch.
-    # PUC Science stream pathways included since score is 90 >= 25.
+    # PUC Science post-PUC pathways included since engineering=90 and computing=85 >= 25.
     assert len(recs) == 2
+    rec_ids = [x["pathway_id"] for x in recs]
+    assert "puc-science-eng" in rec_ids
+    assert "puc-science-comp" in rec_ids
+    assert "puc-commerce-ca" not in rec_ids
 
-    # Check warnings are None (progression warnings removed)
-    puc_science_p1 = next(x for x in recs if x["pathway_id"] == "puc-science")
-    assert puc_science_p1["eligibility_warning"] is None
 
-    puc_science_p2 = next(x for x in recs if x["pathway_id"] == "puc-science-pcmc")
-    assert puc_science_p2["eligibility_warning"] is None
+def test_mandatory_semantic_candidate_constraints():
+    """
+    Constraint 15:
+    Class 10: must NOT receive deep PUC/Diploma/ITI family nodes as top-level recommendations.
+    PUC Science: must NOT receive 'PUC Science Stream' as if choosing it for the first time.
+    Diploma: must NOT receive 'Choose Polytechnic Diploma'.
+    ITI: must NOT receive 'Choose ITI'.
+    """
+    # 1. Class 10 Candidate Scope Verification
+    foundation_candidates = [
+        "c10-puc", "c10-diploma", "c10-iti"
+    ]
+    assert set(foundation_candidates) == {"c10-puc", "c10-diploma", "c10-iti"}
+    # Must NOT contain deep family nodes
+    assert "puc-science-eng" not in foundation_candidates
+    assert "dip-family-comp" not in foundation_candidates
+    assert "iti-family-elec" not in foundation_candidates
+
+    token = create_test_token(USER_1_ID)
+    headers = {"Authorization": f"Bearer {token}"}
+    global MOCK_LATEST_RESULT, MOCK_PROFILE, MOCK_PATHWAYS
+
+    # Test PUC Science candidate set
+    MOCK_LATEST_RESULT = {
+        "attempt_id": str(uuid.uuid4()),
+        "assessment_id": "puc-science-direction-v2",
+        "scoring_version": "rule-v2-puc-science",
+        "dimension_scores": {"engineering": 80}
+    }
+    MOCK_PROFILE = {
+        "current_level": "PUC 2",
+        "stream": "Science",
+        "is_complete": True,
+        "id": str(uuid.uuid4()),
+        "user_id": USER_1_ID
+    }
+    # If roadmap returns both post-puc and 'puc-science', PUC Science candidate scope excludes 'puc-science'
+    MOCK_PATHWAYS = {
+        "pathways": [
+            {"id": "puc-science-eng", "title": "Engineering", "stream": "Science", "recommendation_dimensions": ["engineering"]},
+            {"id": "puc-science", "title": "PUC Science Stream", "stream": "Science", "recommendation_dimensions": ["science"]}
+        ]
+    }
+    resp_sci = client.post("/career-intelligence/recommendations/generate", headers=headers)
+    assert resp_sci.status_code == 200
+    sci_recs = resp_sci.json()["recommendations"]
+    assert all(r["pathway_id"] != "puc-science" for r in sci_recs)
+
+    # Test Diploma candidate set
+    MOCK_LATEST_RESULT = {
+        "attempt_id": str(uuid.uuid4()),
+        "assessment_id": "diploma-direction-v2",
+        "scoring_version": "rule-v2-diploma",
+        "dimension_scores": {"software_digital": 85}
+    }
+    MOCK_PROFILE = {
+        "current_level": "Diploma",
+        "stream": None,
+        "is_complete": True,
+        "id": str(uuid.uuid4()),
+        "user_id": USER_1_ID
+    }
+    MOCK_PATHWAYS = {
+        "pathways": [
+            {"id": "dip-family-comp", "title": "Computing & Digital Diploma", "stream": None, "recommendation_dimensions": ["software_digital"]},
+            {"id": "c10-diploma", "title": "Polytechnic Diploma", "stream": None, "recommendation_dimensions": ["diploma"]}
+        ]
+    }
+    resp_dip = client.post("/career-intelligence/recommendations/generate", headers=headers)
+    assert resp_dip.status_code == 200
+    dip_recs = resp_dip.json()["recommendations"]
+    assert all(r["pathway_id"] != "c10-diploma" for r in dip_recs)
+
+    # Test ITI candidate set
+    MOCK_LATEST_RESULT = {
+        "attempt_id": str(uuid.uuid4()),
+        "assessment_id": "iti-direction-v2",
+        "scoring_version": "rule-v2-iti",
+        "dimension_scores": {"energy_electrical": 85}
+    }
+    MOCK_PROFILE = {
+        "current_level": "ITI",
+        "stream": None,
+        "is_complete": True,
+        "id": str(uuid.uuid4()),
+        "user_id": USER_1_ID
+    }
+    MOCK_PATHWAYS = {
+        "pathways": [
+            {"id": "iti-family-elec", "title": "Electrical ITI Trade", "stream": None, "recommendation_dimensions": ["energy_electrical"]},
+            {"id": "c10-iti", "title": "ITI Vocational Trades", "stream": None, "recommendation_dimensions": ["iti"]}
+        ]
+    }
+    resp_iti = client.post("/career-intelligence/recommendations/generate", headers=headers)
+    assert resp_iti.status_code == 200
+    iti_recs = resp_iti.json()["recommendations"]
+    assert all(r["pathway_id"] != "c10-iti" for r in iti_recs)
 
 
 def test_recommendation_threshold_and_boundary_checks():

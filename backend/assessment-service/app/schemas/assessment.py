@@ -99,6 +99,7 @@ class AssessmentResultResponse(BaseModel):
     top_career_match: str
     dimension_scores: Dict[str, Any]
     summary_text: str
+    is_current: Optional[bool] = None
     created_at: datetime
 
 

@@ -61,6 +61,15 @@ def test_list_pathways_no_filters():
     assert "pathways" in data
     assert data["total"] == 36
     assert len(data["pathways"]) == 36
+
+
+def test_list_pathways_with_ids_filter():
+    response = client.get("/roadmaps/pathways?ids=c10-puc,c10-diploma,c10-iti")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 3
+    ids = [p["id"] for p in data["pathways"]]
+    assert set(ids) == {"c10-puc", "c10-diploma", "c10-iti"}
     
     # Verify response contract and field types
     p = data["pathways"][0]

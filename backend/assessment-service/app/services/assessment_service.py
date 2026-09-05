@@ -153,33 +153,87 @@ class AssessmentService:
                 detail="Student profile is incomplete. Please complete your profile first."
             )
 
-        if current_level in ["Class 8", "Class 9"]:
-            target_level = "Class 8-9"
-        elif current_level in ["PUC 1", "PUC 2"]:
-            target_level = "PUC"
-        else:
-            target_level = current_level
+        level_clean = (current_level or "").strip()
 
-        query = db.query(Assessment).filter(
-            Assessment.target_level == target_level,
-            Assessment.is_active == True
-        )
+        # Constraint 7: Class 8, Class 9, and Class 10 share the SAME Foundation assessment family
+        if level_clean in ["Class 8", "Class 9", "Class 10"]:
+            # Prefer v2 foundation assessment
+            v2_found = db.query(Assessment).filter(
+                Assessment.id == "foundation-career-discovery-v2",
+                Assessment.is_active == True
+            ).first()
+            if v2_found:
+                return v2_found
+            # Fallback for existing v1 fixtures
+            fallback = db.query(Assessment).filter(
+                Assessment.target_level.in_(["Class 8-9", "Class 10"]),
+                Assessment.is_active == True
+            ).first()
+            if fallback:
+                return fallback
 
-        if target_level == "PUC":
+        elif level_clean in ["PUC 1", "PUC 2"]:
             if not stream:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Academic stream is required for PUC assessment selection."
                 )
-            query = query.filter(Assessment.target_stream == stream)
+            stream_clean = stream.strip().title()
+            stream_map = {
+                "Science": "puc-science-direction-v2",
+                "Commerce": "puc-commerce-direction-v2",
+                "Arts": "puc-arts-direction-v2"
+            }
+            target_id = stream_map.get(stream_clean)
+            if target_id:
+                v2_puc = db.query(Assessment).filter(
+                    Assessment.id == target_id,
+                    Assessment.is_active == True
+                ).first()
+                if v2_puc:
+                    return v2_puc
 
-        assessment = query.first()
-        if not assessment:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"No active assessment found for level '{current_level}'" + (f" and stream '{stream}'" if stream else "") + "."
-            )
-        return assessment
+            # Fallback for v1 fixtures
+            fallback = db.query(Assessment).filter(
+                Assessment.target_level == "PUC",
+                Assessment.target_stream == stream_clean,
+                Assessment.is_active == True
+            ).first()
+            if fallback:
+                return fallback
+
+        elif level_clean == "Diploma":
+            v2_dip = db.query(Assessment).filter(
+                Assessment.id == "diploma-direction-v2",
+                Assessment.is_active == True
+            ).first()
+            if v2_dip:
+                return v2_dip
+            fallback = db.query(Assessment).filter(
+                Assessment.target_level == "Diploma",
+                Assessment.is_active == True
+            ).first()
+            if fallback:
+                return fallback
+
+        elif level_clean == "ITI":
+            v2_iti = db.query(Assessment).filter(
+                Assessment.id == "iti-direction-v2",
+                Assessment.is_active == True
+            ).first()
+            if v2_iti:
+                return v2_iti
+            fallback = db.query(Assessment).filter(
+                Assessment.target_level == "ITI",
+                Assessment.is_active == True
+            ).first()
+            if fallback:
+                return fallback
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No active assessment found for level '{current_level}'" + (f" and stream '{stream}'" if stream else "") + "."
+        )
 
     @staticmethod
     def validate_assessment_for_student(db: Session, user_id: str, assessment_id: str, token: str) -> None:
@@ -236,32 +290,20 @@ class AssessmentService:
                 detail=f"Cannot complete assessment. You have answered {answered_count} out of {total_required} required questions."
             )
 
-        # Calculate maximum possible score for each dimension dynamically
-        max_scores = {
-            "science": 0,
-            "commerce": 0,
-            "arts": 0,
-            "diploma": 0,
-            "iti": 0
-        }
+        # Calculate maximum possible score for each dimension dynamically from assessment questions
+        max_scores = {}
+        dimension_scores = {}
         for q in questions:
             q_max = {}
             for opt in q.options:
                 dim = opt.weight_dimension.lower()
+                dimension_scores.setdefault(dim, 0)
                 if opt.weight_score > q_max.get(dim, 0):
                     q_max[dim] = opt.weight_score
             for dim, score in q_max.items():
                 max_scores[dim] = max_scores.get(dim, 0) + score
 
-        # Deterministic Rule-Based Scoring across dimensions (science, commerce, arts, diploma, iti)
-        dimension_scores = {
-            "science": 0,
-            "commerce": 0,
-            "arts": 0,
-            "diploma": 0,
-            "iti": 0
-        }
-
+        # Accumulate raw scores from student answers
         for ans in answers:
             opt = ans.selected_option
             if opt and opt.weight_dimension:
@@ -277,25 +319,56 @@ class AssessmentService:
             else:
                 normalized_scores[dim] = 0
 
-        # Sort dimensions by normalized score descending to find the top recommendation
+        # Sort dimensions by normalized score descending to identify primary strengths
         sorted_dims = sorted(normalized_scores.items(), key=lambda x: x[1], reverse=True)
-        top_dim, top_score = sorted_dims[0]
-        second_dim, second_score = sorted_dims[1]
+        top_dim, top_score = sorted_dims[0] if sorted_dims else ("general", 0)
+        second_dim, second_score = sorted_dims[1] if len(sorted_dims) > 1 else (top_dim, top_score)
 
         dimension_map = {
+            # Foundation
             "science": ("PUC Science", "AI & Software Application Engineer"),
             "diploma": ("Polytechnic Diploma", "Computer Science & Robotics Engineer"),
             "commerce": ("PUC Commerce", "Financial Analyst & CA Associate"),
             "arts": ("PUC Arts & Humanities", "UI/UX & Product Designer"),
-            "iti": ("ITI Vocational Trades", "Industrial Automation & Solar Technician")
+            "iti": ("ITI Vocational Trades", "Industrial Automation & Solar Technician"),
+            # PUC Science
+            "engineering": ("Engineering & Technology (B.E / B.Tech)", "Systems Design & Robotics Engineer"),
+            "computing": ("Computer Applications & IT", "Software Architect & Machine Learning Engineer"),
+            "medicine": ("Medicine & Health Sciences", "Physician / Healthcare Specialist"),
+            "allied_health": ("Allied Health Sciences & Pharmacy", "Clinical Pharmacologist / Diagnostic Specialist"),
+            "pure_sciences": ("Pure & Applied Sciences (B.Sc)", "Research Scientist & Data Analyst"),
+            # PUC Commerce
+            "accounting_ca": ("Chartered Accountancy & Audit", "Chartered Accountant / Statutory Auditor"),
+            "finance_banking": ("Investment Banking & Finance", "Financial Risk Analyst / Portfolio Manager"),
+            "business_management": ("Business Management & Operations", "Operations Director / Strategy Consultant"),
+            "corporate_law": ("Corporate Law & Compliance", "Corporate Legal Counsel / Company Secretary"),
+            # PUC Arts
+            "law_judiciary": ("Integrated Law (B.A. LL.B)", "Advocate / Judicial Services Officer"),
+            "design_arts": ("Design & Creative Visual Arts (B.Des)", "Product Designer / Art Director"),
+            "media_journalism": ("Media & Digital Journalism", "Special Correspondent / Media Editor"),
+            "humanities_social": ("Social Policy & Administration", "Civil Services Officer / Policy Specialist"),
+            # Diploma
+            "dcet_lateral_engineering": ("B.E Lateral Entry (DCET)", "Graduate Engineer Trainee / Project Engineer"),
+            "software_digital": ("Software & Digital Tech", "Full-Stack Developer / Cloud Systems Engineer"),
+            "core_industrial": ("Core Industrial Engineering", "CAD/CAM Tooling Specialist / Automation Engineer"),
+            "industry_employment": ("Direct Industry Operations", "Plant Supervisor / Junior Site Engineer"),
+            # ITI
+            "apprenticeship_industry": ("National Apprenticeship (PSU/Railways)", "Permanent Industrial Technician"),
+            "energy_electrical": ("Electrical & Solar Energy Trade", "Certified Electrical / Solar Contractor"),
+            "mechanical_machining": ("Precision CNC Machining & Tooling", "Precision Machinist & CNC Programmer"),
+            "diploma_lateral": ("Polytechnic Diploma Lateral Entry", "Diploma Engineer Trainee")
         }
 
-        primary_recommendation, top_career = dimension_map.get(top_dim, ("PUC Science", "Software Engineer"))
-        secondary_recommendation, _ = dimension_map.get(second_dim, ("Polytechnic Diploma", "Technical Specialist"))
+        primary_recommendation, top_career = dimension_map.get(
+            top_dim, (top_dim.replace("_", " ").title(), "Technical Specialist")
+        )
+        secondary_recommendation, _ = dimension_map.get(
+            second_dim, (second_dim.replace("_", " ").title(), "Career Specialist")
+        )
 
         summary_text = (
             f"Based on your assessment responses, you show strong aptitude for {primary_recommendation} "
-            f"with key strength in {top_dim.title()} (score: {top_score}). Your secondary suitable pathway is "
+            f"with key strength in {top_dim.replace('_', ' ').title()} (score: {top_score}). Your secondary suitable pathway is "
             f"{secondary_recommendation}. Target career match: {top_career}."
         )
 
@@ -359,3 +432,43 @@ class AssessmentService:
         return db.query(AssessmentResult).filter(
             AssessmentResult.user_id == user_uuid
         ).order_by(AssessmentResult.created_at.desc()).first()
+
+    @staticmethod
+    def get_my_latest_result_with_status(db: Session, user_id: str, token: Optional[str] = None) -> Optional[dict]:
+        """
+        Constraint 2: Current assessment semantics include version identity.
+        A result is current only if it matches the assessment_id, assessment_version,
+        and scoring_version expected for the student's current academic context.
+        """
+        latest = AssessmentService.get_my_latest_result(db, user_id)
+        if not latest:
+            return None
+
+        is_current = False
+        if token:
+            try:
+                assigned = AssessmentService.resolve_assessment_for_student(db, user_id, token)
+                if (
+                    latest.assessment_id == assigned.id
+                    and latest.assessment_version == assigned.assessment_version
+                    and latest.scoring_version == assigned.scoring_version
+                ):
+                    is_current = True
+            except Exception:
+                is_current = False
+
+        return {
+            "id": latest.id,
+            "attempt_id": latest.attempt_id,
+            "user_id": latest.user_id,
+            "assessment_id": latest.assessment_id,
+            "assessment_version": latest.assessment_version,
+            "scoring_version": latest.scoring_version,
+            "primary_stream_recommendation": latest.primary_stream_recommendation,
+            "secondary_stream_recommendation": latest.secondary_stream_recommendation,
+            "top_career_match": latest.top_career_match,
+            "dimension_scores": latest.dimension_scores,
+            "summary_text": latest.summary_text,
+            "is_current": is_current,
+            "created_at": latest.created_at,
+        }

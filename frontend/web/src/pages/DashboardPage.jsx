@@ -97,8 +97,10 @@ const DashboardPage = () => {
   const fullName = profile?.full_name || user?.full_name || 'Student';
   const firstName = fullName.trim().split(' ')[0] || 'Student';
 
-  // Derived state flags
-  const isAssessmentComplete = Boolean(assessmentResult);
+  // Derived state flags (Constraint 12: isCurrentAssessmentComplete vs historical)
+  const hasHistoricalAssessment = Boolean(assessmentResult);
+  const isCurrentAssessmentComplete = Boolean(assessmentResult && assessmentResult.is_current === true);
+  const isAssessmentPending = Boolean(hasHistoricalAssessment && !isCurrentAssessmentComplete);
   const isGoalSelected = Boolean(activeGoal);
   const isRoadmapStarted = isGoalSelected && (activeGoal?.progress?.completed > 0);
 
@@ -174,7 +176,7 @@ const DashboardPage = () => {
                   <span>Your next step</span>
                 </div>
 
-                {!isAssessmentComplete ? (
+                {!hasHistoricalAssessment ? (
                   <>
                     <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight font-sans">
                       Discover your strengths and interests
@@ -189,7 +191,7 @@ const DashboardPage = () => {
                       Explore options that fit you
                     </h2>
                     <p className="text-xs sm:text-sm text-teal-100/90 font-medium leading-relaxed font-sans">
-                      Your assessment shows strong alignment with <span className="font-extrabold text-white underline decoration-[#F97316]">{assessmentResult.primary_stream_recommendation || 'PUC Science'}</span>. Explore pathways that match your interests and goals.
+                      Your assessment shows alignment with <span className="font-extrabold text-white underline decoration-[#F97316]">{assessmentResult.primary_stream_recommendation || 'recommended pathways'}</span>. Explore pathways that match your interests and goals.
                     </p>
                   </>
                 ) : !isRoadmapStarted ? (
@@ -217,14 +219,14 @@ const DashboardPage = () => {
               <button
                 type="button"
                 onClick={() => {
-                  if (!isAssessmentComplete) navigate('/assessment?mode=take');
+                  if (!hasHistoricalAssessment) navigate('/assessment?mode=take');
                   else if (!isGoalSelected) navigate('/pathways');
                   else navigate('/my-roadmap');
                 }}
                 className="bg-[#F97316] hover:bg-orange-500 text-white font-black text-xs px-6 py-3.5 rounded-xl transition-all shadow-md flex items-center space-x-2 shrink-0 cursor-pointer font-sans"
               >
                 <span>
-                  {!isAssessmentComplete ? 'Start Assessment →' : !isGoalSelected ? 'Explore Pathways →' : !isRoadmapStarted ? 'View My Roadmap →' : 'Continue Roadmap →'}
+                  {!hasHistoricalAssessment ? 'Start Assessment →' : !isGoalSelected ? 'Explore Pathways →' : !isRoadmapStarted ? 'View My Roadmap →' : 'Continue Roadmap →'}
                 </span>
               </button>
             </div>

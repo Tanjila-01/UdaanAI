@@ -727,6 +727,9 @@ SEED_ASSESSMENTS = [
     }
 ]
 
+from app.db.v2_assessments_data import ALL_V2_ASSESSMENTS
+SEED_ASSESSMENTS.extend(ALL_V2_ASSESSMENTS)
+
 
 def seed_initial_assessment_data(db: Session) -> dict:
     created_count = 0

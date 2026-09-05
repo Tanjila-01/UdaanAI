@@ -3,7 +3,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.models.student_profile import StudentProfile
-from app.schemas.student_profile import ProfileCreate, ProfileUpdate
+from app.schemas.student_profile import ProfileCreate, ProfileUpdate, AcademicStageUpdate
 
 
 class StudentService:
@@ -130,13 +130,69 @@ class StudentService:
         profile = StudentService.get_profile_by_user_id(db, user_id_str)
 
         update_dict = data.model_dump(exclude_unset=True)
+
+        # Constraint 8: Standard profile update must actively REJECT academic context changes.
+        academic_fields = {"current_level", "class_or_year", "board", "stream", "diploma_branch", "iti_trade"}
+        attempted_academic = [f for f in academic_fields if f in update_dict]
+        if attempted_academic:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Academic fields ({', '.join(attempted_academic)}) cannot be updated via standard profile update. "
+                    "Please use the dedicated academic stage update endpoint."
+                )
+            )
+
         for field, value in update_dict.items():
             if value is not None:
                 setattr(profile, field, value)
 
+        current_dict = {
+            "current_level": profile.current_level,
+            "class_or_year": profile.class_or_year,
+            "board": profile.board,
+            "institution_name": profile.institution_name,
+            "district": profile.district,
+            "stream": profile.stream,
+            "diploma_branch": profile.diploma_branch,
+            "iti_trade": profile.iti_trade,
+        }
+        is_complete, percentage = StudentService.calculate_completion(current_dict)
+        profile.is_complete = is_complete
+        profile.completion_percentage = percentage
+
+        db.commit()
+        db.refresh(profile)
+        return profile
+
+    @staticmethod
+    def update_academic_stage(db: Session, user_id_str: str, data: AcademicStageUpdate) -> StudentProfile:
+        profile = StudentService.get_profile_by_user_id(db, user_id_str)
+
+        # Constraint 9: Validate and normalize legal combinations centrally
         clean_stream, clean_diploma, clean_iti = StudentService.normalize_and_validate_academic_fields(
-            profile.current_level, profile.stream, profile.diploma_branch, profile.iti_trade
+            data.current_level, data.stream, data.diploma_branch, data.iti_trade
         )
+
+        profile.current_level = data.current_level.strip()
+        if data.class_or_year:
+            profile.class_or_year = data.class_or_year.strip()
+        else:
+            # Fallback sensible defaults for class_or_year based on level
+            level = profile.current_level
+            if level in ["Class 8", "Class 9", "Class 10"]:
+                profile.class_or_year = f"{level.split()[-1]}th Standard"
+            elif level == "PUC 1":
+                profile.class_or_year = "1st Year PUC"
+            elif level == "PUC 2":
+                profile.class_or_year = "2nd Year PUC"
+            elif level == "Diploma":
+                profile.class_or_year = "1st Year Diploma"
+            elif level == "ITI":
+                profile.class_or_year = "1st Year ITI"
+
+        if data.board:
+            profile.board = data.board.strip()
 
         profile.stream = clean_stream
         profile.diploma_branch = clean_diploma

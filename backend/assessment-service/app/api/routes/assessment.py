@@ -27,10 +27,12 @@ def list_assessments(db: Session = Depends(get_db)):
 @router.get("/my-latest-result", response_model=Optional[AssessmentResultResponse])
 def get_my_latest_result(
     claims: dict = Depends(get_current_user_claims),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db)
 ):
     user_id = claims.get("sub")
-    return AssessmentService.get_my_latest_result(db, user_id)
+    token = credentials.credentials if credentials else None
+    return AssessmentService.get_my_latest_result_with_status(db, user_id, token)
 
 
 @router.get("/my-assessment", response_model=AssessmentDetailResponse)

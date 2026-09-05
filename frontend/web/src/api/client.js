@@ -150,6 +150,11 @@ export const updateMyProfileApi = async (data) => {
   return response.data;
 };
 
+export const updateMyAcademicStageApi = async (data) => {
+  const response = await apiClient.put('/api/v1/students/profile/academic-stage', data);
+  return response.data;
+};
+
 export const getPathwaysApi = async (params = {}) => {
   const cleanParams = {};
   if (params.education_level && typeof params.education_level === 'string' && params.education_level.trim()) {

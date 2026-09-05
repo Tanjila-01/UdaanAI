@@ -19,16 +19,26 @@ class ProfileCreate(BaseModel):
 
 class ProfileUpdate(BaseModel):
     full_name: Optional[str] = None
+    institution_name: Optional[str] = None
+    district: Optional[str] = None
+    state: Optional[str] = None
+    preferred_language: Optional[str] = None
+    # Academic fields included as Optional to catch frontend errors and reject with 400
     current_level: Optional[str] = None
     class_or_year: Optional[str] = None
     board: Optional[str] = None
     stream: Optional[str] = None
     diploma_branch: Optional[str] = None
     iti_trade: Optional[str] = None
-    institution_name: Optional[str] = None
-    district: Optional[str] = None
-    state: Optional[str] = None
-    preferred_language: Optional[str] = None
+
+
+class AcademicStageUpdate(BaseModel):
+    current_level: str = Field(..., min_length=2, max_length=100)
+    class_or_year: Optional[str] = Field(default=None, max_length=50)
+    board: Optional[str] = Field(default=None, max_length=150)
+    stream: Optional[str] = Field(default=None, max_length=100)
+    diploma_branch: Optional[str] = Field(default=None, max_length=150)
+    iti_trade: Optional[str] = Field(default=None, max_length=150)
 
 
 class ProfileResponse(BaseModel):

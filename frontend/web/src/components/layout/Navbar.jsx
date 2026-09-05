@@ -32,8 +32,8 @@ export const Navbar = () => {
 
   // Curated public navigation anchors mapped directly to homepage sections
   const navLinks = [
-    { label: 'Pathways', href: '#pathways' },
     { label: 'How It Works', href: '#how-it-works' },
+    { label: 'Pathways', href: '#pathways' },
     { label: 'Workshops', href: '#workshops' },
     { label: 'For Schools', href: '#school-invitation' },
   ];
@@ -42,9 +42,9 @@ export const Navbar = () => {
     if (href.startsWith('#')) {
       e.preventDefault();
       setMobileMenuOpen(false);
-      
+
       const targetId = href.replace('#', '');
-      
+
       if (location.pathname !== '/') {
         navigate('/' + href);
         setTimeout(() => {
@@ -55,7 +55,7 @@ export const Navbar = () => {
         }, 150);
         return;
       }
-      
+
       const element = document.getElementById(targetId);
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' });
@@ -64,15 +64,14 @@ export const Navbar = () => {
   };
 
   return (
-    <header 
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled 
-          ? 'bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-xs py-3' 
+    <header
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
+          ? 'bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-xs py-3'
           : 'bg-white/80 backdrop-blur-xs py-4 border-b border-slate-100'
-      }`}
+        }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-        
+
         {/* Left: Brand Logo & Tagline */}
         <Link to="/" className="flex items-center space-x-3 group">
           <div className="w-10 h-10 rounded-xl bg-[#005F60] flex items-center justify-center text-white shadow-xs group-hover:scale-105 transition-transform">
@@ -140,9 +139,9 @@ export const Navbar = () => {
                 </Button>
               </Link>
               <Link to="/register">
-                <Button 
-                  variant="secondary" 
-                  size="sm" 
+                <Button
+                  variant="secondary"
+                  size="sm"
                   className="bg-[#E06D14] hover:bg-[#C2580E] text-white shadow-2xs font-extrabold"
                   rightIcon={<ChevronRight className="w-4 h-4" />}
                 >

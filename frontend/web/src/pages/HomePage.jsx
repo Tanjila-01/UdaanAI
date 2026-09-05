@@ -51,7 +51,9 @@ import {
   BarChart3,
   Layers3,
   Lightbulb,
-  CheckSquare
+  CheckSquare,
+  Route as RouteIcon,
+  Map as MapIcon
 } from 'lucide-react';
 
 const HomePage = () => {
@@ -114,79 +116,89 @@ const HomePage = () => {
       tabTitle: 'Discover Yourself',
       title: 'Understand Strengths & Interests',
       shortDesc: 'Understand interests, strengths, preferences and academic context.',
-      fullDesc: 'Take guided interest assessments mapping your natural aptitude across SSLC subjects, logical reasoning, hands-on mechanics, or creative problem-solving.',
+      fullDesc: 'Take a career discovery assessment designed around your current education stage, interests, strengths, and the decisions ahead of you.',
       bullets: [
-        'SSLC subject affinity breakdown',
         'Aptitude & interest pattern matching',
-        'Karnataka educational context mapping'
+        'Questions tailored to your current education stage',
+        'Karnataka curriculum and route alignment'
       ],
       icon: <Compass className="w-5 h-5 text-[#005F60]" />,
-      badge: 'Step 01: Profile Assessment',
-      visualType: 'radar'
+      badge: 'Step 01: Stage-Aware Assessment',
+      visualType: 'radar',
+      targetRoute: '/assessment',
+      ctaLabel: 'Take Assessment'
     },
     {
       id: 'explore',
       stepNum: '02',
-      tabTitle: 'Explore Careers',
-      title: 'Explore Mapped Opportunities',
-      shortDesc: 'Explore careers connected to your interests and education options.',
-      fullDesc: 'Browse over 140+ verified career options mapped to current industrial demand across Bengaluru, Mysuru, Hubballi, and Karnataka hubs.',
+      tabTitle: 'Explore Pathways',
+      title: 'Explore Education & Career Pathways',
+      shortDesc: 'See how PUC streams, diplomas, ITI trades, and higher degrees connect.',
+      fullDesc: 'See how PUC streams, Polytechnic Diploma programs, ITI trades, higher education options, and career directions connect so you can understand where each choice can lead.',
       bullets: [
-        'Real-world salary ranges & growth rates',
-        'Key technical and soft skills required',
-        'Industry demand ratings updated for 2026'
+        'Understand what comes after each education choice',
+        'Explore PUC, Diploma, ITI and higher-education routes',
+        'See how courses connect to future career directions'
       ],
-      icon: <Briefcase className="w-5 h-5 text-[#E06D14]" />,
-      badge: 'Step 02: Career Matching',
-      visualType: 'careers'
+      icon: <RouteIcon className="w-5 h-5 text-[#005F60]" />,
+      badge: 'Step 02: Explore Pathways',
+      visualType: 'pathways',
+      targetRoute: '/pathways',
+      ctaLabel: 'Explore Pathways'
     },
     {
-      id: 'compare',
+      id: 'choose',
       stepNum: '03',
-      tabTitle: 'Compare Pathways',
-      title: 'Compare Education Streams Side-by-Side',
-      shortDesc: 'Compare PUC, Diploma, ITI and degree routes.',
-      fullDesc: 'Transparently evaluate PUC (Science, Commerce, Arts) vs 3-Year Polytechnic Technical Diplomas vs ITI Vocational Trades before making decisions.',
+      tabTitle: 'Choose a Direction',
+      title: 'Choose the Direction That Fits You',
+      shortDesc: 'Select an education or career direction as your active goal.',
+      fullDesc: 'Review your recommended pathways, understand the available routes, and choose the direction you want to work toward.',
       bullets: [
-        'Duration, tuition estimates, and eligibility',
-        'Entrance exams: KCET, NEET, DCET',
-        'Direct 2nd-year lateral entry B.Tech paths'
+        'Review recommendations aligned with your assessment',
+        'Commit to an active education or career target',
+        'Unlock your personalized milestone roadmap'
       ],
-      icon: <GitBranch className="w-5 h-5 text-blue-600" />,
-      badge: 'Step 03: Stream Analysis',
-      visualType: 'compare'
+      icon: <Target className="w-5 h-5 text-[#005F60]" />,
+      badge: 'Step 03: Select Goal',
+      visualType: 'choose',
+      targetRoute: '/pathways',
+      ctaLabel: 'Choose Direction'
     },
     {
       id: 'roadmap',
       stepNum: '04',
       tabTitle: 'Build Your Roadmap',
-      title: 'Construct Your Milestone Roadmap',
+      title: 'Turn Your Direction Into a Roadmap',
       shortDesc: 'Turn a chosen direction into a structured sequence of milestones.',
-      fullDesc: 'Generate a step-by-step sequential action timeline connecting your current grade directly to entrance exams, higher degrees, and target job roles.',
+      fullDesc: 'After selecting your direction, Udaan AI structures your journey into clear sequential milestones from your current stage to higher studies and career entry.',
       bullets: [
-        'Grade-by-grade timeline markers',
-        'Exam preparation target dates',
-        'Skill certification milestones'
+        'Clear grade-by-grade milestone markers',
+        'Entrance exam milestones: KCET, NEET, DCET',
+        'Key academic and skill preparation steps'
       ],
-      icon: <Milestone className="w-5 h-5 text-purple-600" />,
-      badge: 'Step 04: Actionable Plan',
-      visualType: 'roadmap'
+      icon: <MapIcon className="w-5 h-5 text-[#005F60]" />,
+      badge: 'Step 04: Milestone Roadmap',
+      visualType: 'roadmap',
+      targetRoute: '/my-roadmap',
+      ctaLabel: 'View My Roadmap'
     },
     {
       id: 'track',
       stepNum: '05',
       tabTitle: 'Track Your Progress',
-      title: 'Track Milestones & Achievements',
+      title: 'Keep Moving Forward',
       shortDesc: 'Keep track of important milestones and next steps.',
-      fullDesc: 'Continuously track SSLC score goals, KCET/DCET prep milestones, and skill achievements with progress metrics that keep you on route.',
+      fullDesc: 'Continuously track your milestones, review your progress, and stay focused on the next concrete action in your educational journey.',
       bullets: [
-        'SSLC target score tracker',
-        'Entrance exam prep milestones',
-        'Skill certification badges'
+        'Track completed and upcoming milestones',
+        'Clear next-step indicators for your active goal',
+        'Review and update your educational direction anytime'
       ],
-      icon: <TrendingUp className="w-5 h-5 text-emerald-600" />,
-      badge: 'Step 05: Execution',
-      visualType: 'track'
+      icon: <TrendingUp className="w-5 h-5 text-[#005F60]" />,
+      badge: 'Step 05: Milestone Progress',
+      visualType: 'track',
+      targetRoute: '/dashboard',
+      ctaLabel: 'Track Progress'
     }
   ];
 
@@ -488,7 +500,7 @@ const HomePage = () => {
                 From Self-Discovery to Career Direction
               </h2>
               <p className="text-base text-slate-700 mt-3 font-semibold">
-                Explore yourself, compare possibilities, understand pathways, and build a clearer next step.
+                Explore yourself, understand connected pathways, choose a direction, and build a clearer next step.
               </p>
             </div>
 
@@ -542,9 +554,12 @@ const HomePage = () => {
                     ))}
                   </div>
 
-                  <Link to={user ? "/dashboard" : "/register"} className="pt-2">
+                  <Link 
+                    to={user ? flowSteps[activeFlowStep].targetRoute : "/register"} 
+                    className="pt-2"
+                  >
                     <Button variant="primary" size="md" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                      Try This Step Now
+                      {user ? flowSteps[activeFlowStep].ctaLabel : (activeFlowStep === 1 ? "Explore Pathways" : "Try This Step Now")}
                     </Button>
                   </Link>
                 </div>
@@ -558,10 +573,12 @@ const HomePage = () => {
                       <div className="flex items-center gap-2">
                         {flowSteps[activeFlowStep].icon}
                         <span className="text-xs font-bold text-slate-900">
-                          {flowSteps[activeFlowStep].tabTitle} Module Preview
+                          {flowSteps[activeFlowStep].tabTitle} Preview
                         </span>
                       </div>
-                      <span className="text-[10px] font-mono text-slate-500 uppercase">Live UI</span>
+                      <span className="text-[10px] font-mono text-[#005F60] font-bold uppercase tracking-wider bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                        Interactive Pathway Preview
+                      </span>
                     </div>
 
                     {/* Content Preview based on active tab */}
@@ -592,82 +609,151 @@ const HomePage = () => {
                     )}
 
                     {activeFlowStep === 1 && (
-                      <div className="py-4 space-y-2.5">
-                        <div className="p-3 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-between">
-                          <div>
-                            <span className="text-xs font-bold text-slate-950 block">AI & Software Engineer</span>
-                            <span className="text-[10px] text-slate-700 font-medium">Demand: High (+24%) • ₹4.5L - ₹14L</span>
+                      <div className="py-3 space-y-2.5">
+                        {/* Root: Class 10 */}
+                        <div className="flex flex-col items-center">
+                          <div className="px-3 py-1 rounded-xl bg-slate-900 text-white text-xs font-bold shadow-2xs flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                            <span>Class 10 (SSLC)</span>
                           </div>
-                          <Badge variant="primary" size="sm">Top Match</Badge>
+                          <div className="w-0.5 h-2.5 bg-slate-300"></div>
                         </div>
-                        <div className="p-3 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-between">
-                          <div>
-                            <span className="text-xs font-bold text-slate-950 block">Industrial Automation Tech</span>
-                            <span className="text-[10px] text-slate-700 font-medium">Demand: Steady (+16%) • ₹3.2L - ₹8.5L</span>
+
+                        {/* Split: PUC Science vs Diploma vs ITI */}
+                        <div className="grid grid-cols-3 gap-2 relative">
+                          <div className="flex flex-col items-center gap-1 p-2 rounded-xl bg-teal-50 border border-teal-300 text-center shadow-2xs">
+                            <span className="text-[9px] font-black uppercase tracking-wider text-[#005F60]">Recommended</span>
+                            <span className="text-xs font-black text-teal-950">PUC Science</span>
+                            <span className="text-[10px] text-teal-700 font-medium">PCMB / PCMC</span>
                           </div>
-                          <Badge variant="warning" size="sm">High Demand</Badge>
+
+                          <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                            <span className="text-xs font-bold text-slate-700">Polytechnic</span>
+                            <span className="text-[10px] text-slate-500 font-medium">3-Yr Diploma</span>
+                          </div>
+
+                          <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-slate-50 border border-slate-200 text-center">
+                            <span className="text-xs font-bold text-slate-700">ITI Trades</span>
+                            <span className="text-[10px] text-slate-500 font-medium">Vocational</span>
+                          </div>
+                        </div>
+
+                        {/* Progression down from PUC Science */}
+                        <div className="flex flex-col items-center gap-1.5 pt-0.5">
+                          <div className="w-0.5 h-2.5 bg-teal-500"></div>
+
+                          {/* Higher Education Node */}
+                          <div className="w-full p-2 rounded-xl bg-[#005F60] text-white flex items-center justify-between shadow-2xs">
+                            <div className="flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-teal-300"></span>
+                              <span className="text-xs font-bold">B.E / B.Tech (Engineering)</span>
+                            </div>
+                            <span className="text-[10px] text-teal-200 font-mono">KCET / JEE</span>
+                          </div>
+
+                          <div className="w-0.5 h-2.5 bg-orange-400"></div>
+
+                          {/* Destination Role Node */}
+                          <div className="w-full p-2 rounded-xl bg-orange-50 border border-orange-300 text-[#C2410C] flex items-center justify-between shadow-2xs">
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="w-3.5 h-3.5 text-[#F97316]" />
+                              <span className="text-xs font-black text-slate-900">Software & AI Careers</span>
+                            </div>
+                            <span className="text-[10px] font-bold text-[#F97316] bg-white px-2 py-0.5 rounded border border-orange-200">
+                              Career Direction
+                            </span>
+                          </div>
                         </div>
                       </div>
                     )}
 
                     {activeFlowStep === 2 && (
-                      <div className="py-4 space-y-2">
-                        <div className="grid grid-cols-2 gap-2 text-center text-xs">
-                          <div className="p-3 rounded-xl bg-teal-50 border border-teal-200">
-                            <span className="font-bold text-[#004D4E] block">PUC Science</span>
-                            <span className="text-[10px] text-slate-600">2 Yrs • KCET Prep</span>
+                      <div className="py-3 space-y-3">
+                        <div className="p-3.5 rounded-2xl bg-teal-50/90 border-2 border-[#005F60] space-y-2 shadow-2xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-[#005F60] bg-teal-100/80 px-2 py-0.5 rounded-full border border-teal-200">
+                              Recommended Direction
+                            </span>
+                            <span className="text-[10px] font-bold text-teal-800 flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-[#005F60]" /> Aligned
+                            </span>
                           </div>
-                          <div className="p-3 rounded-xl bg-blue-50 border border-blue-200">
-                            <span className="font-bold text-blue-900 block">Polytechnic Diploma</span>
-                            <span className="text-[10px] text-slate-600">3 Yrs • Direct B.Tech 2nd Yr</span>
+                          <div>
+                            <h4 className="text-xs sm:text-sm font-black text-slate-900">Pre-University Science (PCMC)</h4>
+                            <p className="text-[11px] text-slate-600 mt-1 leading-relaxed font-medium">
+                              Why it fits: Strong analytical aptitude and interest in software systems. Direct eligibility for Karnataka B.E / B.Tech engineering admissions.
+                            </p>
+                          </div>
+                          <div className="pt-0.5">
+                            <div className="w-full bg-[#005F60] text-white font-extrabold text-xs py-2 px-3 rounded-xl shadow-2xs flex items-center justify-center gap-1.5 cursor-default">
+                              <Target className="w-3.5 h-3.5" />
+                              <span>Selected Active Direction</span>
+                            </div>
                           </div>
                         </div>
-                        <div className="p-2.5 rounded-lg bg-slate-100 text-[11px] text-slate-700 font-semibold text-center">
-                          Result: Diploma provides earlier practical exposure; PUC offers broader university entrance options.
+
+                        <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+                          <div>
+                            <span className="font-bold text-slate-800 block text-xs">Alternative: Polytechnic Diploma</span>
+                            <span className="text-[10px] text-slate-500">Computer Science & Engineering</span>
+                          </div>
+                          <span className="text-[10px] font-bold text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
+                            Available
+                          </span>
                         </div>
                       </div>
                     )}
 
                     {activeFlowStep === 3 && (
-                      <div className="py-4 space-y-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-[#005F60] text-white flex items-center justify-center font-bold text-xs">10</div>
-                          <div className="flex-1 border-b border-slate-200 pb-1">
-                            <span className="text-xs font-bold text-slate-900 block">SSLC Class 10 Completion</span>
-                            <span className="text-[10px] text-slate-600">Target Score: 85%+</span>
+                      <div className="py-3 space-y-2">
+                        <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                          <div className="w-7 h-7 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs shrink-0">1</div>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs font-bold text-slate-900 block truncate">10th SSLC Board Examination</span>
+                            <span className="text-[10px] text-slate-500">Foundation marks in Mathematics & Science</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-[#E06D14] text-white flex items-center justify-center font-bold text-xs">Dip</div>
-                          <div className="flex-1 border-b border-slate-200 pb-1">
-                            <span className="text-xs font-bold text-slate-900 block">Polytechnic CSE Diploma</span>
-                            <span className="text-[10px] text-slate-600">3 Years Applied Learning</span>
+                        <div className="flex items-center gap-3 p-2.5 rounded-xl bg-teal-50 border border-teal-200">
+                          <div className="w-7 h-7 rounded-full bg-[#005F60] text-white flex items-center justify-center font-bold text-xs shrink-0">2</div>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs font-bold text-[#005F60] block truncate">PUC Science (PCMC) & CET Prep</span>
+                            <span className="text-[10px] text-teal-700 font-medium">Physics, Chemistry, Math & Computer Science</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs">Eng</div>
-                          <div className="flex-1">
-                            <span className="text-xs font-bold text-slate-900 block">B.Tech 2nd Year Lateral Entry</span>
-                            <span className="text-[10px] text-slate-600">DCET Karnataka Exam</span>
+                        <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                          <div className="w-7 h-7 rounded-full bg-[#F97316] text-white flex items-center justify-center font-bold text-xs shrink-0">3</div>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs font-bold text-slate-900 block truncate">KCET Engineering Allotment</span>
+                            <span className="text-[10px] text-slate-500">Karnataka State Engineering Counselling</span>
                           </div>
                         </div>
                       </div>
                     )}
 
                     {activeFlowStep === 4 && (
-                      <div className="py-4 space-y-3">
+                      <div className="py-3 space-y-2.5">
                         <div className="flex items-center justify-between text-xs font-bold text-slate-800">
-                          <span>Overall Roadmap Progress</span>
-                          <span className="text-[#005F60]">4 of 6 Milestones Completed</span>
+                          <span>Milestone Progress</span>
+                          <span className="text-[#005F60]">2 of 4 Steps Completed</span>
                         </div>
-                        <ProgressBar value={66} variant="primary" size="lg" />
-                        <div className="grid grid-cols-2 gap-2 text-[11px] font-bold text-slate-700">
-                          <span className="flex items-center gap-1 text-emerald-700">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> SSLC Verified
-                          </span>
-                          <span className="flex items-center gap-1 text-emerald-700">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Stream Selected
-                          </span>
+                        <ProgressBar value={50} variant="primary" size="md" />
+                        <div className="space-y-1.5 pt-1 text-xs">
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50 text-emerald-800 font-semibold border border-emerald-200">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span>Explore education pathways</span>
+                          </div>
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50 text-emerald-800 font-semibold border border-emerald-200">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span>Select active direction: PUC Science</span>
+                          </div>
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-50 text-amber-900 font-semibold border border-amber-200">
+                            <span className="w-2 h-2 rounded-full bg-[#F97316] shrink-0 ml-1 mr-0.5"></span>
+                            <span>Next: 1st PUC board preparation</span>
+                          </div>
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 text-slate-500 font-medium border border-slate-200">
+                            <span className="w-2 h-2 rounded-full bg-slate-300 shrink-0 ml-1 mr-0.5"></span>
+                            <span>Upcoming: KCET examination & counselling</span>
+                          </div>
                         </div>
                       </div>
                     )}

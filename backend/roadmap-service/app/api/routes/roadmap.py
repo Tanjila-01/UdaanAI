@@ -30,9 +30,14 @@ def list_pathways(
         None,
         description="Filter pathways by PUC academic stream (e.g. Science, Commerce, Arts)",
     ),
+    ids: Optional[str] = Query(
+        None,
+        description="Comma-separated list of pathway IDs to fetch specifically",
+    ),
     db: Session = Depends(get_db),
 ):
-    pathways_orm = RoadmapService.get_pathways(db, education_level=education_level, stream=stream)
+    ids_list = [i.strip() for i in ids.split(",") if i.strip()] if ids else None
+    pathways_orm = RoadmapService.get_pathways(db, education_level=education_level, stream=stream, ids=ids_list)
     pathway_details = [PathwayDetailResponse.model_validate(p) for p in pathways_orm]
     return PathwayListResponse(
         total=len(pathway_details),

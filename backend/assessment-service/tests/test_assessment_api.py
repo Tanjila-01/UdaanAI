@@ -138,11 +138,11 @@ def test_level_specific_routing_class89():
         "is_complete": True
     }
 
-    # Starting an attempt automatically should resolve to Class 8-9 assessment
+    # Starting an attempt automatically should resolve to Foundation v2 assessment
     resp = client.post("/assessments/attempts", headers=headers)
     assert resp.status_code == 201
     data = resp.json()
-    assert data["assessment_id"] == "karnataka-class-8-9-exploration-v1"
+    assert data["assessment_id"] == "foundation-career-discovery-v2"
 
 
 def test_level_specific_routing_puc_science():
@@ -159,7 +159,7 @@ def test_level_specific_routing_puc_science():
     resp = client.post("/assessments/attempts", headers=headers)
     assert resp.status_code == 201
     data = resp.json()
-    assert data["assessment_id"] == "karnataka-puc-science-direction-v1"
+    assert data["assessment_id"] == "puc-science-direction-v2"
 
 
 def test_level_specific_routing_diploma_iti():
@@ -176,7 +176,7 @@ def test_level_specific_routing_diploma_iti():
     resp = client.post("/assessments/attempts", headers=headers)
     assert resp.status_code == 201
     data = resp.json()
-    assert data["assessment_id"] == "karnataka-diploma-direction-v1"
+    assert data["assessment_id"] == "diploma-direction-v2"
 
 
 def test_validate_manual_start_mismatch_fails():
@@ -190,7 +190,8 @@ def test_validate_manual_start_mismatch_fails():
         "is_complete": True
     }
 
-    resp = client.post("/assessments/karnataka-class-10-pathway-exploration-v1/attempts", headers=headers)
+    # Manually starting Foundation when user is ITI should fail with 400
+    resp = client.post("/assessments/foundation-career-discovery-v2/attempts", headers=headers)
     assert resp.status_code == 400
     assert "not appropriate for your level" in resp.json()["detail"]
 
@@ -227,8 +228,8 @@ def test_completing_with_fewer_than_all_questions_fails():
     assert resp.status_code == 201
     attempt_id = resp.json()["id"]
 
-    # Answer only 1 question (out of 10 required for Class 10)
-    detail_resp = client.get("/assessments/karnataka-class-10-pathway-exploration-v1")
+    # Answer only 1 question (out of 15 required for Foundation)
+    detail_resp = client.get("/assessments/foundation-career-discovery-v2")
     questions = detail_resp.json()["questions"]
     q = questions[0]
     ans_resp = client.post(
@@ -238,10 +239,10 @@ def test_completing_with_fewer_than_all_questions_fails():
     )
     assert ans_resp.status_code == 200
 
-    # Complete attempt (should fail because 1 < 10)
+    # Complete attempt (should fail because 1 < 15)
     comp_resp = client.post(f"/assessments/attempts/{attempt_id}/complete", headers=headers)
     assert comp_resp.status_code == 400
-    assert "You have answered 1 out of 10" in comp_resp.json()["detail"]
+    assert "You have answered 1 out of 15" in comp_resp.json()["detail"]
 
 
 def test_complete_assessment_full_flow():
@@ -255,16 +256,16 @@ def test_complete_assessment_full_flow():
         "is_complete": True
     }
 
-    # 1. Start Attempt (auto resolves to karnataka-class-10-pathway-exploration-v1)
+    # 1. Start Attempt (auto resolves to foundation-career-discovery-v2)
     resp = client.post("/assessments/attempts", headers=headers)
     assert resp.status_code == 201
     attempt_id = resp.json()["id"]
 
     # 2. Get details to get questions
-    detail_resp = client.get("/assessments/karnataka-class-10-pathway-exploration-v1")
+    detail_resp = client.get("/assessments/foundation-career-discovery-v2")
     questions = detail_resp.json()["questions"]
 
-    # 3. Submit answers to all 10 questions (select first option for all)
+    # 3. Submit answers to all 15 questions (select first option for all)
     for q in questions:
         client.post(
             f"/assessments/attempts/{attempt_id}/answers",
@@ -284,9 +285,9 @@ def test_complete_assessment_full_flow():
     result_data = comp_resp.json()
 
     # Assert versions are saved and returned
-    assert result_data["assessment_id"] == "karnataka-class-10-pathway-exploration-v1"
-    assert result_data["assessment_version"] == "v1"
-    assert result_data["scoring_version"] == "rule-v1"
+    assert result_data["assessment_id"] == "foundation-career-discovery-v2"
+    assert result_data["assessment_version"] == "v2"
+    assert result_data["scoring_version"] == "rule-v2-foundation"
 
     # Assert dimension structure is consistent
     scores = result_data["dimension_scores"]
@@ -299,6 +300,21 @@ def test_complete_assessment_full_flow():
     comp_resp_2 = client.post(f"/assessments/attempts/{attempt_id}/complete", headers=headers)
     assert comp_resp_2.status_code == 200
     assert comp_resp_2.json()["id"] == result_data["id"]
+
+    # 7. Constraint 2: Verify is_current is True when academic context matches
+    latest_resp = client.get("/assessments/my-latest-result", headers=headers)
+    assert latest_resp.status_code == 200
+    assert latest_resp.json()["is_current"] is True
+
+    # 8. When student transitions academic stage (e.g. to PUC Science), is_current becomes False
+    CURRENT_MOCK_PROFILE = {
+        "current_level": "PUC 1",
+        "stream": "Science",
+        "is_complete": True
+    }
+    latest_resp_after_transition = client.get("/assessments/my-latest-result", headers=headers)
+    assert latest_resp_after_transition.status_code == 200
+    assert latest_resp_after_transition.json()["is_current"] is False
 
 
 def test_cannot_submit_to_unrelated_attempt():
@@ -335,17 +351,17 @@ def test_get_my_assessment_all_education_levels():
     headers = {"Authorization": f"Bearer {token}"}
 
     test_cases = [
-        ("Class 8", None, "karnataka-class-8-9-exploration-v1"),
-        ("Class 9", None, "karnataka-class-8-9-exploration-v1"),
-        ("Class 10", None, "karnataka-class-10-pathway-exploration-v1"),
-        ("PUC 1", "Science", "karnataka-puc-science-direction-v1"),
-        ("PUC 2", "Science", "karnataka-puc-science-direction-v1"),
-        ("PUC 1", "Commerce", "karnataka-puc-commerce-direction-v1"),
-        ("PUC 2", "Commerce", "karnataka-puc-commerce-direction-v1"),
-        ("PUC 1", "Arts", "karnataka-puc-arts-direction-v1"),
-        ("PUC 2", "Arts", "karnataka-puc-arts-direction-v1"),
-        ("Diploma", None, "karnataka-diploma-direction-v1"),
-        ("ITI", None, "karnataka-iti-direction-v1"),
+        ("Class 8", None, "foundation-career-discovery-v2"),
+        ("Class 9", None, "foundation-career-discovery-v2"),
+        ("Class 10", None, "foundation-career-discovery-v2"),
+        ("PUC 1", "Science", "puc-science-direction-v2"),
+        ("PUC 2", "Science", "puc-science-direction-v2"),
+        ("PUC 1", "Commerce", "puc-commerce-direction-v2"),
+        ("PUC 2", "Commerce", "puc-commerce-direction-v2"),
+        ("PUC 1", "Arts", "puc-arts-direction-v2"),
+        ("PUC 2", "Arts", "puc-arts-direction-v2"),
+        ("Diploma", None, "diploma-direction-v2"),
+        ("ITI", None, "iti-direction-v2"),
     ]
 
     for level, stream, expected_assessment_id in test_cases:
@@ -358,5 +374,4 @@ def test_get_my_assessment_all_education_levels():
         assert resp.status_code == 200, f"Failed for level {level} stream {stream}: {resp.text}"
         data = resp.json()
         assert data["id"] == expected_assessment_id, f"Expected {expected_assessment_id} for {level}/{stream}, got {data['id']}"
-        assert len(data["questions"]) > 0
-
+        assert len(data["questions"]) == 15

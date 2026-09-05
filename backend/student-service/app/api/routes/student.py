@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.core.security import get_current_user_claims
-from app.schemas.student_profile import ProfileCreate, ProfileUpdate, ProfileResponse
+from app.schemas.student_profile import ProfileCreate, ProfileUpdate, ProfileResponse, AcademicStageUpdate
 from app.services.student_service import StudentService
 
 router = APIRouter(prefix="/students", tags=["Student Profile"])
@@ -36,3 +36,13 @@ def update_my_profile(
 ):
     user_id = claims.get("sub")
     return StudentService.update_profile(db, user_id, data)
+
+
+@router.put("/profile/academic-stage", response_model=ProfileResponse)
+def update_my_academic_stage(
+    data: AcademicStageUpdate,
+    claims: dict = Depends(get_current_user_claims),
+    db: Session = Depends(get_db)
+):
+    user_id = claims.get("sub")
+    return StudentService.update_academic_stage(db, user_id, data)

@@ -151,12 +151,21 @@ def test_academic_field_normalization_and_transitions():
     assert p1["diploma_branch"] is None
     assert p1["iti_trade"] is None
 
-    # 2. Transition PUC 2 -> Class 10: Stream MUST be cleared (set to None) automatically
+    # 2. Standard profile update MUST REJECT academic context changes with HTTP 400
+    res_reject = client.put(
+        "/students/profile/me",
+        json={"current_level": "Class 10"},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert res_reject.status_code == 400
+    assert "Academic fields" in res_reject.json()["detail"]
+
+    # 3. Transition PUC 2 -> Class 10 via academic-stage endpoint: Stream MUST be cleared (set to None) automatically
     update_to_class10 = {
         "current_level": "Class 10",
         "class_or_year": "10th Standard (SSLC)"
     }
-    res2 = client.put("/students/profile/me", json=update_to_class10, headers={"Authorization": f"Bearer {token}"})
+    res2 = client.put("/students/profile/academic-stage", json=update_to_class10, headers={"Authorization": f"Bearer {token}"})
     assert res2.status_code == 200
     p2 = res2.json()
     assert p2["current_level"] == "Class 10"
@@ -164,17 +173,17 @@ def test_academic_field_normalization_and_transitions():
     assert p2["diploma_branch"] is None
     assert p2["iti_trade"] is None
 
-    # 3. Transition Class 10 -> Diploma without diploma_branch -> HTTP 400 Bad Request
-    res3_err = client.put("/students/profile/me", json={"current_level": "Diploma"}, headers={"Authorization": f"Bearer {token}"})
+    # 4. Transition Class 10 -> Diploma without diploma_branch -> HTTP 400 Bad Request
+    res3_err = client.put("/students/profile/academic-stage", json={"current_level": "Diploma"}, headers={"Authorization": f"Bearer {token}"})
     assert res3_err.status_code == 400
     assert "Diploma branch is required" in res3_err.json()["detail"]
 
-    # 4. Transition Class 10 -> Diploma WITH diploma_branch -> Success, stream remains None
+    # 5. Transition Class 10 -> Diploma WITH diploma_branch -> Success, stream remains None
     update_to_diploma = {
         "current_level": "Diploma",
         "diploma_branch": "Computer Science & Engineering"
     }
-    res4 = client.put("/students/profile/me", json=update_to_diploma, headers={"Authorization": f"Bearer {token}"})
+    res4 = client.put("/students/profile/academic-stage", json=update_to_diploma, headers={"Authorization": f"Bearer {token}"})
     assert res4.status_code == 200
     p4 = res4.json()
     assert p4["current_level"] == "Diploma"
@@ -182,17 +191,17 @@ def test_academic_field_normalization_and_transitions():
     assert p4["stream"] is None
     assert p4["iti_trade"] is None
 
-    # 5. Transition Diploma -> ITI without iti_trade -> HTTP 400 Bad Request
-    res5_err = client.put("/students/profile/me", json={"current_level": "ITI"}, headers={"Authorization": f"Bearer {token}"})
+    # 6. Transition Diploma -> ITI without iti_trade -> HTTP 400 Bad Request
+    res5_err = client.put("/students/profile/academic-stage", json={"current_level": "ITI"}, headers={"Authorization": f"Bearer {token}"})
     assert res5_err.status_code == 400
     assert "ITI trade is required" in res5_err.json()["detail"]
 
-    # 6. Transition Diploma -> ITI WITH iti_trade -> Success, diploma_branch cleared!
+    # 7. Transition Diploma -> ITI WITH iti_trade -> Success, diploma_branch cleared!
     update_to_iti = {
         "current_level": "ITI",
         "iti_trade": "Electrician"
     }
-    res6 = client.put("/students/profile/me", json=update_to_iti, headers={"Authorization": f"Bearer {token}"})
+    res6 = client.put("/students/profile/academic-stage", json=update_to_iti, headers={"Authorization": f"Bearer {token}"})
     assert res6.status_code == 200
     p6 = res6.json()
     assert p6["current_level"] == "ITI"

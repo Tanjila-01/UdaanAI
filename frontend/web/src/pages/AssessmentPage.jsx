@@ -58,6 +58,7 @@ export const AssessmentPage = () => {
   const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({}); // { question_id: selected_option_id }
   const [result, setResult] = useState(null);
+  const [historicalResult, setHistoricalResult] = useState(null);
   const [isSubmittingAnswer, setIsSubmittingAnswer] = useState(false);
   const [recommendations, setRecommendations] = useState(null);
   const [isGeneratingRecs, setIsGeneratingRecs] = useState(false);
@@ -71,9 +72,14 @@ export const AssessmentPage = () => {
     setLoading(true);
     setError(null);
     try {
-      // 1. Check if user already has a completed result, unless force take mode is requested
+      const forceHistoryMode = searchParams.get('mode') === 'history';
+
+      // 1. Check if user already has a completed result
       const latestResult = await getMyLatestAssessmentResultApi().catch(() => null);
-      if (latestResult && !forceTakeMode) {
+      const isResultCurrent = latestResult?.is_current === true;
+
+      // If the result is current and user did not explicitly click retake/take
+      if (latestResult && isResultCurrent && !forceTakeMode) {
         setResult(latestResult);
         setStep('result');
         // Fetch existing recommendations
@@ -90,12 +96,25 @@ export const AssessmentPage = () => {
         return;
       }
 
+      // If user has a historical result and explicitly requested history mode
+      if (latestResult && !isResultCurrent && forceHistoryMode) {
+        setResult(latestResult);
+        setHistoricalResult(latestResult);
+        setStep('result');
+        setLoading(false);
+        return;
+      }
+
       // 2. Fetch the student's assigned level/stream-specific assessment
       const assignedAssessment = await getMyAssignedAssessmentApi();
       if (!assignedAssessment) {
         setError('No active career assessment found for your education level.');
         setLoading(false);
         return;
+      }
+
+      if (latestResult && !isResultCurrent) {
+        setHistoricalResult(latestResult);
       }
 
       setAssessment(assignedAssessment);
@@ -211,16 +230,13 @@ export const AssessmentPage = () => {
     setSelectedAnswers({});
     setCurrentQuestionIdx(0);
     try {
-      let currentAssessment = assessment;
+      const currentAssessment = await getMyAssignedAssessmentApi();
       if (!currentAssessment) {
-        currentAssessment = await getMyAssignedAssessmentApi();
-        if (!currentAssessment) {
-          setError('No active career assessment found for your education level.');
-          setLoading(false);
-          return;
-        }
-        setAssessment(currentAssessment);
+        setError('No active career assessment found for your education level.');
+        setLoading(false);
+        return;
       }
+      setAssessment(currentAssessment);
 
       const newAttempt = await startAssessmentAttemptApi(currentAssessment.id);
       setAttempt(newAttempt);
@@ -281,6 +297,30 @@ export const AssessmentPage = () => {
           {/* STEP 1: INTRO SCREEN */}
           {!loading && step === 'intro' && assessment && (
             <div className="max-w-4xl mx-auto space-y-6">
+              {historicalResult && (
+                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-extrabold block text-sm">Academic Stage Updated</span>
+                      <span className="text-amber-800">
+                        You previously completed an assessment for an earlier stage. Because your academic stage is now <strong>{assessment.education_level}</strong>, please complete this tailored assessment to update your recommendations. Your previous results remain safely saved.
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResult(historicalResult);
+                      setStep('result');
+                    }}
+                    className="shrink-0 bg-white hover:bg-amber-100 text-amber-900 font-extrabold border border-amber-300 px-3.5 py-1.5 rounded-xl transition text-xs cursor-pointer"
+                  >
+                    View Previous Results
+                  </button>
+                </div>
+              )}
+
               <Card className="shadow-xs border border-slate-200/80 rounded-3xl overflow-hidden bg-white">
                 <CardHeader className="bg-gradient-to-r from-teal-900 via-[#005F60] to-teal-950 text-white p-6 sm:p-8">
                   <div className="flex items-center gap-2 mb-3">
@@ -463,13 +503,35 @@ export const AssessmentPage = () => {
           {!loading && step === 'result' && result && (
             <div className="w-full max-w-7xl mx-auto space-y-8 animate-fade-in-rise">
               
+              {result.is_current === false && (
+                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-900 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-extrabold block text-sm">Viewing Historical Assessment Result</span>
+                      <span className="text-amber-800">
+                        This result was completed for your previous stage ({result.assessment_title || 'previous assessment'}). Your profile has since been updated to a new education stage.
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRetakeAssessment}
+                    className="shrink-0 bg-[#005F60] hover:bg-teal-800 text-white font-extrabold px-4 py-2 rounded-xl transition text-xs cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>Take New Level Assessment</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
               {/* Header Banner */}
               <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xs space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="space-y-1">
                     <div className="inline-flex items-center space-x-1.5 text-xs font-extrabold text-[#005F60] bg-teal-50 px-3 py-1 rounded-full border border-teal-200">
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Assessment completed</span>
+                      <span>{result.is_current === false ? 'Historical result' : 'Assessment completed'}</span>
                     </div>
                     <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-[#0F172A] tracking-tight">
                       Your Career Direction
@@ -510,7 +572,7 @@ export const AssessmentPage = () => {
                         {result.primary_stream_recommendation}
                       </h2>
                       <p className="text-xs sm:text-sm text-teal-100/90 leading-relaxed font-medium">
-                        Your responses show stronger alignment with educational pathways in this stream post Class 10 SSLC.
+                        Your responses show stronger alignment with educational pathways in this direction.
                       </p>
                     </div>
 
@@ -587,11 +649,42 @@ export const AssessmentPage = () => {
                         const maxPossible = 15;
                         const pct = Math.min(100, Math.round((score / maxPossible) * 100));
                         const dimLabelMap = {
+                          // Foundation
                           science: 'PUC Science Aptitude',
                           diploma: 'Polytechnic Diploma Aptitude',
                           commerce: 'PUC Commerce Aptitude',
                           arts: 'PUC Arts & Humanities',
                           iti: 'ITI Trade Skills',
+                          // PUC Science
+                          engineering: 'Engineering & Technology',
+                          computing: 'Computing & IT',
+                          medicine: 'Medicine & Allied Health',
+                          pure_sciences: 'Pure Sciences & Research',
+                          applied_tech: 'Applied Technology & Defense',
+                          // PUC Commerce
+                          accounting_ca: 'Accounting & CA/CS',
+                          management_bba: 'Business & Management',
+                          banking_finance: 'Banking & Financial Markets',
+                          economics_data: 'Economics & Analytics',
+                          corporate_law: 'Corporate Law & Governance',
+                          // PUC Arts
+                          civil_services: 'Civil Services & Public Admin',
+                          law_legal: 'Law & Judiciary',
+                          journalism_media: 'Journalism & Mass Media',
+                          psychology_social: 'Psychology & Social Work',
+                          design_arts: 'Design & Visual Arts',
+                          // Diploma
+                          lateral_engineering: 'Lateral Entry B.Tech/B.E.',
+                          core_industry: 'Core Industry Engineering',
+                          tech_consulting: 'Specialized Technical Consulting',
+                          entrepreneurship: 'Contracting & Enterprise',
+                          advanced_diploma: 'Advanced Certifications',
+                          // ITI
+                          apprentice_industry: 'Apprenticeship & Industry Jobs',
+                          lateral_polytechnic: 'Lateral Entry to Diploma',
+                          overseas_trades: 'Gulf / Overseas Skilled Employment',
+                          railways_psu: 'Railways, PSU & Defense Skilled Jobs',
+                          small_enterprise: 'Workshops & Independent Enterprise',
                         };
 
                         return (
