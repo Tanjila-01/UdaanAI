@@ -44,6 +44,21 @@ const MyCareerRoadmapPage = () => {
   const [pathways, setPathways] = useState([]);
   const [studentGoal, setStudentGoal] = useState(null);
   const [completingMilestoneId, setCompletingMilestoneId] = useState(null);
+  const [milestoneError, setMilestoneError] = useState(null);
+
+  const completionDate = React.useMemo(() => {
+    if (!studentGoal?.milestones || studentGoal.status !== 'COMPLETED') return null;
+    const completedTimestamps = studentGoal.milestones
+      .map(m => m.completed_at ? new Date(m.completed_at).getTime() : 0)
+      .filter(t => t > 0);
+    if (completedTimestamps.length === 0) return null;
+    const latestTime = Math.max(...completedTimestamps);
+    return new Date(latestTime).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  }, [studentGoal]);
 
   const loadData = async () => {
     setLoading(true);
@@ -55,7 +70,7 @@ const MyCareerRoadmapPage = () => {
           education_level: profile?.current_level || 'Class 10',
           stream: profile?.stream || '',
         }).catch(() => ({ pathways: [] })),
-        getMyStudentGoalApi().catch(() => null),
+        getMyStudentGoalApi(),
       ]);
 
       setAssessmentResult(resAssessment);
@@ -75,11 +90,14 @@ const MyCareerRoadmapPage = () => {
 
   const handleCompleteMilestone = async (milestoneId) => {
     setCompletingMilestoneId(milestoneId);
+    setMilestoneError(null);
     try {
       const updatedGoal = await completeMilestoneApi(milestoneId);
       setStudentGoal(updatedGoal);
     } catch (err) {
       console.error('Failed to complete milestone:', err);
+      const detail = err.response?.data?.detail;
+      setMilestoneError(typeof detail === 'string' ? detail : 'Unable to complete milestone. Please check previous milestones and try again.');
     } finally {
       setCompletingMilestoneId(null);
     }
@@ -199,30 +217,50 @@ const MyCareerRoadmapPage = () => {
             </div>
           )}
 
-          {!loading && (
+          {!loading && !error && (
             <>
-              {/* Active Student Goal Section */}
+              {/* Student Goal Section: Active or Completed */}
               {studentGoal ? (
-                <section className="bg-gradient-to-r from-teal-900 via-[#005F60] to-teal-950 text-white rounded-3xl p-6 sm:p-8 shadow-md border border-teal-700/50 space-y-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-teal-700/60 pb-5">
+                <section className={`rounded-3xl p-6 sm:p-8 shadow-md border space-y-6 text-white ${
+                  studentGoal.status === 'COMPLETED'
+                    ? 'bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-950 border-emerald-600/50'
+                    : 'bg-gradient-to-r from-teal-900 via-[#005F60] to-teal-950 border-teal-700/50'
+                }`}>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/10 pb-5">
                     <div className="space-y-1">
-                      <div className="inline-flex items-center space-x-1.5 text-[11px] font-extrabold uppercase tracking-widest text-teal-300 bg-teal-950/60 px-3 py-0.5 rounded-full border border-teal-700/60">
-                        <Target className="w-3.5 h-3.5 text-[#F97316]" />
-                        <span>Active Career Goal</span>
-                      </div>
+                      {studentGoal.status === 'COMPLETED' ? (
+                        <div className="inline-flex items-center space-x-1.5 text-[11px] font-extrabold uppercase tracking-widest text-emerald-300 bg-emerald-950/80 px-3 py-0.5 rounded-full border border-emerald-600/60">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Roadmap checklist completed</span>
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center space-x-1.5 text-[11px] font-extrabold uppercase tracking-widest text-teal-300 bg-teal-950/60 px-3 py-0.5 rounded-full border border-teal-700/60">
+                          <Target className="w-3.5 h-3.5 text-[#F97316]" />
+                          <span>Active Career Goal</span>
+                        </div>
+                      )}
                       <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
                         {studentGoal.goal_title}
                       </h2>
-                      <p className="text-xs sm:text-sm text-teal-100/90 font-medium">
-                        Pathway: <span className="font-extrabold text-white">{studentGoal.pathway_title}</span>
-                      </p>
+                      <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-teal-100/90 font-medium">
+                        <span>Pathway: <strong className="text-white">{studentGoal.pathway_title}</strong></span>
+                        {completionDate && (
+                          <span className="text-emerald-300 bg-emerald-950/60 border border-emerald-700/60 px-2 py-0.5 rounded-md text-[11px] font-bold">
+                            Completed on {completionDate}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <button
                       onClick={() => navigate('/pathways')}
-                      className="bg-teal-800/80 hover:bg-teal-800 text-teal-100 border border-teal-600 font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all self-start sm:self-auto cursor-pointer"
+                      className={`font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all self-start sm:self-auto cursor-pointer border ${
+                        studentGoal.status === 'COMPLETED'
+                          ? 'bg-emerald-800/80 hover:bg-emerald-800 text-emerald-100 border-emerald-600'
+                          : 'bg-teal-800/80 hover:bg-teal-800 text-teal-100 border-teal-600'
+                      }`}
                     >
-                      Change Goal
+                      {studentGoal.status === 'COMPLETED' ? 'Explore Next Pathway' : 'Change Goal'}
                     </button>
                   </div>
 
@@ -230,7 +268,7 @@ const MyCareerRoadmapPage = () => {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-extrabold text-teal-200">
-                        Overall Milestone Progress
+                        {studentGoal.status === 'COMPLETED' ? 'Milestone Progress (Completed)' : 'Overall Milestone Progress'}
                       </span>
                       <span className="font-black text-white bg-teal-950/80 px-3 py-1 rounded-full border border-teal-700/80">
                         {studentGoal.progress.completed} / {studentGoal.progress.total} Completed ({studentGoal.progress.percentage}%)
@@ -238,7 +276,11 @@ const MyCareerRoadmapPage = () => {
                     </div>
                     <div className="w-full bg-teal-950/60 rounded-full h-3 p-0.5 border border-teal-700/60 overflow-hidden">
                       <div 
-                        className="bg-gradient-to-r from-[#F97316] to-amber-400 h-full rounded-full transition-all duration-500 shadow-sm"
+                        className={`h-full rounded-full transition-all duration-500 shadow-sm ${
+                          studentGoal.status === 'COMPLETED'
+                            ? 'bg-gradient-to-r from-emerald-400 to-teal-300'
+                            : 'bg-gradient-to-r from-[#F97316] to-amber-400'
+                        }`}
                         style={{ width: `${Math.min(studentGoal.progress.percentage, 100)}%` }}
                       ></div>
                     </div>
@@ -267,20 +309,38 @@ const MyCareerRoadmapPage = () => {
                 </section>
               )}
 
+              {/* Milestone Error Notification */}
+              {milestoneError && (
+                <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-center justify-between text-rose-800 text-xs">
+                  <div className="flex items-center space-x-2.5">
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>{milestoneError}</span>
+                  </div>
+                  <button
+                    onClick={() => setMilestoneError(null)}
+                    className="text-rose-600 hover:text-rose-800 font-bold text-xs cursor-pointer ml-4"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
+
               {/* Milestone Progress Timeline */}
               {studentGoal && studentGoal.milestones && studentGoal.milestones.length > 0 && (
                 <section className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xs">
                   <div className="border-b border-slate-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div>
                       <h2 className="text-lg font-extrabold text-[#0F172A] tracking-tight">
-                        Milestone Action Checklist
+                        {studentGoal.status === 'COMPLETED' ? 'Completed Milestone Checklist' : 'Milestone Action Checklist'}
                       </h2>
                       <p className="text-xs text-slate-500">
-                        Mark milestones as completed to unlock next steps and advance your career plan.
+                        {studentGoal.status === 'COMPLETED'
+                          ? 'Roadmap checklist completed. You marked all steps complete.'
+                          : 'Mark milestones as completed to unlock next steps and advance your career plan.'}
                       </p>
                     </div>
                     <span className="text-xs font-extrabold text-[#005F60] bg-teal-50 border border-teal-200 px-3 py-1 rounded-full self-start sm:self-auto">
-                      Sequential Progression
+                      {studentGoal.status === 'COMPLETED' ? 'Roadmap checklist completed' : 'Sequential Progression'}
                     </span>
                   </div>
 

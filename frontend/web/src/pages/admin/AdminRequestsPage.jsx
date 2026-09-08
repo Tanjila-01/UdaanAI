@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   getAdminWorkshopRequestsApi,
@@ -8,6 +8,7 @@ import {
   completeWorkshopApi,
   cancelWorkshopApi,
 } from '../../api/client';
+import { normalizeApiError } from '../../utils/errorHandler';
 import AdminLayout from '../../components/layout/AdminLayout';
 import {
   Search,
@@ -40,6 +41,14 @@ const KARNATAKA_DISTRICTS = [
   'Tumakuru', 'Udupi', 'Uttara Kannada', 'Vijayanagara', 'Yadgir'
 ];
 
+const VALID_STATUSES = ['NEW', 'CONTACTED', 'SCHEDULED', 'COMPLETED', 'CANCELLED'];
+
+const getValidatedStatus = (rawStatus) => {
+  if (!rawStatus) return 'ALL';
+  const upper = rawStatus.toUpperCase();
+  return VALID_STATUSES.includes(upper) ? upper : 'ALL';
+};
+
 export const AdminRequestsPage = () => {
   const location = useLocation();
   const [requests, setRequests] = useState([]);
@@ -47,13 +56,17 @@ export const AdminRequestsPage = () => {
   const [error, setError] = useState(null);
 
   // Filters
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState(() => {
+    const searchParams = new URLSearchParams(location.search);
+    return getValidatedStatus(searchParams.get('status'));
+  });
   const [districtFilter, setDistrictFilter] = useState('ALL');
   const [modeFilter, setModeFilter] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
 
   // Selected Request for Detail Drawer
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const consumedOpenIdRef = useRef(null);
 
   // Modals inside drawer
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
@@ -61,6 +74,9 @@ export const AdminRequestsPage = () => {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState(null);
+  const [scheduleError, setScheduleError] = useState(null);
+  const [cancelError, setCancelError] = useState(null);
+  const [completeError, setCompleteError] = useState(null);
 
   // Scheduling form state
   const [scheduleForm, setScheduleForm] = useState({
@@ -83,55 +99,48 @@ export const AdminRequestsPage = () => {
   // Cancellation form state
   const [cancelReason, setCancelReason] = useState('');
 
-  const fetchRequests = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await getAdminWorkshopRequestsApi({
-        status: statusFilter,
-        district: districtFilter,
-        mode: modeFilter,
-        search: searchTerm,
-      });
-      setRequests(res);
-
-      // Handle ?open=request_id query param
-      const searchParams = new URLSearchParams(location.search);
-      const openId = searchParams.get('open');
-      if (openId && res) {
-        const found = res.find((r) => r.id === openId);
-        if (found) setSelectedRequest(found);
-      }
-    } catch (err) {
-      setError(err.response?.data?.detail || err.message || 'Failed to load requests.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Sync statusFilter when URL status param changes
   useEffect(() => {
-    fetchRequests();
-  }, [statusFilter, districtFilter, modeFilter]);
-
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    fetchRequests();
-  };
+    const searchParams = new URLSearchParams(location.search);
+    const validated = getValidatedStatus(searchParams.get('status'));
+    setStatusFilter((prev) => (prev !== validated ? validated : prev));
+  }, [location.search]);
 
   const handleOpenDrawer = (req) => {
     setSelectedRequest(req);
     setActionError(null);
+    setScheduleError(null);
+    setCancelError(null);
+    setCompleteError(null);
+    setCancelReason('');
+    setCompleteForm({
+      actual_attendance: '',
+      feedback_score: '',
+      completion_notes: '',
+    });
+    setIsCancelModalOpen(false);
+    setIsCompleteModalOpen(false);
     if (req.schedule) {
-      const dt = new Date(req.schedule.scheduled_start);
-      const yyyy = dt.getFullYear();
-      const mm = String(dt.getMonth() + 1).padStart(2, '0');
-      const dd = String(dt.getDate()).padStart(2, '0');
-      const hh = String(dt.getHours()).padStart(2, '0');
-      const min = String(dt.getMinutes()).padStart(2, '0');
+      let dateStr = '';
+      let timeStr = '10:30';
+      try {
+        const dt = new Date(req.schedule.scheduled_start);
+        if (!isNaN(dt.getTime())) {
+          const yyyy = dt.getFullYear();
+          const mm = String(dt.getMonth() + 1).padStart(2, '0');
+          const dd = String(dt.getDate()).padStart(2, '0');
+          const hh = String(dt.getHours()).padStart(2, '0');
+          const min = String(dt.getMinutes()).padStart(2, '0');
+          dateStr = `${yyyy}-${mm}-${dd}`;
+          timeStr = `${hh}:${min}`;
+        }
+      } catch {
+        // fallback
+      }
 
       setScheduleForm({
-        date: `${yyyy}-${mm}-${dd}`,
-        time: `${hh}:${min}`,
+        date: dateStr,
+        time: timeStr,
         duration_minutes: req.schedule.duration_minutes || 90,
         mode: req.schedule.mode || 'offline',
         venue_or_meeting_link: req.schedule.venue_or_meeting_link || '',
@@ -151,6 +160,122 @@ export const AdminRequestsPage = () => {
     }
   };
 
+  const handleCloseDrawer = () => {
+    setSelectedRequest(null);
+    setActionError(null);
+    setScheduleError(null);
+    setCancelError(null);
+    setCompleteError(null);
+    setCancelReason('');
+    setCompleteForm({
+      actual_attendance: '',
+      feedback_score: '',
+      completion_notes: '',
+    });
+    setIsCancelModalOpen(false);
+    setIsCompleteModalOpen(false);
+  };
+
+  const handleOpenScheduleModal = () => {
+    setScheduleError(null);
+    setIsScheduleModalOpen(true);
+  };
+
+  const handleOpenCancelModal = () => {
+    setCancelError(null);
+    setIsCancelModalOpen(true);
+  };
+
+  const handleOpenCompleteModal = () => {
+    setCompleteError(null);
+    setIsCompleteModalOpen(true);
+  };
+
+  const reconcileRequestInList = (updated) => {
+    setRequests((prev) => {
+      const matchesStatus = statusFilter === 'ALL' || updated.status === statusFilter;
+      const matchesDistrict = districtFilter === 'ALL' || updated.district === districtFilter;
+      const matchesMode =
+        modeFilter === 'ALL' ||
+        updated.preferred_mode?.toLowerCase() === modeFilter.toLowerCase();
+
+      let matchesSearch = true;
+      if (searchTerm && searchTerm.trim()) {
+        const term = searchTerm.trim().toLowerCase();
+        matchesSearch =
+          Boolean(updated.institution_name && updated.institution_name.toLowerCase().includes(term)) ||
+          Boolean(updated.contact_name && updated.contact_name.toLowerCase().includes(term)) ||
+          Boolean(updated.contact_email && updated.contact_email.toLowerCase().includes(term)) ||
+          Boolean(updated.district && updated.district.toLowerCase().includes(term));
+      }
+
+      if (matchesStatus && matchesDistrict && matchesMode && matchesSearch) {
+        const exists = prev.some((r) => r.id === updated.id);
+        if (exists) {
+          return prev.map((r) => (r.id === updated.id ? updated : r));
+        }
+        return [updated, ...prev];
+      } else {
+        return prev.filter((r) => r.id !== updated.id);
+      }
+    });
+  };
+
+  const fetchRequests = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await getAdminWorkshopRequestsApi({
+        status: statusFilter,
+        district: districtFilter,
+        mode: modeFilter,
+        search: searchTerm,
+      });
+      setRequests(res);
+
+      // Handle ?open=request_id query param
+      const searchParams = new URLSearchParams(location.search);
+      const openId = searchParams.get('open');
+      if (openId && res) {
+        if (openId !== consumedOpenIdRef.current) {
+          const found = res.find((r) => r.id === openId);
+          if (found) {
+            consumedOpenIdRef.current = openId;
+            handleOpenDrawer(found);
+          }
+        }
+      }
+    } catch (err) {
+      setError(normalizeApiError(err, 'Failed to load requests.'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRequests();
+  }, [statusFilter, districtFilter, modeFilter]);
+
+  // Handle URL changes with ?open=<id>; treat URL open action as consumed until parameter changes
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const openId = searchParams.get('open');
+    if (!openId) {
+      consumedOpenIdRef.current = null;
+    } else if (openId !== consumedOpenIdRef.current && requests.length > 0) {
+      const found = requests.find((r) => r.id === openId);
+      if (found) {
+        consumedOpenIdRef.current = openId;
+        handleOpenDrawer(found);
+      }
+    }
+  }, [location.search, requests]);
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    fetchRequests();
+  };
+
   // --- Operational Actions ---
 
   const handleMarkContacted = async () => {
@@ -160,9 +285,9 @@ export const AdminRequestsPage = () => {
       setActionError(null);
       const updated = await markWorkshopContactedApi(selectedRequest.id);
       setSelectedRequest(updated);
-      setRequests((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+      reconcileRequestInList(updated);
     } catch (err) {
-      setActionError(err.response?.data?.detail || 'Failed to update request.');
+      setActionError(normalizeApiError(err, 'Failed to update request.'));
     } finally {
       setActionLoading(false);
     }
@@ -174,6 +299,7 @@ export const AdminRequestsPage = () => {
     try {
       setActionLoading(true);
       setActionError(null);
+      setScheduleError(null);
 
       // Convert local date + time to ISO-8601 string
       const isoDatetime = new Date(`${scheduleForm.date}T${scheduleForm.time}:00`).toISOString();
@@ -195,10 +321,38 @@ export const AdminRequestsPage = () => {
       }
 
       setSelectedRequest(updated);
-      setRequests((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+      reconcileRequestInList(updated);
+
+      if (updated.schedule) {
+        try {
+          const dt = new Date(updated.schedule.scheduled_start);
+          if (!isNaN(dt.getTime())) {
+            const yyyy = dt.getFullYear();
+            const mm = String(dt.getMonth() + 1).padStart(2, '0');
+            const dd = String(dt.getDate()).padStart(2, '0');
+            const hh = String(dt.getHours()).padStart(2, '0');
+            const min = String(dt.getMinutes()).padStart(2, '0');
+            setScheduleForm({
+              date: `${yyyy}-${mm}-${dd}`,
+              time: `${hh}:${min}`,
+              duration_minutes: updated.schedule.duration_minutes || 90,
+              mode: updated.schedule.mode || 'offline',
+              venue_or_meeting_link: updated.schedule.venue_or_meeting_link || '',
+              assigned_facilitator: updated.schedule.assigned_facilitator || '',
+              internal_notes: updated.schedule.internal_notes || '',
+            });
+          }
+        } catch {
+          // fallback
+        }
+      }
+
       setIsScheduleModalOpen(false);
+      setScheduleError(null);
     } catch (err) {
-      setActionError(err.response?.data?.detail || 'Failed to schedule workshop.');
+      const errorMsg = normalizeApiError(err, 'Failed to schedule workshop.');
+      setScheduleError(errorMsg);
+      setActionError(errorMsg);
     } finally {
       setActionLoading(false);
     }
@@ -206,21 +360,52 @@ export const AdminRequestsPage = () => {
 
   const handleCompleteSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedRequest) return;
+    if (!selectedRequest || actionLoading) return;
     try {
       setActionLoading(true);
       setActionError(null);
+      setCompleteError(null);
+
+      let actual_attendance = null;
+      const rawAtt = completeForm.actual_attendance !== undefined && completeForm.actual_attendance !== null
+        ? String(completeForm.actual_attendance).trim()
+        : '';
+      if (rawAtt !== '') {
+        if (!/^\d+$/.test(rawAtt)) {
+          throw new Error('Actual attendance must be a non-negative whole number.');
+        }
+        actual_attendance = parseInt(rawAtt, 10);
+      }
+
+      let feedback_score = null;
+      const rawScore = completeForm.feedback_score !== undefined && completeForm.feedback_score !== null
+        ? String(completeForm.feedback_score).trim()
+        : '';
+      if (rawScore !== '') {
+        const scoreNum = Number(rawScore);
+        if (isNaN(scoreNum) || scoreNum < 0 || scoreNum > 5) {
+          throw new Error('Feedback score must be between 0 and 5.');
+        }
+        feedback_score = scoreNum;
+      }
+
       const payload = {
-        actual_attendance: completeForm.actual_attendance ? parseInt(completeForm.actual_attendance, 10) : null,
-        feedback_score: completeForm.feedback_score ? parseFloat(completeForm.feedback_score) : null,
-        completion_notes: completeForm.completion_notes || null,
+        actual_attendance,
+        feedback_score,
+        completion_notes: completeForm.completion_notes ? completeForm.completion_notes.trim() || null : null,
       };
       const updated = await completeWorkshopApi(selectedRequest.id, payload);
       setSelectedRequest(updated);
-      setRequests((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+      reconcileRequestInList(updated);
       setIsCompleteModalOpen(false);
+      setCompleteForm({
+        actual_attendance: '',
+        feedback_score: '',
+        completion_notes: '',
+      });
+      setCompleteError(null);
     } catch (err) {
-      setActionError(err.response?.data?.detail || 'Failed to complete workshop.');
+      setCompleteError(normalizeApiError(err, 'Failed to complete workshop.'));
     } finally {
       setActionLoading(false);
     }
@@ -228,19 +413,21 @@ export const AdminRequestsPage = () => {
 
   const handleCancelSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedRequest) return;
+    if (!selectedRequest || actionLoading) return;
     try {
       setActionLoading(true);
       setActionError(null);
+      setCancelError(null);
       const updated = await cancelWorkshopApi(selectedRequest.id, {
         cancellation_reason: cancelReason,
       });
       setSelectedRequest(updated);
-      setRequests((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+      reconcileRequestInList(updated);
       setIsCancelModalOpen(false);
       setCancelReason('');
+      setCancelError(null);
     } catch (err) {
-      setActionError(err.response?.data?.detail || 'Failed to cancel request.');
+      setCancelError(normalizeApiError(err, 'Failed to cancel request.'));
     } finally {
       setActionLoading(false);
     }
@@ -470,7 +657,8 @@ export const AdminRequestsPage = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setSelectedRequest(null)}
+                  aria-label="Close drawer"
+                  onClick={handleCloseDrawer}
                   className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
                 >
                   <X className="w-5 h-5" />
@@ -625,13 +813,17 @@ export const AdminRequestsPage = () => {
                       <div>
                         <span className="text-slate-500 font-bold text-[10px] block">Actual Attendance</span>
                         <span className="font-extrabold text-sm text-slate-950">
-                          {selectedRequest.schedule.actual_attendance ?? '—'} Students
+                          {selectedRequest.schedule.actual_attendance !== null && selectedRequest.schedule.actual_attendance !== undefined
+                            ? `${selectedRequest.schedule.actual_attendance} Students`
+                            : '—'}
                         </span>
                       </div>
                       <div>
                         <span className="text-slate-500 font-bold text-[10px] block">Feedback Rating</span>
                         <span className="font-extrabold text-sm text-slate-950">
-                          {selectedRequest.schedule.feedback_score ? `${selectedRequest.schedule.feedback_score} / 5.0` : '—'}
+                          {selectedRequest.schedule.feedback_score !== null && selectedRequest.schedule.feedback_score !== undefined
+                            ? `${selectedRequest.schedule.feedback_score} / 5.0`
+                            : '—'}
                         </span>
                       </div>
                       {selectedRequest.schedule.completion_notes && (
@@ -671,7 +863,7 @@ export const AdminRequestsPage = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setIsScheduleModalOpen(true)}
+                    onClick={handleOpenScheduleModal}
                     className="bg-[#005F60] hover:bg-[#004D4E] text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors flex items-center space-x-1.5 shadow-xs"
                   >
                     <CalendarCheck className="w-3.5 h-3.5" />
@@ -679,7 +871,7 @@ export const AdminRequestsPage = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setIsCancelModalOpen(true)}
+                    onClick={handleOpenCancelModal}
                     className="text-slate-600 hover:text-rose-600 hover:bg-rose-50 px-3 py-2 rounded-xl text-xs font-bold transition-colors"
                   >
                     Cancel
@@ -691,7 +883,7 @@ export const AdminRequestsPage = () => {
                 <>
                   <button
                     type="button"
-                    onClick={() => setIsScheduleModalOpen(true)}
+                    onClick={handleOpenScheduleModal}
                     className="bg-[#005F60] hover:bg-[#004D4E] text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors flex items-center space-x-1.5 shadow-xs"
                   >
                     <CalendarCheck className="w-3.5 h-3.5" />
@@ -699,7 +891,7 @@ export const AdminRequestsPage = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setIsCancelModalOpen(true)}
+                    onClick={handleOpenCancelModal}
                     className="text-slate-600 hover:text-rose-600 hover:bg-rose-50 px-3 py-2 rounded-xl text-xs font-bold transition-colors"
                   >
                     Cancel
@@ -711,14 +903,14 @@ export const AdminRequestsPage = () => {
                 <>
                   <button
                     type="button"
-                    onClick={() => setIsScheduleModalOpen(true)}
+                    onClick={handleOpenScheduleModal}
                     className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-3 py-2 rounded-xl text-xs transition-colors"
                   >
                     Edit Schedule
                   </button>
                   <button
                     type="button"
-                    onClick={() => setIsCompleteModalOpen(true)}
+                    onClick={handleOpenCompleteModal}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition-colors flex items-center space-x-1.5 shadow-xs"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
@@ -726,7 +918,7 @@ export const AdminRequestsPage = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setIsCancelModalOpen(true)}
+                    onClick={handleOpenCancelModal}
                     className="text-slate-600 hover:text-rose-600 hover:bg-rose-50 px-3 py-2 rounded-xl text-xs font-bold transition-colors"
                   >
                     Cancel
@@ -737,7 +929,7 @@ export const AdminRequestsPage = () => {
               {(selectedRequest.status === 'COMPLETED' || selectedRequest.status === 'CANCELLED') && (
                 <button
                   type="button"
-                  onClick={() => setSelectedRequest(null)}
+                  onClick={handleCloseDrawer}
                   className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-4 py-2 rounded-xl text-xs transition-colors"
                 >
                   Close
@@ -763,18 +955,33 @@ export const AdminRequestsPage = () => {
               </div>
               <button
                 type="button"
-                onClick={() => setIsScheduleModalOpen(false)}
+                aria-label="Close schedule modal"
+                onClick={() => {
+                  setIsScheduleModalOpen(false);
+                  setScheduleError(null);
+                }}
                 className="text-slate-400 hover:text-slate-700 p-1"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
+            {scheduleError && (
+              <div
+                role="alert"
+                className="bg-rose-50 border border-rose-200 rounded-xl p-3 flex items-start space-x-2 text-rose-800 text-xs"
+              >
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <span>{scheduleError}</span>
+              </div>
+            )}
+
             <form onSubmit={handleScheduleSubmit} className="space-y-3 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Session Date *</label>
+                  <label htmlFor="schedule-date" className="block text-slate-700 font-bold mb-1">Session Date *</label>
                   <input
+                    id="schedule-date"
                     type="date"
                     required
                     value={scheduleForm.date}
@@ -783,8 +990,9 @@ export const AdminRequestsPage = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Start Time (Local) *</label>
+                  <label htmlFor="schedule-time" className="block text-slate-700 font-bold mb-1">Start Time (Local) *</label>
                   <input
+                    id="schedule-time"
                     type="time"
                     required
                     value={scheduleForm.time}
@@ -796,8 +1004,9 @@ export const AdminRequestsPage = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Duration (Minutes)</label>
+                  <label htmlFor="schedule-duration" className="block text-slate-700 font-bold mb-1">Duration (Minutes)</label>
                   <input
+                    id="schedule-duration"
                     type="number"
                     min="15"
                     max="480"
@@ -807,8 +1016,9 @@ export const AdminRequestsPage = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Mode *</label>
+                  <label htmlFor="schedule-mode" className="block text-slate-700 font-bold mb-1">Mode *</label>
                   <select
+                    id="schedule-mode"
                     value={scheduleForm.mode}
                     onChange={(e) => setScheduleForm({ ...scheduleForm, mode: e.target.value })}
                     className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#005F60]"
@@ -821,10 +1031,11 @@ export const AdminRequestsPage = () => {
               </div>
 
               <div>
-                <label className="block text-slate-700 font-bold mb-1">
+                <label htmlFor="schedule-venue" className="block text-slate-700 font-bold mb-1">
                   {scheduleForm.mode === 'online' ? 'Meeting Link (Zoom / Meet) *' : 'Venue / Campus Address *'}
                 </label>
                 <input
+                  id="schedule-venue"
                   type="text"
                   required
                   placeholder={scheduleForm.mode === 'online' ? 'https://meet.google.com/xyz' : 'School Main Auditorium'}
@@ -835,8 +1046,9 @@ export const AdminRequestsPage = () => {
               </div>
 
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Assigned Facilitator / Speaker</label>
+                <label htmlFor="schedule-facilitator" className="block text-slate-700 font-bold mb-1">Assigned Facilitator / Speaker</label>
                 <input
+                  id="schedule-facilitator"
                   type="text"
                   placeholder="e.g. Dr. K. Srinivas"
                   value={scheduleForm.assigned_facilitator}
@@ -846,8 +1058,9 @@ export const AdminRequestsPage = () => {
               </div>
 
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Internal Preparation Notes</label>
+                <label htmlFor="schedule-notes" className="block text-slate-700 font-bold mb-1">Internal Preparation Notes</label>
                 <textarea
+                  id="schedule-notes"
                   rows="2"
                   placeholder="Auditorium key, slides uploaded, Kannada speaker requested..."
                   value={scheduleForm.internal_notes}
@@ -859,7 +1072,10 @@ export const AdminRequestsPage = () => {
               <div className="pt-2 flex justify-end space-x-2">
                 <button
                   type="button"
-                  onClick={() => setIsScheduleModalOpen(false)}
+                  onClick={() => {
+                    setIsScheduleModalOpen(false);
+                    setScheduleError(null);
+                  }}
                   className="px-3 py-2 rounded-xl text-slate-600 hover:text-slate-900 font-bold"
                 >
                   Cancel
@@ -880,27 +1096,44 @@ export const AdminRequestsPage = () => {
       {/* ========================================================================= */}
       {/* COMPLETE WORKSHOP DIALOG */}
       {/* ========================================================================= */}
+      {/* COMPLETE WORKSHOP DIALOG */}
+      {/* ========================================================================= */}
       {isCompleteModalOpen && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
+        <div role="dialog" aria-modal="true" aria-labelledby="complete-modal-title" className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
           <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center space-x-2">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                <h3 className="font-extrabold text-base text-slate-900">Complete Workshop</h3>
+                <h3 id="complete-modal-title" className="font-extrabold text-base text-slate-900">Complete Workshop</h3>
               </div>
               <button
                 type="button"
-                onClick={() => setIsCompleteModalOpen(false)}
+                aria-label="Close complete modal"
+                onClick={() => {
+                  setIsCompleteModalOpen(false);
+                  setCompleteError(null);
+                }}
                 className="text-slate-400 hover:text-slate-700 p-1"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCompleteSubmit} className="space-y-3 text-xs">
+            {completeError && (
+              <div
+                role="alert"
+                className="bg-rose-50 border border-rose-200 rounded-xl p-3 flex items-start space-x-2 text-rose-800 text-xs"
+              >
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <span>{completeError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleCompleteSubmit} noValidate className="space-y-3 text-xs">
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Actual Student Attendance</label>
+                <label htmlFor="complete-attendance" className="block text-slate-700 font-bold mb-1">Actual Student Attendance</label>
                 <input
+                  id="complete-attendance"
                   type="number"
                   min="0"
                   placeholder="e.g. 215"
@@ -911,8 +1144,9 @@ export const AdminRequestsPage = () => {
               </div>
 
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Overall Feedback Score (1.0 – 5.0)</label>
+                <label htmlFor="complete-feedback" className="block text-slate-700 font-bold mb-1">Overall Feedback Score (0.0 – 5.0)</label>
                 <input
+                  id="complete-feedback"
                   type="number"
                   step="0.1"
                   min="0"
@@ -925,8 +1159,9 @@ export const AdminRequestsPage = () => {
               </div>
 
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Completion Notes / Session Highlights</label>
+                <label htmlFor="complete-notes" className="block text-slate-700 font-bold mb-1">Completion Notes / Session Highlights</label>
                 <textarea
+                  id="complete-notes"
                   rows="3"
                   placeholder="Key takeaways, student feedback, followup requested..."
                   value={completeForm.completion_notes}
@@ -938,7 +1173,10 @@ export const AdminRequestsPage = () => {
               <div className="pt-2 flex justify-end space-x-2">
                 <button
                   type="button"
-                  onClick={() => setIsCompleteModalOpen(false)}
+                  onClick={() => {
+                    setIsCompleteModalOpen(false);
+                    setCompleteError(null);
+                  }}
                   className="px-3 py-2 rounded-xl text-slate-600 hover:text-slate-900 font-bold"
                 >
                   Cancel
@@ -969,20 +1207,35 @@ export const AdminRequestsPage = () => {
               </div>
               <button
                 type="button"
-                onClick={() => setIsCancelModalOpen(false)}
+                aria-label="Close cancel modal"
+                onClick={() => {
+                  setIsCancelModalOpen(false);
+                  setCancelError(null);
+                }}
                 className="text-slate-400 hover:text-slate-700 p-1"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
+            {cancelError && (
+              <div
+                role="alert"
+                className="bg-rose-50 border border-rose-200 rounded-xl p-3 flex items-start space-x-2 text-rose-800 text-xs"
+              >
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <span>{cancelError}</span>
+              </div>
+            )}
+
             <form onSubmit={handleCancelSubmit} className="space-y-3 text-xs">
               <p className="text-slate-600">
                 This request will be marked as CANCELLED. All historical details will remain in the database for audit.
               </p>
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Reason for Cancellation *</label>
+                <label htmlFor="cancel-reason" className="block text-slate-700 font-bold mb-1">Reason for Cancellation *</label>
                 <textarea
+                  id="cancel-reason"
                   rows="3"
                   required
                   placeholder="e.g. School exams scheduled; coordinator requested deferral to next semester."
@@ -995,7 +1248,10 @@ export const AdminRequestsPage = () => {
               <div className="pt-2 flex justify-end space-x-2">
                 <button
                   type="button"
-                  onClick={() => setIsCancelModalOpen(false)}
+                  onClick={() => {
+                    setIsCancelModalOpen(false);
+                    setCancelError(null);
+                  }}
                   className="px-3 py-2 rounded-xl text-slate-600 hover:text-slate-900 font-bold"
                 >
                   Back

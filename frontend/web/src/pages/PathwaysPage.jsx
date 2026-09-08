@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSidebar } from '../context/SidebarContext';
@@ -24,6 +24,7 @@ import {
   getCanonicalPathwayId,
   C10_STRUCTURAL_DETAIL
 } from '../utils/pathwayAdapter';
+import { normalizeApiError } from '../utils/errorHandler';
 
 export { PATHWAY_ID_TO_NODE_MAP, getVisualNodeId };
 import { 
@@ -166,13 +167,32 @@ const PathwaysPage = () => {
     fetchRecommendations();
   }, [authLoading]);
 
+  const listRequestIdRef = useRef(0);
+  const detailRequestIdRef = useRef(0);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   // Fetch all pathways
-  const fetchPathways = async (shouldCancel = () => false) => {
+  const fetchPathways = useCallback(async (shouldCancel = () => false) => {
+    const checkCancel = typeof shouldCancel === 'function' ? shouldCancel : () => false;
+    const requestId = ++listRequestIdRef.current;
+    const isCancelled = () => {
+      if (!isMountedRef.current) return true;
+      if (requestId !== listRequestIdRef.current) return true;
+      return checkCancel();
+    };
+
     setLoading(true);
     setError(null);
     try {
       const data = await getPathwaysApi();
-      if (shouldCancel()) return;
+      if (isCancelled()) return;
 
       setPathways(data.pathways || []);
 
@@ -184,22 +204,22 @@ const PathwaysPage = () => {
         targetPathwayIdRef.current = null;
       }
     } catch (err) {
-      if (shouldCancel()) return;
-      setError(err.response?.data?.detail || err.message || 'Failed to load pathways from server.');
+      if (isCancelled()) return;
+      setError(normalizeApiError(err, 'Failed to load pathways from server.'));
       setPathways([]);
     } finally {
-      if (!shouldCancel()) {
+      if (!isCancelled()) {
         setLoading(false);
       }
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
     let isCancelled = false;
     fetchPathways(() => isCancelled);
     return () => { isCancelled = true; };
-  }, [authLoading]);
+  }, [authLoading, fetchPathways]);
 
   // Determine current active Choice Explorer level pathways
   const currentChoicePathways = useMemo(() => {
@@ -221,49 +241,48 @@ const PathwaysPage = () => {
   }, [selectedStructuralNodeId, selectedCombinationId, apiPathwaysMap]);
 
   // Safe detail data resolution (bypasses backend fetch for structural-only 'c10' node)
-  useEffect(() => {
-    const activeId = selectedCareerDirectionId || selectedCombinationId || selectedStructuralNodeId;
-    if (!activeId) return;
-
-    const canonicalId = getCanonicalPathwayId(activeId);
-
-    // If canonicalId is null (e.g. for 'c10'), render local structural overview without backend fetch
+  const loadPathwayDetail = useCallback(async (canonicalId) => {
     if (!canonicalId) {
+      detailRequestIdRef.current++;
       setSelectedPathwayDetail(C10_STRUCTURAL_DETAIL);
       setDetailLoading(false);
       setDetailError(null);
       return;
     }
 
-    let isSubscribed = true;
-    const fetchDetail = async () => {
-      setDetailLoading(true);
-      setDetailError(null);
-      try {
-        const detailData = await getPathwayDetailApi(canonicalId);
-        if (isSubscribed) {
-          setSelectedPathwayDetail(detailData);
-        }
-      } catch (err) {
-        if (isSubscribed) {
-          const fallback = apiPathwaysMap[canonicalId];
-          if (fallback) {
-            setSelectedPathwayDetail(fallback);
-          } else {
-            setDetailError(err.response?.data?.detail || err.message || 'Failed to load pathway details.');
-            setSelectedPathwayDetail(null);
-          }
-        }
-      } finally {
-        if (isSubscribed) {
-          setDetailLoading(false);
-        }
-      }
+    const requestId = ++detailRequestIdRef.current;
+    const isCancelled = () => {
+      return !isMountedRef.current || requestId !== detailRequestIdRef.current;
     };
 
-    fetchDetail();
-    return () => { isSubscribed = false; };
-  }, [selectedCareerDirectionId, selectedCombinationId, selectedStructuralNodeId, apiPathwaysMap]);
+    setDetailLoading(true);
+    setDetailError(null);
+
+    try {
+      const detailData = await getPathwayDetailApi(canonicalId);
+      if (isCancelled()) return;
+
+      setSelectedPathwayDetail(detailData);
+      setDetailError(null);
+    } catch (err) {
+      if (isCancelled()) return;
+
+      setDetailError(normalizeApiError(err, 'Failed to load pathway details.'));
+      setSelectedPathwayDetail(null);
+    } finally {
+      if (!isCancelled()) {
+        setDetailLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const activeId = selectedCareerDirectionId || selectedCombinationId || selectedStructuralNodeId;
+    if (!activeId) return;
+
+    const canonicalId = getCanonicalPathwayId(activeId);
+    loadPathwayDetail(canonicalId);
+  }, [selectedCareerDirectionId, selectedCombinationId, selectedStructuralNodeId, loadPathwayDetail]);
 
   // Search Navigation Handler (Exploration Only - DOES NOT open Goal Modal)
   const handleSelectSearchResult = ({ pathwayId, option }) => {
@@ -335,11 +354,9 @@ const PathwaysPage = () => {
       setGoalModalData(null);
       navigate('/my-roadmap');
     } catch (err) {
+      if (!isMountedRef.current) return;
       console.error('Failed to create goal:', err);
-      const rawDetail = err.response?.data?.detail;
-      const userMessage = (rawDetail && typeof rawDetail === 'string' && rawDetail !== 'Not Found')
-        ? rawDetail
-        : "We couldn't save your career goal. Please try again.";
+      const userMessage = normalizeApiError(err, "We couldn't save your career goal. Please try again.");
       setGoalError(userMessage);
     } finally {
       setSubmittingGoal(false);
@@ -429,12 +446,12 @@ const PathwaysPage = () => {
                 <AlertCircle className="w-6 h-6 text-rose-600 flex-shrink-0" />
                 <div>
                   <h3 className="font-extrabold text-sm">Unable to Fetch Pathways</h3>
-                  <p className="text-xs text-rose-700 mt-0.5">{error}</p>
+                  <p className="text-xs text-rose-700 mt-0.5">{typeof error === 'string' ? error : normalizeApiError(error, 'Failed to load pathways from server.')}</p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={fetchPathways}
+                onClick={() => fetchPathways()}
                 className="bg-rose-600 hover:bg-rose-700 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center space-x-1.5 transition-colors cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
@@ -497,7 +514,7 @@ const PathwaysPage = () => {
                     onRetry={() => {
                       const activeId = selectedCareerDirectionId || selectedCombinationId || selectedStructuralNodeId;
                       const canonicalId = getCanonicalPathwayId(activeId);
-                      if (canonicalId) getPathwayDetailApi(canonicalId).then(setSelectedPathwayDetail);
+                      loadPathwayDetail(canonicalId);
                     }}
                     onSelectGoal={(pathway, option) => handleOpenGoalModal(pathway, option)}
                     recommendations={recommendations}

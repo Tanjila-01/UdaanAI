@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getAdminWorkshopOverviewApi } from '../../api/client';
+import { normalizeApiError } from '../../utils/errorHandler';
 import AdminLayout from '../../components/layout/AdminLayout';
 import {
   Inbox,
@@ -30,7 +31,7 @@ export const AdminOverviewPage = () => {
       const res = await getAdminWorkshopOverviewApi();
       setData(res);
     } catch (err) {
-      setError(err.response?.data?.detail || err.message || 'Failed to load operational overview.');
+      setError(normalizeApiError(err, 'Failed to load operational overview.'));
     } finally {
       setLoading(false);
     }
@@ -75,9 +76,15 @@ export const AdminOverviewPage = () => {
           <div>
             <div className="flex items-center space-x-2">
               <h1 className="text-2xl font-extrabold text-slate-950 tracking-tight">Workshop Operations</h1>
-              <span className="bg-teal-50 text-[#005F60] border border-teal-200 text-xs font-bold px-2 py-0.5 rounded-md">
-                Live
-              </span>
+              {error && data ? (
+                <span className="bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold px-2 py-0.5 rounded-md">
+                  Stale
+                </span>
+              ) : (
+                <span className="bg-teal-50 text-[#005F60] border border-teal-200 text-xs font-bold px-2 py-0.5 rounded-md">
+                  Live
+                </span>
+              )}
             </div>
             <p className="text-xs text-slate-500 font-medium mt-1">
               Manage institution requests, upcoming sessions, and completed workshops.
@@ -87,7 +94,7 @@ export const AdminOverviewPage = () => {
             <button
               type="button"
               onClick={fetchOverview}
-              className="text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl transition-colors"
+              className="text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl transition-colors cursor-pointer"
             >
               Refresh Data
             </button>
@@ -101,15 +108,52 @@ export const AdminOverviewPage = () => {
           </div>
         </div>
 
-        {error && (
-          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-center space-x-3 text-rose-800 text-xs">
-            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-            <span>{error}</span>
+        {error && !data ? (
+          <div
+            role="alert"
+            className="bg-white border border-rose-200 rounded-2xl p-12 text-center space-y-4 shadow-2xs"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center mx-auto">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-sm font-bold text-slate-900">Failed to load operational overview</h2>
+              <p className="text-xs text-rose-700">{error}</p>
+            </div>
+            <button
+              type="button"
+              onClick={fetchOverview}
+              className="inline-flex items-center space-x-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition-colors shadow-xs cursor-pointer"
+            >
+              <span>Retry</span>
+            </button>
           </div>
-        )}
+        ) : (
+          <>
+            {error && data && (
+              <div
+                role="alert"
+                className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-900 text-xs shadow-2xs"
+              >
+                <div className="flex items-center space-x-3">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <div>
+                    <span className="font-bold">Showing cached data (data may be stale).</span>
+                    <span className="ml-1 text-amber-800">{error}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={fetchOverview}
+                  className="text-xs font-bold text-amber-950 bg-amber-200/80 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors shrink-0 self-start sm:self-auto cursor-pointer"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
 
-        {/* 4 Compact Operational Metric Tiles */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* 4 Compact Operational Metric Tiles */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs hover:border-slate-300 transition-all">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-600">New Requests</span>
@@ -316,6 +360,8 @@ export const AdminOverviewPage = () => {
             </div>
           )}
         </div>
+          </>
+        )}
       </div>
     </AdminLayout>
   );

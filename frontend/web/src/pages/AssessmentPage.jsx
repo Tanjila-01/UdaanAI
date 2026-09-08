@@ -635,68 +635,87 @@ export const AssessmentPage = () => {
                 {/* Right Column (5 cols): Dimension Scores & Next Actions */}
                 <div className="lg:col-span-5 space-y-6">
                   
-                  {/* Dimension Aptitude Breakdown */}
+                  {/* Dimension Interest Reflection */}
                   <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xs space-y-5">
-                    <div className="border-b border-slate-100 pb-3">
+                    <div className="border-b border-slate-100 pb-3 space-y-1">
                       <h3 className="text-xs font-black uppercase tracking-wider text-[#005F60] flex items-center space-x-1.5">
                         <BarChart3 className="w-4 h-4 text-[#005F60]" />
-                        <span>Aptitude Breakdown</span>
+                        <span>Interest Reflection</span>
                       </h3>
+                      <p className="text-[11px] text-slate-500 leading-relaxed font-medium">
+                        These results describe your current interests, not proven ability or permanent career suitability.
+                      </p>
                     </div>
 
                     <div className="space-y-4">
                       {result.dimension_scores && Object.entries(result.dimension_scores).map(([dim, score]) => {
-                        const maxPossible = 15;
-                        const pct = Math.min(100, Math.round((score / maxPossible) * 100));
+                        const normalizedScore = typeof score === 'number' ? Math.max(0, Math.min(100, Math.round(score))) : 0;
                         const dimLabelMap = {
                           // Foundation
-                          science: 'PUC Science Aptitude',
-                          diploma: 'Polytechnic Diploma Aptitude',
-                          commerce: 'PUC Commerce Aptitude',
+                          science: 'PUC Science',
+                          commerce: 'PUC Commerce',
                           arts: 'PUC Arts & Humanities',
-                          iti: 'ITI Trade Skills',
+                          diploma: 'Polytechnic Diploma',
+                          iti: 'ITI Vocational Trades',
                           // PUC Science
                           engineering: 'Engineering & Technology',
-                          computing: 'Computing & IT',
-                          medicine: 'Medicine & Allied Health',
-                          pure_sciences: 'Pure Sciences & Research',
-                          applied_tech: 'Applied Technology & Defense',
+                          computing: 'Computer Applications & IT',
+                          medicine: 'Medicine & Health Sciences',
+                          allied_health: 'Allied Health Sciences & Pharmacy',
+                          pure_sciences: 'Pure & Applied Sciences',
                           // PUC Commerce
-                          accounting_ca: 'Accounting & CA/CS',
-                          management_bba: 'Business & Management',
-                          banking_finance: 'Banking & Financial Markets',
-                          economics_data: 'Economics & Analytics',
-                          corporate_law: 'Corporate Law & Governance',
+                          accounting_ca: 'Chartered Accountancy & Audit',
+                          finance_banking: 'Investment Banking & Finance',
+                          business_management: 'Business Management & Operations',
+                          corporate_law: 'Corporate Law & Compliance',
                           // PUC Arts
-                          civil_services: 'Civil Services & Public Admin',
-                          law_legal: 'Law & Judiciary',
-                          journalism_media: 'Journalism & Mass Media',
-                          psychology_social: 'Psychology & Social Work',
-                          design_arts: 'Design & Visual Arts',
+                          law_judiciary: 'Integrated Law & Judiciary',
+                          design_arts: 'Design & Creative Visual Arts',
+                          media_journalism: 'Media & Digital Journalism',
+                          humanities_social: 'Social Policy & Administration',
                           // Diploma
-                          lateral_engineering: 'Lateral Entry B.Tech/B.E.',
-                          core_industry: 'Core Industry Engineering',
+                          dcet_lateral_engineering: 'B.E Lateral Entry (DCET)',
+                          software_digital: 'Software & Digital Tech',
+                          core_industrial: 'Core Industrial Engineering',
+                          industry_employment: 'Direct Industry Operations',
+                          // ITI
+                          apprenticeship_industry: 'National Apprenticeship & Industry Jobs',
+                          energy_electrical: 'Electrical & Solar Energy Trade',
+                          mechanical_machining: 'Precision CNC Machining & Tooling',
+                          diploma_lateral: 'Polytechnic Diploma Lateral Entry',
+                          // Aliases & legacy keys
+                          applied_tech: 'Applied Technology & Defense',
+                          management_bba: 'Business Management & Operations',
+                          banking_finance: 'Investment Banking & Finance',
+                          economics_data: 'Economics & Analytics',
+                          civil_services: 'Social Policy & Administration',
+                          law_legal: 'Integrated Law & Judiciary',
+                          journalism_media: 'Media & Digital Journalism',
+                          psychology_social: 'Psychology & Social Work',
+                          lateral_engineering: 'B.E Lateral Entry (DCET)',
+                          core_industry: 'Core Industrial Engineering',
                           tech_consulting: 'Specialized Technical Consulting',
                           entrepreneurship: 'Contracting & Enterprise',
                           advanced_diploma: 'Advanced Certifications',
-                          // ITI
-                          apprentice_industry: 'Apprenticeship & Industry Jobs',
-                          lateral_polytechnic: 'Lateral Entry to Diploma',
-                          overseas_trades: 'Gulf / Overseas Skilled Employment',
-                          railways_psu: 'Railways, PSU & Defense Skilled Jobs',
+                          apprentice_industry: 'National Apprenticeship & Industry Jobs',
+                          lateral_polytechnic: 'Polytechnic Diploma Lateral Entry',
+                          overseas_trades: 'Gulf & Overseas Skilled Employment',
+                          railways_psu: 'Railways & PSU Skilled Jobs',
                           small_enterprise: 'Workshops & Independent Enterprise',
                         };
+
+                        const label = dimLabelMap[dim] || dim.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
                         return (
                           <div key={dim} className="space-y-1.5 text-xs">
                             <div className="flex items-center justify-between font-bold">
-                              <span className="text-slate-800">{dimLabelMap[dim] || dim}</span>
-                              <span className="text-[#005F60]">{score} pts ({pct}%)</span>
+                              <span className="text-slate-800">{label}</span>
+                              <span className="text-[#005F60] font-bold">{normalizedScore}%</span>
                             </div>
                             <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
                               <div
                                 className="bg-[#005F60] h-full rounded-full transition-all duration-500"
-                                style={{ width: `${pct}%` }}
+                                style={{ width: `${normalizedScore}%` }}
                               />
                             </div>
                           </div>

@@ -14,6 +14,7 @@ import {
   Compass
 } from 'lucide-react';
 import { PRESENTATION_METADATA } from '../../utils/pathwayAdapter';
+import { normalizeApiError } from '../../utils/errorHandler';
 
 const PathwayDetailPanel = ({
   detail,
@@ -36,16 +37,17 @@ const PathwayDetailPanel = ({
   }
 
   if (error) {
+    const errorText = normalizeApiError(error, 'Error loading pathway details.');
     return (
       <div className="bg-rose-50 border border-rose-200 rounded-3xl p-6 space-y-3 text-rose-900 font-sans">
         <div className="flex items-center space-x-2 font-bold text-sm">
           <AlertCircle className="w-5 h-5 text-rose-600" />
           <span>Error Loading Detail</span>
         </div>
-        <p className="text-xs text-rose-700">{error}</p>
+        <p className="text-xs text-rose-700">{errorText}</p>
         <button
           type="button"
-          onClick={onRetry}
+          onClick={() => onRetry?.()}
           className="bg-rose-600 text-white text-xs font-extrabold px-3.5 py-1.5 rounded-xl cursor-pointer"
         >
           Retry

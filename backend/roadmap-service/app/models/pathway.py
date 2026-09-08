@@ -8,6 +8,8 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     UniqueConstraint,
+    Index,
+    text,
     func,
     JSON,
 )
@@ -101,7 +103,24 @@ fk_milestones_target = f"{schema}.pathway_milestones.id" if schema else "pathway
 
 class StudentGoal(Base):
     __tablename__ = "student_goals"
-    __table_args__ = schema_args
+    __table_args__ = (
+        Index(
+            "uq_student_active_goal",
+            "student_id",
+            unique=True,
+            postgresql_where=text("status = 'ACTIVE'"),
+            sqlite_where=text("status = 'ACTIVE'"),
+        ),
+        schema_args,
+    ) if schema else (
+        Index(
+            "uq_student_active_goal",
+            "student_id",
+            unique=True,
+            postgresql_where=text("status = 'ACTIVE'"),
+            sqlite_where=text("status = 'ACTIVE'"),
+        ),
+    )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     student_id = Column(UUID(as_uuid=True), nullable=False, index=True)

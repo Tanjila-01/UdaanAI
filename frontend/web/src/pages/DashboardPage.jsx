@@ -525,9 +525,13 @@ const DashboardPage = () => {
 
                 <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="text-xs text-slate-600">
-                    <span className="font-bold text-[#005F60] font-sans">Next milestone: </span>
+                    <span className="font-bold text-[#005F60] font-sans">
+                      {activeGoal.status === 'COMPLETED' ? 'Status: ' : 'Next milestone: '}
+                    </span>
                     <span className="font-sans">
-                      {activeGoal.milestones?.find(m => m.status === 'AVAILABLE')?.title || 'Check roadmap for next step'}
+                      {activeGoal.status === 'COMPLETED'
+                        ? 'Roadmap checklist completed'
+                        : (activeGoal.milestones?.find(m => m.status === 'AVAILABLE')?.title || 'Check roadmap for next step')}
                     </span>
                   </div>
 

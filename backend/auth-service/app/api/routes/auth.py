@@ -20,7 +20,7 @@ def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depen
             detail="Missing or invalid Authorization header"
         )
     token = credentials.credentials
-    payload = decode_token(token)
+    payload = decode_token(token, expected_type="access")
     user_id_str = payload.get("sub")
     try:
         user_uuid = uuid.UUID(user_id_str)

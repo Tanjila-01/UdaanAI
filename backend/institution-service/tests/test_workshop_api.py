@@ -50,10 +50,14 @@ app.dependency_overrides[get_db] = override_get_db
 client = TestClient(app)
 
 
-def make_jwt(user_id: str = "admin-1", role: str = "admin") -> str:
+from typing import Optional
+
+
+def make_jwt(user_id: Optional[str] = None, role: str = "admin") -> str:
+    sub = user_id if user_id is not None else str(uuid.uuid4())
     payload = {
-        "sub": user_id,
-        "email": f"{user_id}@udaan.ai",
+        "sub": sub,
+        "email": f"{sub}@udaan.ai",
         "role": role,
         "type": "access",
         "exp": datetime.now(timezone.utc) + timedelta(minutes=30),
@@ -169,7 +173,7 @@ def test_admin_endpoints_require_auth():
 
 
 def test_admin_endpoints_reject_student_role():
-    student_token = make_jwt(user_id="student-99", role="student")
+    student_token = make_jwt(role="student")
     headers = {"Authorization": f"Bearer {student_token}"}
 
     res = client.get("/workshops/admin/overview", headers=headers)
@@ -178,7 +182,7 @@ def test_admin_endpoints_reject_student_role():
 
 
 def test_admin_endpoints_accept_admin_role():
-    admin_token = make_jwt(user_id="admin-1", role="admin")
+    admin_token = make_jwt(role="admin")
     headers = {"Authorization": f"Bearer {admin_token}"}
 
     res = client.get("/workshops/admin/overview", headers=headers)
@@ -193,7 +197,7 @@ def test_admin_endpoints_accept_admin_role():
 # ============================================================================
 
 def test_full_operational_lifecycle():
-    admin_token = make_jwt(user_id="admin-1", role="admin")
+    admin_token = make_jwt(role="admin")
     headers = {"Authorization": f"Bearer {admin_token}"}
 
     # 1. Submit public request
@@ -256,7 +260,7 @@ def test_full_operational_lifecycle():
 
 
 def test_illegal_lifecycle_transitions():
-    admin_token = make_jwt(user_id="admin-1", role="admin")
+    admin_token = make_jwt(role="admin")
     headers = {"Authorization": f"Bearer {admin_token}"}
 
     # Submit request
@@ -295,7 +299,7 @@ def test_illegal_lifecycle_transitions():
 
 
 def test_historical_records_preserved():
-    admin_token = make_jwt(user_id="admin-1", role="admin")
+    admin_token = make_jwt(role="admin")
     headers = {"Authorization": f"Bearer {admin_token}"}
 
     create_res = client.post("/workshops/requests", json=valid_payload())
@@ -311,3 +315,186 @@ def test_historical_records_preserved():
     detail_res = client.get(f"/workshops/admin/requests/{req_id}", headers=headers)
     assert detail_res.status_code == 200
     assert detail_res.json()["status"] == "CANCELLED"
+
+
+def test_institution_token_validation_matrix():
+    valid_uuid = str(uuid.uuid4())
+
+    # 1. Missing Authorization header -> 401
+    res_no_auth = client.get("/workshops/admin/overview")
+    assert res_no_auth.status_code == 401
+    assert "Missing or invalid Authorization header" in res_no_auth.json()["detail"]
+
+    # 2. Refresh token rejected -> 401 Invalid token type (even if role is admin)
+    refresh_token = jwt.encode(
+        {
+            "sub": valid_uuid,
+            "email": "admin@test.com",
+            "role": "admin",
+            "type": "refresh",
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=30)
+        },
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM
+    )
+    res_ref = client.get("/workshops/admin/overview", headers={"Authorization": f"Bearer {refresh_token}"})
+    assert res_ref.status_code == 401
+    assert "Invalid token type" in res_ref.json()["detail"]
+
+    # 3. Expired token -> 401 Token has expired
+    exp_token = jwt.encode(
+        {
+            "sub": valid_uuid,
+            "email": "admin@test.com",
+            "role": "admin",
+            "type": "access",
+            "exp": datetime.now(timezone.utc) - timedelta(minutes=5)
+        },
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM
+    )
+    res_exp = client.get("/workshops/admin/overview", headers={"Authorization": f"Bearer {exp_token}"})
+    assert res_exp.status_code == 401
+    assert res_exp.json()["detail"] == "Token has expired"
+
+    # 4. Invalid signature -> 401 Invalid token
+    bad_sig_token = jwt.encode(
+        {
+            "sub": valid_uuid,
+            "email": "admin@test.com",
+            "role": "admin",
+            "type": "access",
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=30)
+        },
+        "wrong_secret_key",
+        algorithm=settings.JWT_ALGORITHM
+    )
+    res_bad_sig = client.get("/workshops/admin/overview", headers={"Authorization": f"Bearer {bad_sig_token}"})
+    assert res_bad_sig.status_code == 401
+    assert res_bad_sig.json()["detail"] == "Invalid token"
+
+    # 5. Missing exp claim -> 401 Invalid token
+    no_exp_token = jwt.encode(
+        {
+            "sub": valid_uuid,
+            "email": "admin@test.com",
+            "role": "admin",
+            "type": "access"
+        },
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM
+    )
+    res_no_exp = client.get("/workshops/admin/overview", headers={"Authorization": f"Bearer {no_exp_token}"})
+    assert res_no_exp.status_code == 401
+    assert res_no_exp.json()["detail"] == "Invalid token"
+
+    # 6. Missing sub claim -> 401 Invalid token
+    no_sub_token = jwt.encode(
+        {
+            "email": "admin@test.com",
+            "role": "admin",
+            "type": "access",
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=30)
+        },
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM
+    )
+    res_no_sub = client.get("/workshops/admin/overview", headers={"Authorization": f"Bearer {no_sub_token}"})
+    assert res_no_sub.status_code == 401
+    assert res_no_sub.json()["detail"] == "Invalid token"
+
+    # 7. Missing type claim -> 401 Invalid token
+    no_type_token = jwt.encode(
+        {
+            "sub": valid_uuid,
+            "email": "admin@test.com",
+            "role": "admin",
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=30)
+        },
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM
+    )
+    res_no_type = client.get("/workshops/admin/overview", headers={"Authorization": f"Bearer {no_type_token}"})
+    assert res_no_type.status_code == 401
+    assert res_no_type.json()["detail"] == "Invalid token"
+
+    # 8. Malformed subject (non-UUID string) -> 401 Invalid user ID in token (MUST NOT be 500)
+    malformed_sub_token = jwt.encode(
+        {
+            "sub": "not-a-valid-uuid",
+            "email": "admin@test.com",
+            "role": "admin",
+            "type": "access",
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=30)
+        },
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM
+    )
+    res_malformed_sub = client.get("/workshops/admin/overview", headers={"Authorization": f"Bearer {malformed_sub_token}"})
+    assert res_malformed_sub.status_code == 401
+    assert res_malformed_sub.json()["detail"] == "Invalid user ID in token"
+
+    # 9. Empty subject -> 401 Invalid user ID in token (MUST NOT be 500)
+    empty_sub_token = jwt.encode(
+        {
+            "sub": "",
+            "email": "admin@test.com",
+            "role": "admin",
+            "type": "access",
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=30)
+        },
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM
+    )
+    res_empty_sub = client.get("/workshops/admin/overview", headers={"Authorization": f"Bearer {empty_sub_token}"})
+    assert res_empty_sub.status_code == 401
+    assert res_empty_sub.json()["detail"] == "Invalid user ID in token"
+
+    # 10. Malformed exp values (list, dict, non-numeric) -> 401 Invalid token (never 500)
+    for bad_exp in [[], {}, "not-a-number"]:
+        bad_exp_token = jwt.encode(
+            {
+                "sub": valid_uuid,
+                "email": "admin@test.com",
+                "role": "admin",
+                "type": "access",
+                "exp": bad_exp
+            },
+            settings.JWT_SECRET_KEY,
+            algorithm=settings.JWT_ALGORITHM
+        )
+        res_bad_exp = client.get("/workshops/admin/overview", headers={"Authorization": f"Bearer {bad_exp_token}"})
+        assert res_bad_exp.status_code == 401
+        assert res_bad_exp.json()["detail"] == "Invalid token"
+
+    # 11. Identity checked BEFORE role: invalid token with non-admin role returns 401, not 403
+    bad_token_student = jwt.encode(
+        {
+            "sub": "invalid-uuid",
+            "email": "student@test.com",
+            "role": "student",
+            "type": "access",
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=30)
+        },
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM
+    )
+    res_bad_token_student = client.get("/workshops/admin/overview", headers={"Authorization": f"Bearer {bad_token_student}"})
+    assert res_bad_token_student.status_code == 401
+    assert res_bad_token_student.json()["detail"] == "Invalid user ID in token"
+
+    # 12. Valid token with student role returns 403
+    valid_student_token = jwt.encode(
+        {
+            "sub": valid_uuid,
+            "email": "student@test.com",
+            "role": "student",
+            "type": "access",
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=30)
+        },
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM
+    )
+    res_valid_student = client.get("/workshops/admin/overview", headers={"Authorization": f"Bearer {valid_student_token}"})
+    assert res_valid_student.status_code == 403
+    assert "Admin privileges required" in res_valid_student.json()["detail"]

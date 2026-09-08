@@ -1,7 +1,9 @@
-from typing import List, Optional
+from typing import List, Optional, Callable
 from uuid import UUID
 from datetime import datetime, timezone
 from fastapi import HTTPException, status
+from sqlalchemy import case
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 from app.models.pathway import Pathway, PathwayOption, PathwayMilestone, StudentGoal, StudentMilestoneProgress
 from app.schemas.goal import CreateGoalRequest, StudentGoalResponse, GoalProgressSummary, MilestoneProgressResponse
@@ -213,7 +215,14 @@ class RoadmapService:
 
     @classmethod
     def get_active_student_goal(cls, db: Session, student_id: UUID) -> Optional[StudentGoalResponse]:
-        goal = (
+        """
+        Retrieves the current student goal deterministically:
+        1. Current ACTIVE goal (if one exists).
+        2. If no active goal exists, the latest COMPLETED goal (ordered by updated_at desc, created_at desc, id desc).
+        Returns None if no active or completed goals exist (genuine empty state).
+        """
+        # 1. Query for active goal first
+        active_goal = (
             db.query(StudentGoal)
             .options(
                 selectinload(StudentGoal.pathway),
@@ -223,9 +232,25 @@ class RoadmapService:
             .filter(StudentGoal.student_id == student_id, StudentGoal.status == "ACTIVE")
             .first()
         )
-        if not goal:
-            return None
-        return cls._build_goal_response(goal)
+        if active_goal:
+            return cls._build_goal_response(active_goal)
+
+        # 2. Fall back to latest completed goal
+        completed_goal = (
+            db.query(StudentGoal)
+            .options(
+                selectinload(StudentGoal.pathway),
+                selectinload(StudentGoal.option),
+                selectinload(StudentGoal.milestone_progress).selectinload(StudentMilestoneProgress.milestone),
+            )
+            .filter(StudentGoal.student_id == student_id, StudentGoal.status == "COMPLETED")
+            .order_by(StudentGoal.updated_at.desc(), StudentGoal.created_at.desc(), StudentGoal.id.desc())
+            .first()
+        )
+        if completed_goal:
+            return cls._build_goal_response(completed_goal)
+
+        return None
 
     @classmethod
     def create_or_update_student_goal(
@@ -254,11 +279,70 @@ class RoadmapService:
                     detail="Selected pathway option is invalid or does not belong to the target pathway."
                 )
 
-        # Archive any previous active goal for this student
-        db.query(StudentGoal).filter(
-            StudentGoal.student_id == student_id,
-            StudentGoal.status == "ACTIVE"
-        ).update({"status": "ARCHIVED"}, synchronize_session=False)
+        # Helper to check if a goal matches requested pathway & option
+        def matches_target(g: StudentGoal) -> bool:
+            if g.pathway_id != pathway.id:
+                return False
+            if pathway_option_id is None:
+                return g.pathway_option_id is None
+            return g.pathway_option_id == pathway_option_id
+
+        # Query existing active goal for this student
+        current_active = (
+            db.query(StudentGoal)
+            .options(
+                selectinload(StudentGoal.pathway),
+                selectinload(StudentGoal.option),
+                selectinload(StudentGoal.milestone_progress).selectinload(StudentMilestoneProgress.milestone),
+            )
+            .filter(StudentGoal.student_id == student_id, StudentGoal.status == "ACTIVE")
+            .first()
+        )
+
+        # Case 1: Active goal already matches the requested pathway & option
+        # Return existing goal and its progress without resetting, archiving, or recreating
+        if current_active and matches_target(current_active):
+            return cls._build_goal_response(current_active)
+
+        # Query existing completed goals for this student that match the target pathway & option
+        matching_completed = (
+            db.query(StudentGoal)
+            .options(
+                selectinload(StudentGoal.pathway),
+                selectinload(StudentGoal.option),
+                selectinload(StudentGoal.milestone_progress).selectinload(StudentMilestoneProgress.milestone),
+            )
+            .filter(
+                StudentGoal.student_id == student_id,
+                StudentGoal.status == "COMPLETED",
+            )
+            .filter(StudentGoal.pathway_id == pathway.id)
+            .filter(StudentGoal.pathway_option_id == (selected_option.id if selected_option else None))
+            .order_by(StudentGoal.updated_at.desc(), StudentGoal.created_at.desc(), StudentGoal.id.desc())
+            .first()
+        )
+
+        # Case 2: Target pathway was previously COMPLETED by this student.
+        # After explicit switch confirmation, archive B and display completed A without resetting/reopening A.
+        # POST and subsequent GET must agree. Preserve all history.
+        if matching_completed:
+            if current_active:
+                db.query(StudentGoal).filter(
+                    StudentGoal.id == current_active.id,
+                    StudentGoal.status == "ACTIVE"
+                ).update({"status": "ARCHIVED", "updated_at": datetime.now(timezone.utc)}, synchronize_session=False)
+            # Touch updated_at to ensure deterministic ordering on subsequent GET
+            matching_completed.updated_at = datetime.now(timezone.utc)
+            db.commit()
+            return cls._build_goal_response(matching_completed)
+
+        # Case 3: Switching to a new target pathway that is not currently active or completed.
+        # Keep switching atomic: archive previous active goal and create new goal in the same transaction.
+        if current_active:
+            db.query(StudentGoal).filter(
+                StudentGoal.id == current_active.id,
+                StudentGoal.status == "ACTIVE"
+            ).update({"status": "ARCHIVED", "updated_at": datetime.now(timezone.utc)}, synchronize_session=False)
 
         goal_title = selected_option.option_name if selected_option else pathway.title
 
@@ -270,21 +354,74 @@ class RoadmapService:
             status="ACTIVE",
         )
         db.add(new_goal)
-        db.flush()
+        try:
+            db.flush()
 
-        # Initialize progress records for each milestone in step order
-        milestones = sorted(pathway.milestones, key=lambda m: m.step_number)
-        for idx, m in enumerate(milestones):
-            init_status = "AVAILABLE" if idx == 0 else "LOCKED"
-            prog = StudentMilestoneProgress(
-                goal_id=new_goal.id,
-                milestone_id=m.id,
-                step_number=m.step_number,
-                status=init_status,
+            # Initialize progress records for each milestone in step order
+            milestones = sorted(pathway.milestones, key=lambda m: m.step_number)
+            for idx, m in enumerate(milestones):
+                init_status = "AVAILABLE" if idx == 0 else "LOCKED"
+                prog = StudentMilestoneProgress(
+                    goal_id=new_goal.id,
+                    milestone_id=m.id,
+                    step_number=m.step_number,
+                    status=init_status,
+                )
+                db.add(prog)
+
+            db.commit()
+        except IntegrityError as exc:
+            db.rollback()
+            # Recover ONLY from specific active-goal uniqueness conflict
+            err_str = str(exc.orig) if hasattr(exc, "orig") and exc.orig else str(exc)
+            is_active_goal_conflict = (
+                "uq_student_active_goal" in err_str
+                or "student_goals.student_id" in err_str
+                or ("UNIQUE constraint failed" in err_str and "student_id" in err_str)
             )
-            db.add(prog)
+            if not is_active_goal_conflict:
+                raise exc
 
-        db.commit()
+            import time
+            concurrent_active = None
+            for _ in range(10):
+                concurrent_active = (
+                    db.query(StudentGoal)
+                    .options(
+                        selectinload(StudentGoal.pathway),
+                        selectinload(StudentGoal.option),
+                        selectinload(StudentGoal.milestone_progress).selectinload(StudentMilestoneProgress.milestone),
+                    )
+                    .filter(StudentGoal.student_id == student_id, StudentGoal.status == "ACTIVE")
+                    .first()
+                )
+                if concurrent_active:
+                    break
+                time.sleep(0.05)
+
+            # Return existing goal only if pathway and option match the request
+            if concurrent_active and matches_target(concurrent_active):
+                return cls._build_goal_response(concurrent_active)
+
+            # Otherwise return a clear 409 conflict
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A conflicting active goal was created by a concurrent request. Please refresh and retry."
+            )
+
+        # Reload the newly created goal eagerly to return full response
+        fresh_goal = (
+            db.query(StudentGoal)
+            .options(
+                selectinload(StudentGoal.pathway),
+                selectinload(StudentGoal.option),
+                selectinload(StudentGoal.milestone_progress).selectinload(StudentMilestoneProgress.milestone),
+            )
+            .filter(StudentGoal.id == new_goal.id)
+            .first()
+        )
+        if fresh_goal:
+            return cls._build_goal_response(fresh_goal)
         return cls.get_active_student_goal(db, student_id)
 
     @classmethod
@@ -292,62 +429,93 @@ class RoadmapService:
         cls,
         db: Session,
         student_id: UUID,
-        milestone_id: UUID
+        milestone_id: UUID,
+        _before_commit_hook: Optional[Callable] = None,
     ) -> StudentGoalResponse:
-        goal = (
-            db.query(StudentGoal)
+        """
+        Updates progress for a milestone against the student-owned goal containing that progress record.
+        Never chooses an arbitrary active/completed goal.
+        Ensures safe repeated completion requests (idempotent 200).
+        """
+        # Find the specific progress record owned by this student
+        # Look for matching progress record by progress ID or milestone template ID,
+        # strictly scoped to goals owned by this student and in ACTIVE or COMPLETED status.
+        prog = (
+            db.query(StudentMilestoneProgress)
+            .join(StudentGoal, StudentMilestoneProgress.goal_id == StudentGoal.id)
             .options(
-                selectinload(StudentGoal.pathway),
-                selectinload(StudentGoal.option),
-                selectinload(StudentGoal.milestone_progress).selectinload(StudentMilestoneProgress.milestone),
+                selectinload(StudentMilestoneProgress.milestone),
+                selectinload(StudentMilestoneProgress.goal).selectinload(StudentGoal.pathway),
+                selectinload(StudentMilestoneProgress.goal).selectinload(StudentGoal.option),
+                selectinload(StudentMilestoneProgress.goal).selectinload(StudentGoal.milestone_progress).selectinload(StudentMilestoneProgress.milestone),
             )
-            .filter(StudentGoal.student_id == student_id, StudentGoal.status == "ACTIVE")
+            .filter(
+                StudentGoal.student_id == student_id,
+                StudentGoal.status.in_(["ACTIVE", "COMPLETED"]),
+                (StudentMilestoneProgress.id == milestone_id) | (StudentMilestoneProgress.milestone_id == milestone_id),
+            )
+            .order_by(
+                case((StudentGoal.status == "ACTIVE", 1), else_=2),
+                StudentGoal.updated_at.desc(),
+                StudentMilestoneProgress.step_number.asc()
+            )
             .first()
         )
-        if not goal:
+
+        if not prog:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="No active career goal found."
+                detail="Milestone not found for student's current goal."
             )
 
-        target_prog = None
-        for prog in goal.milestone_progress:
-            if str(prog.id) == str(milestone_id) or str(prog.milestone_id) == str(milestone_id):
-                target_prog = prog
-                break
+        goal = prog.goal
 
-        if not target_prog:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Milestone not found for current goal."
-            )
-
-        if target_prog.status == "COMPLETED":
+        # Safe idempotent completion: if milestone is already completed, safely return goal response
+        if prog.status == "COMPLETED":
             return cls._build_goal_response(goal)
 
-        if target_prog.status == "LOCKED":
+        if prog.status == "LOCKED":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Milestone is locked. Please complete previous milestones first."
             )
 
-        target_prog.status = "COMPLETED"
-        target_prog.completed_at = datetime.now(timezone.utc)
+        # Mark milestone COMPLETED with timestamp
+        now = datetime.now(timezone.utc)
+        prog.status = "COMPLETED"
+        prog.completed_at = now
+        prog.updated_at = now
 
-        # Find next milestone in order to unlock
-        next_prog = None
-        for prog in goal.milestone_progress:
-            if prog.step_number == target_prog.step_number + 1:
-                next_prog = prog
+        # Unlock next milestone in sequence for this specific goal
+        for other_prog in goal.milestone_progress:
+            if other_prog.step_number == prog.step_number + 1 and other_prog.status == "LOCKED":
+                other_prog.status = "AVAILABLE"
+                other_prog.updated_at = now
                 break
 
-        if next_prog and next_prog.status == "LOCKED":
-            next_prog.status = "AVAILABLE"
+        if _before_commit_hook:
+            _before_commit_hook()
 
-        # Check if all milestones are completed
+        # Check if all milestones for this goal are now completed
         all_completed = all(p.status == "COMPLETED" for p in goal.milestone_progress)
         if all_completed:
-            goal.status = "COMPLETED"
+            # Make the transition conditional on current database status being ACTIVE.
+            # An in-memory status check is insufficient against concurrent state changes.
+            rows_updated = (
+                db.query(StudentGoal)
+                .filter(
+                    StudentGoal.id == goal.id,
+                    StudentGoal.status == "ACTIVE"
+                )
+                .update(
+                    {"status": "COMPLETED", "updated_at": now},
+                    synchronize_session=False
+                )
+            )
+            if rows_updated > 0:
+                goal.status = "COMPLETED"
 
+        goal.updated_at = now
         db.commit()
+        db.refresh(goal)
         return cls._build_goal_response(goal)

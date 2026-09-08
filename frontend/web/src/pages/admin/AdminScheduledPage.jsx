@@ -6,6 +6,7 @@ import {
   updateWorkshopScheduleApi,
   cancelWorkshopApi,
 } from '../../api/client';
+import { normalizeApiError } from '../../utils/errorHandler';
 import AdminLayout from '../../components/layout/AdminLayout';
 import {
   CalendarCheck,
@@ -15,6 +16,7 @@ import {
   Users,
   CheckCircle2,
   AlertTriangle,
+  AlertCircle,
   X,
   ExternalLink,
   Edit,
@@ -23,7 +25,7 @@ import {
 
 export const AdminScheduledPage = () => {
   const location = useLocation();
-  const [scheduledWorkshops, setScheduledWorkshops] = useState([]);
+  const [scheduledWorkshops, setScheduledWorkshops] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -33,6 +35,9 @@ export const AdminScheduledPage = () => {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState(null);
+  const [cancelError, setCancelError] = useState(null);
+  const [completeError, setCompleteError] = useState(null);
+  const [editError, setEditError] = useState(null);
 
   const [completeForm, setCompleteForm] = useState({
     actual_attendance: '',
@@ -72,7 +77,7 @@ export const AdminScheduledPage = () => {
         if (found) handleOpenComplete(found);
       }
     } catch (err) {
-      setError(err.response?.data?.detail || err.message || 'Failed to load scheduled workshops.');
+      setError(normalizeApiError(err, 'Failed to load scheduled workshops.'));
     } finally {
       setLoading(false);
     }
@@ -85,11 +90,14 @@ export const AdminScheduledPage = () => {
   const handleOpenComplete = (workshop) => {
     setSelectedWorkshop(workshop);
     setCompleteForm({
-      actual_attendance: workshop.student_count || '',
+      actual_attendance: '',
       feedback_score: '',
       completion_notes: '',
     });
     setActionError(null);
+    setCancelError(null);
+    setCompleteError(null);
+    setEditError(null);
     setIsCompleteModalOpen(true);
   };
 
@@ -114,6 +122,9 @@ export const AdminScheduledPage = () => {
       });
     }
     setActionError(null);
+    setCancelError(null);
+    setCompleteError(null);
+    setEditError(null);
     setIsEditModalOpen(true);
   };
 
@@ -121,25 +132,60 @@ export const AdminScheduledPage = () => {
     setSelectedWorkshop(workshop);
     setCancelReason('');
     setActionError(null);
+    setCancelError(null);
+    setCompleteError(null);
+    setEditError(null);
     setIsCancelModalOpen(true);
   };
 
   const handleCompleteSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedWorkshop) return;
+    if (!selectedWorkshop || actionLoading) return;
     try {
       setActionLoading(true);
       setActionError(null);
+      setCompleteError(null);
+
+      let actual_attendance = null;
+      const rawAtt = completeForm.actual_attendance !== undefined && completeForm.actual_attendance !== null
+        ? String(completeForm.actual_attendance).trim()
+        : '';
+      if (rawAtt !== '') {
+        if (!/^\d+$/.test(rawAtt)) {
+          throw new Error('Actual attendance must be a non-negative whole number.');
+        }
+        actual_attendance = parseInt(rawAtt, 10);
+      }
+
+      let feedback_score = null;
+      const rawScore = completeForm.feedback_score !== undefined && completeForm.feedback_score !== null
+        ? String(completeForm.feedback_score).trim()
+        : '';
+      if (rawScore !== '') {
+        const scoreNum = Number(rawScore);
+        if (isNaN(scoreNum) || scoreNum < 0 || scoreNum > 5) {
+          throw new Error('Feedback score must be between 0 and 5.');
+        }
+        feedback_score = scoreNum;
+      }
+
       const payload = {
-        actual_attendance: completeForm.actual_attendance ? parseInt(completeForm.actual_attendance, 10) : null,
-        feedback_score: completeForm.feedback_score ? parseFloat(completeForm.feedback_score) : null,
-        completion_notes: completeForm.completion_notes || null,
+        actual_attendance,
+        feedback_score,
+        completion_notes: completeForm.completion_notes ? completeForm.completion_notes.trim() || null : null,
       };
       await completeWorkshopApi(selectedWorkshop.id, payload);
       setIsCompleteModalOpen(false);
+      setCompleteForm({
+        actual_attendance: '',
+        feedback_score: '',
+        completion_notes: '',
+      });
+      setCompleteError(null);
+      setScheduledWorkshops((prev) => prev.filter((w) => w.id !== selectedWorkshop.id));
       fetchScheduled();
     } catch (err) {
-      setActionError(err.response?.data?.detail || 'Failed to complete workshop.');
+      setCompleteError(normalizeApiError(err, 'Failed to complete workshop.'));
     } finally {
       setActionLoading(false);
     }
@@ -147,10 +193,11 @@ export const AdminScheduledPage = () => {
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedWorkshop) return;
+    if (!selectedWorkshop || actionLoading) return;
     try {
       setActionLoading(true);
       setActionError(null);
+      setEditError(null);
       const isoDatetime = new Date(`${editForm.date}T${editForm.time}:00`).toISOString();
       const payload = {
         scheduled_start: isoDatetime,
@@ -162,9 +209,10 @@ export const AdminScheduledPage = () => {
       };
       await updateWorkshopScheduleApi(selectedWorkshop.id, payload);
       setIsEditModalOpen(false);
+      setEditError(null);
       fetchScheduled();
     } catch (err) {
-      setActionError(err.response?.data?.detail || 'Failed to update schedule.');
+      setEditError(normalizeApiError(err, 'Failed to update schedule.'));
     } finally {
       setActionLoading(false);
     }
@@ -172,15 +220,19 @@ export const AdminScheduledPage = () => {
 
   const handleCancelSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedWorkshop) return;
+    if (!selectedWorkshop || actionLoading) return;
     try {
       setActionLoading(true);
       setActionError(null);
+      setCancelError(null);
       await cancelWorkshopApi(selectedWorkshop.id, { cancellation_reason: cancelReason });
       setIsCancelModalOpen(false);
+      setCancelReason('');
+      setCancelError(null);
+      setScheduledWorkshops((prev) => prev.filter((w) => w.id !== selectedWorkshop.id));
       fetchScheduled();
     } catch (err) {
-      setActionError(err.response?.data?.detail || 'Failed to cancel workshop.');
+      setCancelError(normalizeApiError(err, 'Failed to cancel workshop.'));
     } finally {
       setActionLoading(false);
     }
@@ -224,26 +276,63 @@ export const AdminScheduledPage = () => {
           </button>
         </div>
 
-        {error && (
-          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-center space-x-3 text-rose-800 text-xs">
-            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {/* Table */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden">
-          {loading ? (
-            <div className="p-12 text-center text-xs text-slate-400">Loading scheduled agenda...</div>
-          ) : scheduledWorkshops.length === 0 ? (
-            <div className="p-12 text-center space-y-2">
-              <CalendarCheck className="w-8 h-8 text-slate-400 mx-auto" />
-              <p className="text-xs font-bold text-slate-700">No scheduled workshops</p>
-              <p className="text-[11px] text-slate-400">
-                Go to Workshop Requests to coordinate and schedule new sessions with schools.
-              </p>
+        {error && !scheduledWorkshops ? (
+          <div
+            role="alert"
+            className="bg-white border border-rose-200 rounded-2xl p-12 text-center space-y-4 shadow-2xs"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center mx-auto">
+              <AlertTriangle className="w-6 h-6" />
             </div>
-          ) : (
+            <div className="space-y-1">
+              <h2 className="text-sm font-bold text-slate-900">Failed to load scheduled workshops</h2>
+              <p className="text-xs text-rose-700">{error}</p>
+            </div>
+            <button
+              type="button"
+              onClick={fetchScheduled}
+              className="inline-flex items-center space-x-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition-colors shadow-xs cursor-pointer"
+            >
+              <span>Retry</span>
+            </button>
+          </div>
+        ) : (
+          <>
+            {error && scheduledWorkshops && (
+              <div
+                role="alert"
+                className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-900 text-xs shadow-2xs"
+              >
+                <div className="flex items-center space-x-3">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <div>
+                    <span className="font-bold">Showing cached data (data may be stale).</span>
+                    <span className="ml-1 text-amber-800">{error}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={fetchScheduled}
+                  className="text-xs font-bold text-amber-950 bg-amber-200/80 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors shrink-0 self-start sm:self-auto cursor-pointer"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {/* Table */}
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden">
+              {loading && !scheduledWorkshops ? (
+                <div className="p-12 text-center text-xs text-slate-400">Loading scheduled agenda...</div>
+              ) : scheduledWorkshops?.length === 0 ? (
+                <div className="p-12 text-center space-y-2">
+                  <CalendarCheck className="w-8 h-8 text-slate-400 mx-auto" />
+                  <p className="text-xs font-bold text-slate-700">No scheduled workshops</p>
+                  <p className="text-[11px] text-slate-400">
+                    Go to Workshop Requests to coordinate and schedule new sessions with schools.
+                  </p>
+                </div>
+              ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs text-slate-700">
                 <thead className="bg-slate-50 border-b border-slate-200/60 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
@@ -316,39 +405,50 @@ export const AdminScheduledPage = () => {
             </div>
           )}
         </div>
-      </div>
+      </>
+    )}
+  </div>
 
       {/* Complete Workshop Modal */}
       {isCompleteModalOpen && selectedWorkshop && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
+        <div role="dialog" aria-modal="true" aria-labelledby="scheduled-complete-title" className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
           <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center space-x-2">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                 <div>
-                  <h3 className="font-extrabold text-base text-slate-900">Mark Workshop Completed</h3>
+                  <h3 id="scheduled-complete-title" className="font-extrabold text-base text-slate-900">Mark Workshop Completed</h3>
                   <p className="text-[11px] text-slate-500 truncate max-w-xs">{selectedWorkshop.institution_name}</p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => setIsCompleteModalOpen(false)}
+                aria-label="Close complete modal"
+                onClick={() => {
+                  setIsCompleteModalOpen(false);
+                  setCompleteError(null);
+                }}
                 className="text-slate-400 hover:text-slate-700 p-1"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {actionError && (
-              <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs text-rose-800">
-                {actionError}
+            {completeError && (
+              <div
+                role="alert"
+                className="bg-rose-50 border border-rose-200 rounded-xl p-3 flex items-start space-x-2 text-rose-800 text-xs"
+              >
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <span>{completeError}</span>
               </div>
             )}
 
-            <form onSubmit={handleCompleteSubmit} className="space-y-3 text-xs">
+            <form onSubmit={handleCompleteSubmit} noValidate className="space-y-3 text-xs">
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Actual Student Attendance</label>
+                <label htmlFor="scheduled-complete-attendance" className="block text-slate-700 font-bold mb-1">Actual Student Attendance</label>
                 <input
+                  id="scheduled-complete-attendance"
                   type="number"
                   min="0"
                   placeholder="e.g. 215"
@@ -359,8 +459,9 @@ export const AdminScheduledPage = () => {
               </div>
 
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Feedback Score (0.0 – 5.0, optional)</label>
+                <label htmlFor="scheduled-complete-feedback" className="block text-slate-700 font-bold mb-1">Feedback Score (0.0 – 5.0, optional)</label>
                 <input
+                  id="scheduled-complete-feedback"
                   type="number"
                   step="0.1"
                   min="0"
@@ -373,8 +474,9 @@ export const AdminScheduledPage = () => {
               </div>
 
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Completion Notes / Facilitator Comments</label>
+                <label htmlFor="scheduled-complete-notes" className="block text-slate-700 font-bold mb-1">Completion Notes / Facilitator Comments</label>
                 <textarea
+                  id="scheduled-complete-notes"
                   rows="3"
                   placeholder="Session went smoothly; high interest in lateral diploma entry and AI tools."
                   value={completeForm.completion_notes}
@@ -386,7 +488,10 @@ export const AdminScheduledPage = () => {
               <div className="pt-2 flex justify-end space-x-2">
                 <button
                   type="button"
-                  onClick={() => setIsCompleteModalOpen(false)}
+                  onClick={() => {
+                    setIsCompleteModalOpen(false);
+                    setCompleteError(null);
+                  }}
                   className="px-3 py-2 rounded-xl text-slate-600 hover:text-slate-900 font-bold"
                 >
                   Cancel
@@ -406,30 +511,39 @@ export const AdminScheduledPage = () => {
 
       {/* Edit Schedule Modal */}
       {isEditModalOpen && selectedWorkshop && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
+        <div role="dialog" aria-modal="true" aria-labelledby="edit-schedule-title" className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
           <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-extrabold text-base text-slate-900">Edit Workshop Schedule</h3>
+              <h3 id="edit-schedule-title" className="font-extrabold text-base text-slate-900">Edit Workshop Schedule</h3>
               <button
                 type="button"
-                onClick={() => setIsEditModalOpen(false)}
+                aria-label="Close edit modal"
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setEditError(null);
+                }}
                 className="text-slate-400 hover:text-slate-700 p-1"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {actionError && (
-              <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-xs text-rose-800">
-                {actionError}
+            {editError && (
+              <div
+                role="alert"
+                className="bg-rose-50 border border-rose-200 rounded-xl p-3 flex items-start space-x-2 text-rose-800 text-xs"
+              >
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <span>{editError}</span>
               </div>
             )}
 
-            <form onSubmit={handleEditSubmit} className="space-y-3 text-xs">
+            <form onSubmit={handleEditSubmit} noValidate className="space-y-3 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Date *</label>
+                  <label htmlFor="edit-date" className="block text-slate-700 font-bold mb-1">Date *</label>
                   <input
+                    id="edit-date"
                     type="date"
                     required
                     value={editForm.date}
@@ -438,8 +552,9 @@ export const AdminScheduledPage = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Start Time (Local) *</label>
+                  <label htmlFor="edit-time" className="block text-slate-700 font-bold mb-1">Start Time (Local) *</label>
                   <input
+                    id="edit-time"
                     type="time"
                     required
                     value={editForm.time}
@@ -451,8 +566,9 @@ export const AdminScheduledPage = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Duration (Mins)</label>
+                  <label htmlFor="edit-duration" className="block text-slate-700 font-bold mb-1">Duration (Mins)</label>
                   <input
+                    id="edit-duration"
                     type="number"
                     min="15"
                     max="480"
@@ -462,8 +578,9 @@ export const AdminScheduledPage = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-700 font-bold mb-1">Mode *</label>
+                  <label htmlFor="edit-mode" className="block text-slate-700 font-bold mb-1">Mode *</label>
                   <select
+                    id="edit-mode"
                     value={editForm.mode}
                     onChange={(e) => setEditForm({ ...editForm, mode: e.target.value })}
                     className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#005F60]"
@@ -476,8 +593,9 @@ export const AdminScheduledPage = () => {
               </div>
 
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Venue / Link *</label>
+                <label htmlFor="edit-venue" className="block text-slate-700 font-bold mb-1">Venue / Link *</label>
                 <input
+                  id="edit-venue"
                   type="text"
                   required
                   value={editForm.venue_or_meeting_link}
@@ -487,9 +605,11 @@ export const AdminScheduledPage = () => {
               </div>
 
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Assigned Facilitator</label>
+                <label htmlFor="edit-facilitator" className="block text-slate-700 font-bold mb-1">Assigned Facilitator</label>
                 <input
+                  id="edit-facilitator"
                   type="text"
+                  placeholder="e.g. Dr. Preeti Rao"
                   value={editForm.assigned_facilitator}
                   onChange={(e) => setEditForm({ ...editForm, assigned_facilitator: e.target.value })}
                   className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#005F60]"
@@ -497,8 +617,9 @@ export const AdminScheduledPage = () => {
               </div>
 
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Internal Notes</label>
+                <label htmlFor="edit-notes" className="block text-slate-700 font-bold mb-1">Internal Notes</label>
                 <textarea
+                  id="edit-notes"
                   rows="2"
                   value={editForm.internal_notes}
                   onChange={(e) => setEditForm({ ...editForm, internal_notes: e.target.value })}
@@ -509,7 +630,10 @@ export const AdminScheduledPage = () => {
               <div className="pt-2 flex justify-end space-x-2">
                 <button
                   type="button"
-                  onClick={() => setIsEditModalOpen(false)}
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setEditError(null);
+                  }}
                   className="px-3 py-2 rounded-xl text-slate-600 hover:text-slate-900 font-bold"
                 >
                   Cancel
@@ -532,15 +656,32 @@ export const AdminScheduledPage = () => {
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs">
           <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-extrabold text-base text-slate-900">Cancel Scheduled Workshop</h3>
+              <div className="flex items-center space-x-2">
+                <XCircle className="w-5 h-5 text-rose-600" />
+                <h3 className="font-extrabold text-base text-slate-900">Cancel Scheduled Workshop</h3>
+              </div>
               <button
                 type="button"
-                onClick={() => setIsCancelModalOpen(false)}
+                aria-label="Close cancel modal"
+                onClick={() => {
+                  setIsCancelModalOpen(false);
+                  setCancelError(null);
+                }}
                 className="text-slate-400 hover:text-slate-700 p-1"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {cancelError && (
+              <div
+                role="alert"
+                className="bg-rose-50 border border-rose-200 rounded-xl p-3 flex items-start space-x-2 text-rose-800 text-xs"
+              >
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <span>{cancelError}</span>
+              </div>
+            )}
 
             <form onSubmit={handleCancelSubmit} className="space-y-3 text-xs">
               <p className="text-slate-600">
@@ -548,8 +689,9 @@ export const AdminScheduledPage = () => {
                 <strong className="text-slate-900">{selectedWorkshop.institution_name}</strong>?
               </p>
               <div>
-                <label className="block text-slate-700 font-bold mb-1">Reason for Cancellation *</label>
+                <label htmlFor="scheduled-cancel-reason" className="block text-slate-700 font-bold mb-1">Reason for Cancellation *</label>
                 <textarea
+                  id="scheduled-cancel-reason"
                   rows="3"
                   required
                   placeholder="e.g. Schedule clash with board exams; institution requested rescheduling."
@@ -562,7 +704,10 @@ export const AdminScheduledPage = () => {
               <div className="pt-2 flex justify-end space-x-2">
                 <button
                   type="button"
-                  onClick={() => setIsCancelModalOpen(false)}
+                  onClick={() => {
+                    setIsCancelModalOpen(false);
+                    setCancelError(null);
+                  }}
                   className="px-3 py-2 rounded-xl text-slate-600 hover:text-slate-900 font-bold"
                 >
                   Back

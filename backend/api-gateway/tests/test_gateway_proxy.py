@@ -229,3 +229,37 @@ def test_proxy_workshop_admin_overview_with_auth(mock_request):
     assert call_kwargs["url"].endswith("/workshops/admin/overview")
     assert call_kwargs["headers"].get("authorization") == "Bearer test-admin-jwt"
 
+
+@patch("httpx.AsyncClient.request")
+def test_proxy_preserves_downstream_401_unauthorized(mock_request):
+    mock_resp = httpx.Response(
+        401,
+        json={"detail": "Invalid token type"},
+        headers={"content-type": "application/json"}
+    )
+    mock_request.return_value = mock_resp
+
+    headers = {"Authorization": "Bearer invalid-or-refresh-token"}
+    res = client.get("/api/v1/auth/me", headers=headers)
+    assert res.status_code == 401
+    assert res.json()["detail"] == "Invalid token type"
+    call_kwargs = mock_request.call_args.kwargs
+    assert call_kwargs["headers"].get("authorization") == "Bearer invalid-or-refresh-token"
+
+
+@patch("httpx.AsyncClient.request")
+def test_proxy_preserves_downstream_403_forbidden(mock_request):
+    mock_resp = httpx.Response(
+        403,
+        json={"detail": "Admin privileges required"},
+        headers={"content-type": "application/json"}
+    )
+    mock_request.return_value = mock_resp
+
+    headers = {"Authorization": "Bearer student-token"}
+    res = client.get("/api/v1/workshops/admin/overview", headers=headers)
+    assert res.status_code == 403
+    assert res.json()["detail"] == "Admin privileges required"
+    call_kwargs = mock_request.call_args.kwargs
+    assert call_kwargs["headers"].get("authorization") == "Bearer student-token"
+

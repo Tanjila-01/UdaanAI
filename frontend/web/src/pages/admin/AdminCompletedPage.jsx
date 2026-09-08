@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getAdminWorkshopRequestsApi } from '../../api/client';
+import { normalizeApiError } from '../../utils/errorHandler';
 import AdminLayout from '../../components/layout/AdminLayout';
 import {
   CheckCircle2,
@@ -23,7 +24,7 @@ const KARNATAKA_DISTRICTS = [
 ];
 
 export const AdminCompletedPage = () => {
-  const [completedWorkshops, setCompletedWorkshops] = useState([]);
+  const [completedWorkshops, setCompletedWorkshops] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -42,7 +43,7 @@ export const AdminCompletedPage = () => {
       });
       setCompletedWorkshops(res || []);
     } catch (err) {
-      setError(err.response?.data?.detail || err.message || 'Failed to load completed workshops.');
+      setError(normalizeApiError(err, 'Failed to load completed workshops.'));
     } finally {
       setLoading(false);
     }
@@ -139,26 +140,63 @@ export const AdminCompletedPage = () => {
           </div>
         </div>
 
-        {error && (
-          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-center space-x-3 text-rose-800 text-xs">
-            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {/* Historical Table */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden">
-          {loading ? (
-            <div className="p-12 text-center text-xs text-slate-400">Loading historical records...</div>
-          ) : completedWorkshops.length === 0 ? (
-            <div className="p-12 text-center space-y-2">
-              <CheckCircle2 className="w-8 h-8 text-slate-400 mx-auto" />
-              <p className="text-xs font-bold text-slate-700">No completed workshops yet</p>
-              <p className="text-[11px] text-slate-400">
-                Workshops marked as completed from the Scheduled tab will be archived here.
-              </p>
+        {error && !completedWorkshops ? (
+          <div
+            role="alert"
+            className="bg-white border border-rose-200 rounded-2xl p-12 text-center space-y-4 shadow-2xs"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center mx-auto">
+              <AlertTriangle className="w-6 h-6" />
             </div>
-          ) : (
+            <div className="space-y-1">
+              <h2 className="text-sm font-bold text-slate-900">Failed to load completed workshops</h2>
+              <p className="text-xs text-rose-700">{error}</p>
+            </div>
+            <button
+              type="button"
+              onClick={fetchCompleted}
+              className="inline-flex items-center space-x-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition-colors shadow-xs cursor-pointer"
+            >
+              <span>Retry</span>
+            </button>
+          </div>
+        ) : (
+          <>
+            {error && completedWorkshops && (
+              <div
+                role="alert"
+                className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-900 text-xs shadow-2xs"
+              >
+                <div className="flex items-center space-x-3">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <div>
+                    <span className="font-bold">Showing cached data (data may be stale).</span>
+                    <span className="ml-1 text-amber-800">{error}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={fetchCompleted}
+                  className="text-xs font-bold text-amber-950 bg-amber-200/80 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors shrink-0 self-start sm:self-auto cursor-pointer"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {/* Historical Table */}
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-2xs overflow-hidden">
+              {loading && !completedWorkshops ? (
+                <div className="p-12 text-center text-xs text-slate-400">Loading historical records...</div>
+              ) : completedWorkshops?.length === 0 ? (
+                <div className="p-12 text-center space-y-2">
+                  <CheckCircle2 className="w-8 h-8 text-slate-400 mx-auto" />
+                  <p className="text-xs font-bold text-slate-700">No completed workshops yet</p>
+                  <p className="text-[11px] text-slate-400">
+                    Workshops marked as completed from the Scheduled tab will be archived here.
+                  </p>
+                </div>
+              ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs text-slate-700">
                 <thead className="bg-slate-50 border-b border-slate-200/60 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
@@ -194,10 +232,12 @@ export const AdminCompletedPage = () => {
                         </span>
                       </td>
                       <td className="py-3.5 px-4 font-extrabold text-slate-950">
-                        {w.schedule?.actual_attendance ? `${w.schedule.actual_attendance} students` : '—'}
+                        {w.schedule?.actual_attendance !== null && w.schedule?.actual_attendance !== undefined
+                          ? `${w.schedule.actual_attendance} students`
+                          : '—'}
                       </td>
                       <td className="py-3.5 px-4 font-semibold text-slate-800">
-                        {w.schedule?.feedback_score ? (
+                        {w.schedule?.feedback_score !== null && w.schedule?.feedback_score !== undefined ? (
                           <span className="inline-flex items-center space-x-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded font-bold">
                             <Star className="w-3 h-3 fill-emerald-600 text-emerald-600" />
                             <span>{w.schedule.feedback_score}</span>
@@ -229,7 +269,9 @@ export const AdminCompletedPage = () => {
             </div>
           )}
         </div>
-      </div>
+      </>
+    )}
+  </div>
 
       {/* Completed Workshop Audit Drawer */}
       {selectedWorkshop && (
@@ -270,7 +312,11 @@ export const AdminCompletedPage = () => {
                     <div className="text-[10px] font-bold uppercase text-emerald-800">Feedback Score</div>
                     <div className="text-xl font-black text-slate-950 mt-0.5 flex items-center space-x-1">
                       <Star className="w-4 h-4 fill-amber-500 text-amber-500 inline" />
-                      <span>{selectedWorkshop.schedule?.feedback_score ? `${selectedWorkshop.schedule.feedback_score} / 5.0` : '—'}</span>
+                      <span>
+                        {selectedWorkshop.schedule?.feedback_score !== null && selectedWorkshop.schedule?.feedback_score !== undefined
+                          ? `${selectedWorkshop.schedule.feedback_score} / 5.0`
+                          : '—'}
+                      </span>
                     </div>
                   </div>
                 </div>

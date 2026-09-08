@@ -62,13 +62,7 @@ class AuthService:
 
     @staticmethod
     def refresh_access_token(db: Session, refresh_token: str) -> dict:
-        payload = decode_token(refresh_token)
-        if payload.get("type") != "refresh":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token type"
-            )
-
+        payload = decode_token(refresh_token, expected_type="refresh")
         user_id_str = payload.get("sub")
         try:
             user_uuid = uuid.UUID(user_id_str)

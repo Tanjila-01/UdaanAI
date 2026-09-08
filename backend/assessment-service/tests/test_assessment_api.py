@@ -4,7 +4,7 @@ import uuid
 import jwt
 import pytest
 import httpx
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from unittest.mock import patch
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -375,3 +375,154 @@ def test_get_my_assessment_all_education_levels():
         data = resp.json()
         assert data["id"] == expected_assessment_id, f"Expected {expected_assessment_id} for {level}/{stream}, got {data['id']}"
         assert len(data["questions"]) == 15
+
+
+def test_assessment_token_validation_matrix():
+    valid_uuid = str(uuid.uuid4())
+
+    # 1. Missing Authorization header on protected endpoint -> 401
+    res_no_auth = client.get("/assessments/my-latest-result")
+    assert res_no_auth.status_code == 401
+    assert "Missing or invalid Authorization header" in res_no_auth.json()["detail"]
+
+    # 2. Refresh token rejected -> 401 Invalid token type
+    refresh_token = jwt.encode(
+        {
+            "sub": valid_uuid,
+            "email": "student@test.com",
+            "role": "student",
+            "type": "refresh",
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=30)
+        },
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM
+    )
+    res_ref = client.get("/assessments/my-latest-result", headers={"Authorization": f"Bearer {refresh_token}"})
+    assert res_ref.status_code == 401
+    assert "Invalid token type" in res_ref.json()["detail"]
+
+    # 3. Expired token -> 401 Token has expired
+    exp_token = jwt.encode(
+        {
+            "sub": valid_uuid,
+            "email": "student@test.com",
+            "role": "student",
+            "type": "access",
+            "exp": datetime.now(timezone.utc) - timedelta(minutes=5)
+        },
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM
+    )
+    res_exp = client.get("/assessments/my-latest-result", headers={"Authorization": f"Bearer {exp_token}"})
+    assert res_exp.status_code == 401
+    assert res_exp.json()["detail"] == "Token has expired"
+
+    # 4. Invalid signature -> 401 Invalid token
+    bad_sig_token = jwt.encode(
+        {
+            "sub": valid_uuid,
+            "email": "student@test.com",
+            "role": "student",
+            "type": "access",
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=30)
+        },
+        "wrong_secret_key",
+        algorithm=settings.JWT_ALGORITHM
+    )
+    res_bad_sig = client.get("/assessments/my-latest-result", headers={"Authorization": f"Bearer {bad_sig_token}"})
+    assert res_bad_sig.status_code == 401
+    assert res_bad_sig.json()["detail"] == "Invalid token"
+
+    # 5. Missing exp claim -> 401 Invalid token
+    no_exp_token = jwt.encode(
+        {
+            "sub": valid_uuid,
+            "email": "student@test.com",
+            "role": "student",
+            "type": "access"
+        },
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM
+    )
+    res_no_exp = client.get("/assessments/my-latest-result", headers={"Authorization": f"Bearer {no_exp_token}"})
+    assert res_no_exp.status_code == 401
+    assert res_no_exp.json()["detail"] == "Invalid token"
+
+    # 6. Missing sub claim -> 401 Invalid token
+    no_sub_token = jwt.encode(
+        {
+            "email": "student@test.com",
+            "role": "student",
+            "type": "access",
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=30)
+        },
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM
+    )
+    res_no_sub = client.get("/assessments/my-latest-result", headers={"Authorization": f"Bearer {no_sub_token}"})
+    assert res_no_sub.status_code == 401
+    assert res_no_sub.json()["detail"] == "Invalid token"
+
+    # 7. Missing type claim -> 401 Invalid token
+    no_type_token = jwt.encode(
+        {
+            "sub": valid_uuid,
+            "email": "student@test.com",
+            "role": "student",
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=30)
+        },
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM
+    )
+    res_no_type = client.get("/assessments/my-latest-result", headers={"Authorization": f"Bearer {no_type_token}"})
+    assert res_no_type.status_code == 401
+    assert res_no_type.json()["detail"] == "Invalid token"
+
+    # 8. Malformed subject (non-UUID string) -> 401 Invalid user ID in token (MUST NOT be 500)
+    malformed_sub_token = jwt.encode(
+        {
+            "sub": "not-a-valid-uuid",
+            "email": "student@test.com",
+            "role": "student",
+            "type": "access",
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=30)
+        },
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM
+    )
+    res_malformed_sub = client.get("/assessments/my-latest-result", headers={"Authorization": f"Bearer {malformed_sub_token}"})
+    assert res_malformed_sub.status_code == 401
+    assert res_malformed_sub.json()["detail"] == "Invalid user ID in token"
+
+    # 9. Empty subject -> 401 Invalid user ID in token (MUST NOT be 500)
+    empty_sub_token = jwt.encode(
+        {
+            "sub": "",
+            "email": "student@test.com",
+            "role": "student",
+            "type": "access",
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=30)
+        },
+        settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM
+    )
+    res_empty_sub = client.get("/assessments/my-latest-result", headers={"Authorization": f"Bearer {empty_sub_token}"})
+    assert res_empty_sub.status_code == 401
+    assert res_empty_sub.json()["detail"] == "Invalid user ID in token"
+
+    # 10. Malformed exp values (list, dict, non-numeric) -> 401 Invalid token (never 500)
+    for bad_exp in [[], {}, "not-a-number"]:
+        bad_exp_token = jwt.encode(
+            {
+                "sub": valid_uuid,
+                "email": "student@test.com",
+                "role": "student",
+                "type": "access",
+                "exp": bad_exp
+            },
+            settings.JWT_SECRET_KEY,
+            algorithm=settings.JWT_ALGORITHM
+        )
+        res_bad_exp = client.get("/assessments/my-latest-result", headers={"Authorization": f"Bearer {bad_exp_token}"})
+        assert res_bad_exp.status_code == 401
+        assert res_bad_exp.json()["detail"] == "Invalid token"
