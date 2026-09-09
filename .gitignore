@@ -62,3 +62,8 @@ Thumbs.db
 
 # Docker / Postgres data
 postgres_data/
+
+# Disposable local inspection output
+frontend/web/scratch/
+frontend/web/vite.config.*.timestamp-*.mjs
+backend/assessment-service/audit_output*.txt
