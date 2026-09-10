@@ -2,7 +2,7 @@ import hashlib
 import json
 import re
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import date, datetime, timezone, timedelta
 from typing import List, Optional
 from zoneinfo import ZoneInfo
 from sqlalchemy.orm import Session, joinedload
@@ -42,22 +42,37 @@ def compute_payload_hash(data: PublicWorkshopRequestCreate) -> str:
     return hashlib.sha256(canonical_str.encode("utf-8")).hexdigest()
 
 
-def compute_active_duplicate_hash(data: PublicWorkshopRequestCreate) -> str:
-    """
-    Computes a SHA-256 hash representing key fields of an active workshop request.
-    Includes normalized institution name, district, contact email, preferred mode,
-    explicit handling of omitted preferred_date ("NONE"), and normalized sorted preferred_topics.
-    """
+def compute_active_duplicate_hash_from_fields(
+    institution_name: str,
+    district: str,
+    contact_email: str,
+    preferred_mode: str,
+    preferred_date: Optional[date],
+    preferred_topics: list[str],
+) -> str:
+    """Computes a SHA-256 hash representing key fields of an active workshop request from raw fields."""
     key_parts = [
-        data.institution_name.strip().lower(),
-        data.district.strip(),
-        data.contact_email.strip().lower(),
-        data.preferred_mode.strip().lower(),
-        data.preferred_date.isoformat() if data.preferred_date else "NONE",
-        ",".join(sorted(t.strip().lower() for t in data.preferred_topics)),
+        (institution_name or "").strip().lower(),
+        (district or "").strip(),
+        (contact_email or "").strip().lower(),
+        (preferred_mode or "").strip().lower(),
+        preferred_date.isoformat() if preferred_date else "NONE",
+        ",".join(sorted(t.strip().lower() for t in (preferred_topics or []))),
     ]
     key_str = "|".join(key_parts)
     return hashlib.sha256(key_str.encode("utf-8")).hexdigest()
+
+
+def compute_active_duplicate_hash(data: PublicWorkshopRequestCreate) -> str:
+    """Computes a SHA-256 hash representing key fields of an active workshop request from schema data."""
+    return compute_active_duplicate_hash_from_fields(
+        institution_name=data.institution_name,
+        district=data.district,
+        contact_email=data.contact_email,
+        preferred_mode=data.preferred_mode,
+        preferred_date=data.preferred_date,
+        preferred_topics=data.preferred_topics,
+    )
 
 
 class WorkshopService:
@@ -95,6 +110,7 @@ class WorkshopService:
                     )
 
         # 3. Active duplicate detection check before insert
+        # 3a. Match by active_duplicate_hash (covers new and migrated records)
         active_dup = (
             db.query(WorkshopRequest)
             .filter(
@@ -103,6 +119,31 @@ class WorkshopService:
             )
             .first()
         )
+        if not active_dup:
+            # 3b. Match against legacy active records with NULL hashes using identical normalized criteria
+            legacy_candidates = (
+                db.query(WorkshopRequest)
+                .filter(
+                    WorkshopRequest.active_duplicate_hash.is_(None),
+                    WorkshopRequest.status.in_(["NEW", "CONTACTED", "SCHEDULED"]),
+                    func.lower(func.trim(WorkshopRequest.contact_email)) == data.contact_email.strip().lower(),
+                    WorkshopRequest.district == data.district,
+                )
+                .all()
+            )
+            for cand in legacy_candidates:
+                cand_hash = compute_active_duplicate_hash_from_fields(
+                    institution_name=cand.institution_name,
+                    contact_email=cand.contact_email,
+                    district=cand.district,
+                    preferred_mode=cand.preferred_mode,
+                    preferred_date=cand.preferred_date,
+                    preferred_topics=cand.preferred_topics or [],
+                )
+                if cand_hash == dup_hash:
+                    active_dup = cand
+                    break
+
         if active_dup:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -312,8 +353,15 @@ class WorkshopService:
 
         now = datetime.now(timezone.utc)
         schedule = req.schedule
+        fields_set = data.model_fields_set
 
-        if data.scheduled_start is not None:
+        # Reject null or empty values for required schedule fields
+        if "scheduled_start" in fields_set:
+            if data.scheduled_start is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Scheduled start time is required and cannot be null.",
+                )
             if data.scheduled_start.tzinfo is None:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -326,16 +374,34 @@ class WorkshopService:
                     detail="Workshop scheduled start time cannot be in the past.",
                 )
             schedule.scheduled_start = data.scheduled_start
-        if data.duration_minutes is not None:
-            schedule.duration_minutes = data.duration_minutes
-        if data.mode is not None:
-            schedule.mode = data.mode
-        if data.venue_or_meeting_link is not None:
+
+        if "mode" in fields_set:
+            if data.mode is None or not data.mode.strip():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Mode is required and cannot be null or empty.",
+                )
+            schedule.mode = data.mode.strip().lower()
+
+        if "venue_or_meeting_link" in fields_set:
+            if data.venue_or_meeting_link is None or not data.venue_or_meeting_link.strip():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Venue or meeting link is required and cannot be null or empty.",
+                )
             schedule.venue_or_meeting_link = data.venue_or_meeting_link.strip()
-        if data.assigned_facilitator is not None:
-            schedule.assigned_facilitator = data.assigned_facilitator.strip() if data.assigned_facilitator else None
-        if data.internal_notes is not None:
-            schedule.internal_notes = data.internal_notes.strip() if data.internal_notes else None
+
+        if "duration_minutes" in fields_set:
+            schedule.duration_minutes = data.duration_minutes
+
+        # Optional fields: explicit null or blank clears the value; omitted preserves existing
+        if "assigned_facilitator" in fields_set:
+            raw_fac = data.assigned_facilitator
+            schedule.assigned_facilitator = raw_fac.strip() if (raw_fac and raw_fac.strip()) else None
+
+        if "internal_notes" in fields_set:
+            raw_notes = data.internal_notes
+            schedule.internal_notes = raw_notes.strip() if (raw_notes and raw_notes.strip()) else None
 
         schedule.updated_at = now
         req.updated_at = now

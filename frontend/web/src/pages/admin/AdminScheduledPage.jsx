@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   getAdminWorkshopRequestsApi,
@@ -55,6 +55,7 @@ export const AdminScheduledPage = () => {
     internal_notes: '',
   });
 
+  const initialEditScheduleRef = useRef(null);
   const [cancelReason, setCancelReason] = useState('');
 
   const fetchScheduled = async () => {
@@ -111,7 +112,7 @@ export const AdminScheduledPage = () => {
       const hh = String(dt.getHours()).padStart(2, '0');
       const min = String(dt.getMinutes()).padStart(2, '0');
 
-      setEditForm({
+      const initialVals = {
         date: `${yyyy}-${mm}-${dd}`,
         time: `${hh}:${min}`,
         duration_minutes: workshop.schedule.duration_minutes || 90,
@@ -119,7 +120,9 @@ export const AdminScheduledPage = () => {
         venue_or_meeting_link: workshop.schedule.venue_or_meeting_link || '',
         assigned_facilitator: workshop.schedule.assigned_facilitator || '',
         internal_notes: workshop.schedule.internal_notes || '',
-      });
+      };
+      initialEditScheduleRef.current = initialVals;
+      setEditForm(initialVals);
     }
     setActionError(null);
     setCancelError(null);
@@ -198,20 +201,43 @@ export const AdminScheduledPage = () => {
       setActionLoading(true);
       setActionError(null);
       setEditError(null);
-      const isoDatetime = new Date(`${editForm.date}T${editForm.time}:00`).toISOString();
-      if (new Date(isoDatetime).getTime() < Date.now()) {
-        setEditError('Workshop scheduled start time cannot be in the past.');
-        setActionLoading(false);
-        return;
+
+      const initial = initialEditScheduleRef.current || {};
+      const payload = {};
+
+      const dateChanged = editForm.date !== initial.date || editForm.time !== initial.time;
+      if (dateChanged) {
+        const isoDatetime = new Date(`${editForm.date}T${editForm.time}:00`).toISOString();
+        if (new Date(isoDatetime).getTime() < Date.now()) {
+          setEditError('Workshop scheduled start time cannot be in the past.');
+          setActionLoading(false);
+          return;
+        }
+        payload.scheduled_start = isoDatetime;
       }
-      const payload = {
-        scheduled_start: isoDatetime,
-        duration_minutes: parseInt(editForm.duration_minutes, 10),
-        mode: editForm.mode,
-        venue_or_meeting_link: editForm.venue_or_meeting_link,
-        assigned_facilitator: editForm.assigned_facilitator || null,
-        internal_notes: editForm.internal_notes || null,
-      };
+
+      const initialDur = parseInt(initial.duration_minutes, 10) || 90;
+      const newDur = parseInt(editForm.duration_minutes, 10) || 90;
+      if (newDur !== initialDur) {
+        payload.duration_minutes = newDur;
+      }
+
+      if (editForm.mode !== initial.mode) {
+        payload.mode = editForm.mode;
+      }
+
+      if (editForm.venue_or_meeting_link !== initial.venue_or_meeting_link) {
+        payload.venue_or_meeting_link = editForm.venue_or_meeting_link;
+      }
+
+      if (editForm.assigned_facilitator !== initial.assigned_facilitator) {
+        payload.assigned_facilitator = editForm.assigned_facilitator.trim() ? editForm.assigned_facilitator.trim() : null;
+      }
+
+      if (editForm.internal_notes !== initial.internal_notes) {
+        payload.internal_notes = editForm.internal_notes.trim() ? editForm.internal_notes.trim() : null;
+      }
+
       await updateWorkshopScheduleApi(selectedWorkshop.id, payload);
       setIsEditModalOpen(false);
       setEditError(null);

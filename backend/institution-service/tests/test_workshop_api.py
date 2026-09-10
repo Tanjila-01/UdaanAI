@@ -787,3 +787,203 @@ def test_active_duplicate_integrity_race_handling():
     assert exc_info.value.status_code == 409
     assert exc_info.value.detail == "This workshop request has already been submitted."
     db.close()
+
+
+def test_update_schedule_clear_optional_fields_vs_omission():
+    token = make_jwt()
+    headers = {"Authorization": f"Bearer {token}"}
+
+    payload = valid_payload()
+    payload["institution_name"] = "Clear Optional College"
+    payload["contact_email"] = "clear@optional.edu"
+    create_res = client.post("/workshops/requests", json=payload)
+    req_id = create_res.json()["id"]
+
+    # Initial schedule with facilitator and internal_notes
+    future_start = (datetime.now(timezone.utc) + timedelta(days=5)).isoformat()
+    sched_res = client.post(
+        f"/workshops/admin/requests/{req_id}/schedule",
+        json={
+            "scheduled_start": future_start,
+            "duration_minutes": 90,
+            "mode": "offline",
+            "venue_or_meeting_link": "Room 101",
+            "assigned_facilitator": "Prof. Smith",
+            "internal_notes": "Initial internal note",
+        },
+        headers=headers,
+    )
+    assert sched_res.status_code == 200
+    assert sched_res.json()["schedule"]["assigned_facilitator"] == "Prof. Smith"
+    assert sched_res.json()["schedule"]["internal_notes"] == "Initial internal note"
+
+    # 1. Update with omitted optional fields (e.g. only venue changed)
+    patch_res1 = client.patch(
+        f"/workshops/admin/requests/{req_id}/schedule",
+        json={"venue_or_meeting_link": "Room 102"},
+        headers=headers,
+    )
+    assert patch_res1.status_code == 200
+    assert patch_res1.json()["schedule"]["venue_or_meeting_link"] == "Room 102"
+    # Preserved omitted fields
+    assert patch_res1.json()["schedule"]["assigned_facilitator"] == "Prof. Smith"
+    assert patch_res1.json()["schedule"]["internal_notes"] == "Initial internal note"
+
+    # 2. Update with explicit null / blank to clear optional fields
+    patch_res2 = client.patch(
+        f"/workshops/admin/requests/{req_id}/schedule",
+        json={
+            "assigned_facilitator": None,
+            "internal_notes": "   ",
+        },
+        headers=headers,
+    )
+    assert patch_res2.status_code == 200
+    assert patch_res2.json()["schedule"]["assigned_facilitator"] is None
+    assert patch_res2.json()["schedule"]["internal_notes"] is None
+
+    # 3. Reject explicit null on required fields
+    patch_bad_venue = client.patch(
+        f"/workshops/admin/requests/{req_id}/schedule",
+        json={"venue_or_meeting_link": None},
+        headers=headers,
+    )
+    assert patch_bad_venue.status_code == 400
+    assert "Venue or meeting link is required" in patch_bad_venue.json()["detail"]
+
+    patch_bad_mode = client.patch(
+        f"/workshops/admin/requests/{req_id}/schedule",
+        json={"mode": None},
+        headers=headers,
+    )
+    assert patch_bad_mode.status_code == 400
+    assert "Mode is required" in patch_bad_mode.json()["detail"]
+
+    patch_bad_start = client.patch(
+        f"/workshops/admin/requests/{req_id}/schedule",
+        json={"scheduled_start": None},
+        headers=headers,
+    )
+    assert patch_bad_start.status_code == 400
+    assert "Scheduled start time is required" in patch_bad_start.json()["detail"]
+
+
+def test_update_schedule_overdue_details_vs_past_rescheduling():
+    token = make_jwt()
+    headers = {"Authorization": f"Bearer {token}"}
+
+    db = TestingSessionLocal()
+    # Create request with overdue schedule in the past
+    req_id = uuid.uuid4()
+    past_start = datetime.now(timezone.utc) - timedelta(hours=4)
+    req = WorkshopRequest(
+        id=req_id,
+        institution_name="Overdue Workshop College",
+        institution_type="PU College",
+        contact_name="Principal Past",
+        contact_phone="9876543210",
+        contact_email="past@overdue.edu",
+        district="Bengaluru Urban",
+        student_count=100,
+        preferred_mode="offline",
+        preferred_topics=["career_guidance"],
+        status="SCHEDULED",
+    )
+    sched = WorkshopSchedule(
+        request_id=req_id,
+        scheduled_start=past_start,
+        duration_minutes=90,
+        mode="offline",
+        venue_or_meeting_link="Old Hall",
+        internal_notes="Started in past",
+    )
+    db.add(req)
+    db.add(sched)
+    db.commit()
+    db.close()
+
+    # 1. Details-only edit on overdue workshop (omitting scheduled_start) must succeed
+    patch_res = client.patch(
+        f"/workshops/admin/requests/{req_id}/schedule",
+        json={
+            "venue_or_meeting_link": "Auditorium Main",
+            "internal_notes": "Updated post-commencement",
+        },
+        headers=headers,
+    )
+    assert patch_res.status_code == 200
+    data = patch_res.json()["schedule"]
+    assert data["venue_or_meeting_link"] == "Auditorium Main"
+    assert data["internal_notes"] == "Updated post-commencement"
+    # Historical start time is preserved unchanged
+    assert data["scheduled_start"].startswith(past_start.strftime("%Y-%m-%d"))
+
+    # 2. Attempting to reschedule to another past time must be rejected
+    another_past = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+    patch_fail = client.patch(
+        f"/workshops/admin/requests/{req_id}/schedule",
+        json={"scheduled_start": another_past},
+        headers=headers,
+    )
+    assert patch_fail.status_code in {400, 422}
+    assert "cannot be in the past" in patch_fail.text
+
+
+def test_duplicate_check_matches_legacy_active_records():
+    db = TestingSessionLocal()
+    # Insert legacy active record with active_duplicate_hash = None
+    legacy_id = uuid.uuid4()
+    legacy_req = WorkshopRequest(
+        id=legacy_id,
+        institution_name="Legacy Active School",
+        institution_type="high_school",
+        contact_name="Headmaster",
+        contact_phone="9876543210",
+        contact_email="headmaster@legacy.edu",
+        district="Mysuru",
+        student_count=80,
+        preferred_mode="offline",
+        preferred_topics=["career_guidance", "polytechnic_vs_puc"],
+        preferred_date=None,
+        active_duplicate_hash=None,  # Pre-migration 002 legacy record
+        status="NEW",
+    )
+    db.add(legacy_req)
+    db.commit()
+    db.close()
+
+    # New request with identical normalized details matches legacy record
+    dup_payload = {
+        "institution_name": "  Legacy Active School  ",
+        "institution_type": "high_school",
+        "contact_name": "Headmaster Secondary",
+        "contact_phone": "9876543210",
+        "contact_email": "headmaster@legacy.edu",
+        "district": "Mysuru",
+        "student_count": 90,
+        "preferred_mode": "offline",
+        "preferred_topics": ["polytechnic_vs_puc", "career_guidance"],  # Permuted topic order
+    }
+    dup_res = client.post("/workshops/requests", json=dup_payload)
+    assert dup_res.status_code == 409
+    assert dup_res.json()["detail"] == "This workshop request has already been submitted."
+
+    # Different topic does not collide
+    diff_payload = dict(dup_payload)
+    diff_payload["preferred_topics"] = ["future_skills"]
+    diff_res = client.post("/workshops/requests", json=diff_payload)
+    assert diff_res.status_code == 201
+
+    # Mark legacy request COMPLETED
+    token = make_jwt()
+    headers = {"Authorization": f"Bearer {token}"}
+    db2 = TestingSessionLocal()
+    rec = db2.query(WorkshopRequest).filter_by(id=legacy_id).first()
+    rec.status = "COMPLETED"
+    db2.commit()
+    db2.close()
+
+    # Once legacy record is COMPLETED, identical request is permitted
+    dup_res2 = client.post("/workshops/requests", json=dup_payload)
+    assert dup_res2.status_code == 201
+

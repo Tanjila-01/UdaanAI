@@ -641,5 +641,204 @@ describe('AdminScheduledPage Cancellation Recovery', () => {
       expect(screen.queryByRole('alert')).toBeNull();
       expect(screen.getByLabelText(/Venue \/ Link \*/i).value).toBe('https://meet.google.com/xyz-test');
     });
+
+    it('clears optional facilitator and internal_notes when blanked, surviving reload', async () => {
+      apiClient.getAdminWorkshopRequestsApi.mockResolvedValue([mockScheduled1]);
+
+      render(
+        <MemoryRouter initialEntries={['/admin/scheduled']}>
+          <AdminScheduledPage />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Govt Model Higher Primary School')).toBeTruthy();
+        expect(screen.getByText('Dr. Ramesh Patil')).toBeTruthy();
+      });
+
+      // Open edit modal
+      fireEvent.click(screen.getByTitle('Edit Schedule'));
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Edit Workshop Schedule' })).toBeTruthy();
+      });
+
+      expect(screen.getByLabelText(/Internal Notes/i).value).toBe('Kannada slides');
+
+      // Clear facilitator and notes
+      const facInput = screen.getByLabelText(/Assigned Facilitator/i);
+      fireEvent.change(facInput, { target: { value: '' } });
+
+      const notesInput = screen.getByLabelText(/Internal Notes/i);
+      fireEvent.change(notesInput, { target: { value: '' } });
+
+      // Mock update and refreshed get response with cleared fields
+      apiClient.updateWorkshopScheduleApi.mockResolvedValueOnce({
+        ...mockScheduled1,
+        schedule: {
+          ...mockScheduled1.schedule,
+          assigned_facilitator: null,
+          internal_notes: null,
+        },
+      });
+
+      apiClient.getAdminWorkshopRequestsApi.mockResolvedValue([
+        {
+          ...mockScheduled1,
+          schedule: {
+            ...mockScheduled1.schedule,
+            assigned_facilitator: null,
+            internal_notes: null,
+          },
+        },
+      ]);
+
+      fireEvent.click(screen.getByRole('button', { name: /Save Changes/i }));
+
+      await waitFor(() => {
+        expect(screen.queryByRole('heading', { name: 'Edit Workshop Schedule' })).toBeNull();
+      });
+
+      // Verify payload sent explicit nulls and omitted unchanged scheduled_start
+      expect(apiClient.updateWorkshopScheduleApi).toHaveBeenCalledWith(
+        'sch-req-1',
+        {
+          assigned_facilitator: null,
+          internal_notes: null,
+        }
+      );
+
+      // Verify reloading survives with cleared fields
+      await waitFor(() => {
+        expect(screen.queryByText('Dr. Ramesh Patil')).toBeNull();
+        expect(screen.getByText('Unassigned')).toBeTruthy();
+      });
+
+      // Re-open edit dialog to verify internal_notes is cleared
+      fireEvent.click(screen.getByTitle('Edit Schedule'));
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Edit Workshop Schedule' })).toBeTruthy();
+      });
+      expect(screen.getByLabelText(/Internal Notes/i).value).toBe('');
+      expect(screen.getByLabelText(/Assigned Facilitator/i).value).toBe('');
+    });
+
+    it('allows details-only edits on overdue workshops without past-time rejection', async () => {
+      const overdueWorkshop = {
+        id: 'sch-overdue-1',
+        institution_name: 'Historical Overdue College',
+        district: 'Mysuru',
+        preferred_mode: 'offline',
+        status: 'SCHEDULED',
+        schedule: {
+          id: 'sch-overdue',
+          scheduled_start: '2026-01-10T10:30:00.000Z', // In the past
+          duration_minutes: 90,
+          mode: 'offline',
+          venue_or_meeting_link: 'Old Hall A',
+          assigned_facilitator: 'Prof. Past',
+        },
+      };
+
+      apiClient.getAdminWorkshopRequestsApi.mockResolvedValue([overdueWorkshop]);
+
+      render(
+        <MemoryRouter initialEntries={['/admin/scheduled']}>
+          <AdminScheduledPage />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Historical Overdue College')).toBeTruthy();
+      });
+
+      // Open edit modal
+      fireEvent.click(screen.getByTitle('Edit Schedule'));
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Edit Workshop Schedule' })).toBeTruthy();
+      });
+
+      // Update venue and facilitator; keep historical date/time unchanged
+      const venueInput = screen.getByLabelText(/Venue \/ Link \*/i);
+      fireEvent.change(venueInput, { target: { value: 'Renovated Auditorium' } });
+
+      apiClient.updateWorkshopScheduleApi.mockResolvedValueOnce({
+        ...overdueWorkshop,
+        schedule: {
+          ...overdueWorkshop.schedule,
+          venue_or_meeting_link: 'Renovated Auditorium',
+        },
+      });
+
+      apiClient.getAdminWorkshopRequestsApi.mockResolvedValue([
+        {
+          ...overdueWorkshop,
+          schedule: {
+            ...overdueWorkshop.schedule,
+            venue_or_meeting_link: 'Renovated Auditorium',
+          },
+        },
+      ]);
+
+      fireEvent.click(screen.getByRole('button', { name: /Save Changes/i }));
+
+      // Succeeded without 'cannot be in the past' error
+      await waitFor(() => {
+        expect(screen.queryByRole('heading', { name: 'Edit Workshop Schedule' })).toBeNull();
+      });
+
+      // scheduled_start was omitted from payload, preserving historical start
+      expect(apiClient.updateWorkshopScheduleApi).toHaveBeenCalledWith(
+        'sch-overdue-1',
+        {
+          venue_or_meeting_link: 'Renovated Auditorium',
+        }
+      );
+    });
+
+    it('rejects past start time when admin actively modifies date/time of overdue workshop', async () => {
+      const overdueWorkshop = {
+        id: 'sch-overdue-2',
+        institution_name: 'Historical Overdue College 2',
+        district: 'Mysuru',
+        preferred_mode: 'offline',
+        status: 'SCHEDULED',
+        schedule: {
+          id: 'sch-overdue-2',
+          scheduled_start: '2026-01-10T10:30:00.000Z',
+          duration_minutes: 90,
+          mode: 'offline',
+          venue_or_meeting_link: 'Old Hall A',
+        },
+      };
+
+      apiClient.getAdminWorkshopRequestsApi.mockResolvedValue([overdueWorkshop]);
+
+      render(
+        <MemoryRouter initialEntries={['/admin/scheduled']}>
+          <AdminScheduledPage />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Historical Overdue College 2')).toBeTruthy();
+      });
+
+      fireEvent.click(screen.getByTitle('Edit Schedule'));
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Edit Workshop Schedule' })).toBeTruthy();
+      });
+
+      // Change date to another past date
+      const dateInput = screen.getByLabelText(/Date \*/i);
+      fireEvent.change(dateInput, { target: { value: '2026-02-01' } });
+
+      fireEvent.click(screen.getByRole('button', { name: /Save Changes/i }));
+
+      // Client-side validation triggers
+      await waitFor(() => {
+        expect(screen.getByRole('alert').textContent).toContain('Workshop scheduled start time cannot be in the past.');
+      });
+      expect(apiClient.updateWorkshopScheduleApi).not.toHaveBeenCalled();
+    });
   });
 });

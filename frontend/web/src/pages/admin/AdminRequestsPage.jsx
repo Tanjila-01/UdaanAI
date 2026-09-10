@@ -89,6 +89,8 @@ export const AdminRequestsPage = () => {
     internal_notes: '',
   });
 
+  const initialScheduleRef = useRef(null);
+
   // Completion form state
   const [completeForm, setCompleteForm] = useState({
     actual_attendance: '',
@@ -138,7 +140,7 @@ export const AdminRequestsPage = () => {
         // fallback
       }
 
-      setScheduleForm({
+      const initialVals = {
         date: dateStr,
         time: timeStr,
         duration_minutes: req.schedule.duration_minutes || 90,
@@ -146,8 +148,11 @@ export const AdminRequestsPage = () => {
         venue_or_meeting_link: req.schedule.venue_or_meeting_link || '',
         assigned_facilitator: req.schedule.assigned_facilitator || '',
         internal_notes: req.schedule.internal_notes || '',
-      });
+      };
+      initialScheduleRef.current = initialVals;
+      setScheduleForm(initialVals);
     } else {
+      initialScheduleRef.current = null;
       setScheduleForm({
         date: req.preferred_date || '',
         time: '10:30',
@@ -301,27 +306,64 @@ export const AdminRequestsPage = () => {
       setActionError(null);
       setScheduleError(null);
 
-      // Convert local date + time to ISO-8601 string
-      const isoDatetime = new Date(`${scheduleForm.date}T${scheduleForm.time}:00`).toISOString();
-      if (new Date(isoDatetime).getTime() < Date.now()) {
-        setScheduleError('Workshop scheduled start time cannot be in the past.');
-        setActionLoading(false);
-        return;
-      }
-
-      const payload = {
-        scheduled_start: isoDatetime,
-        duration_minutes: parseInt(scheduleForm.duration_minutes, 10),
-        mode: scheduleForm.mode,
-        venue_or_meeting_link: scheduleForm.venue_or_meeting_link,
-        assigned_facilitator: scheduleForm.assigned_facilitator || null,
-        internal_notes: scheduleForm.internal_notes || null,
-      };
-
       let updated;
       if (selectedRequest.schedule) {
+        // Editing existing schedule - send only changed fields
+        const initial = initialScheduleRef.current || {};
+        const payload = {};
+
+        const dateChanged = scheduleForm.date !== initial.date || scheduleForm.time !== initial.time;
+        if (dateChanged) {
+          const isoDatetime = new Date(`${scheduleForm.date}T${scheduleForm.time}:00`).toISOString();
+          if (new Date(isoDatetime).getTime() < Date.now()) {
+            setScheduleError('Workshop scheduled start time cannot be in the past.');
+            setActionLoading(false);
+            return;
+          }
+          payload.scheduled_start = isoDatetime;
+        }
+
+        const initialDur = parseInt(initial.duration_minutes, 10) || 90;
+        const newDur = parseInt(scheduleForm.duration_minutes, 10) || 90;
+        if (newDur !== initialDur) {
+          payload.duration_minutes = newDur;
+        }
+
+        if (scheduleForm.mode !== initial.mode) {
+          payload.mode = scheduleForm.mode;
+        }
+
+        if (scheduleForm.venue_or_meeting_link !== initial.venue_or_meeting_link) {
+          payload.venue_or_meeting_link = scheduleForm.venue_or_meeting_link;
+        }
+
+        if (scheduleForm.assigned_facilitator !== initial.assigned_facilitator) {
+          payload.assigned_facilitator = scheduleForm.assigned_facilitator.trim() ? scheduleForm.assigned_facilitator.trim() : null;
+        }
+
+        if (scheduleForm.internal_notes !== initial.internal_notes) {
+          payload.internal_notes = scheduleForm.internal_notes.trim() ? scheduleForm.internal_notes.trim() : null;
+        }
+
         updated = await updateWorkshopScheduleApi(selectedRequest.id, payload);
       } else {
+        // Scheduling a new request for the first time
+        const isoDatetime = new Date(`${scheduleForm.date}T${scheduleForm.time}:00`).toISOString();
+        if (new Date(isoDatetime).getTime() < Date.now()) {
+          setScheduleError('Workshop scheduled start time cannot be in the past.');
+          setActionLoading(false);
+          return;
+        }
+
+        const payload = {
+          scheduled_start: isoDatetime,
+          duration_minutes: parseInt(scheduleForm.duration_minutes, 10),
+          mode: scheduleForm.mode,
+          venue_or_meeting_link: scheduleForm.venue_or_meeting_link,
+          assigned_facilitator: scheduleForm.assigned_facilitator.trim() || null,
+          internal_notes: scheduleForm.internal_notes.trim() || null,
+        };
+
         updated = await scheduleWorkshopApi(selectedRequest.id, payload);
       }
 
@@ -337,7 +379,7 @@ export const AdminRequestsPage = () => {
             const dd = String(dt.getDate()).padStart(2, '0');
             const hh = String(dt.getHours()).padStart(2, '0');
             const min = String(dt.getMinutes()).padStart(2, '0');
-            setScheduleForm({
+            const newVals = {
               date: `${yyyy}-${mm}-${dd}`,
               time: `${hh}:${min}`,
               duration_minutes: updated.schedule.duration_minutes || 90,
@@ -345,7 +387,9 @@ export const AdminRequestsPage = () => {
               venue_or_meeting_link: updated.schedule.venue_or_meeting_link || '',
               assigned_facilitator: updated.schedule.assigned_facilitator || '',
               internal_notes: updated.schedule.internal_notes || '',
-            });
+            };
+            initialScheduleRef.current = newVals;
+            setScheduleForm(newVals);
           }
         } catch {
           // fallback
