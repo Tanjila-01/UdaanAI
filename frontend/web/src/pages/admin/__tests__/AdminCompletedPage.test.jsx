@@ -70,6 +70,20 @@ describe('AdminCompletedPage Zero-Value and Null Display', () => {
     });
   });
 
+  it('updates an open feedback panel when returning to the page', async () => {
+    apiClient.getAdminWorkshopRequestsApi.mockResolvedValue([mockCompletedZero]);
+    render(<MemoryRouter><AdminCompletedPage /></MemoryRouter>);
+    fireEvent.click(await screen.findByText('Govt PU College Hubballi'));
+    expect(await screen.findByText('Awaiting coordinator feedback')).toBeTruthy();
+    apiClient.getAdminWorkshopRequestsApi.mockResolvedValue([{
+      ...mockCompletedZero,
+      coordinator_feedback: { rating: 4, comments: 'Newly received feedback', submitted_at: '2026-10-15T14:30:00Z' },
+    }]);
+    fireEvent(window, new Event('focus'));
+    expect(await screen.findByText(/Newly received feedback/)).toBeTruthy();
+    expect(screen.queryByText('Awaiting coordinator feedback')).toBeNull();
+  });
+
   it('correctly displays 0 for attendance and feedback rating instead of — in table and drawer', async () => {
     apiClient.getAdminWorkshopRequestsApi.mockResolvedValue([mockCompletedZero]);
 

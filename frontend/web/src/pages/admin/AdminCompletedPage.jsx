@@ -74,22 +74,55 @@ export const AdminCompletedPage = () => {
     </div>
   );
 
-  const fetchCompleted = async () => {
+  const fetchSequence = useRef(0);
+  const fetchInFlight = useRef(false);
+  const refreshRef = useRef(null);
+
+  const fetchCompleted = async (silent = false) => {
+    if (silent && fetchInFlight.current) return;
+    const sequence = ++fetchSequence.current;
+    fetchInFlight.current = true;
     try {
-      setLoading(true);
-      setError(null);
+      if (!silent) setLoading(true);
+      if (!silent) setError(null);
       const res = await getAdminWorkshopRequestsApi({
         status: 'COMPLETED',
         district: districtFilter,
         search: searchTerm,
       });
-      setCompletedWorkshops(res || []);
+      if (sequence !== fetchSequence.current) return;
+      const records = res || [];
+      setCompletedWorkshops(records);
+      setSelectedWorkshop(current => current
+        ? records.find(record => record.id === current.id) || current
+        : null);
+      setError(null);
     } catch (err) {
-      setError(normalizeApiError(err, 'Failed to load completed workshops.'));
+      if (!silent && sequence === fetchSequence.current) setError(normalizeApiError(err, 'Failed to load completed workshops.'));
     } finally {
-      setLoading(false);
+      if (sequence === fetchSequence.current) {
+        fetchInFlight.current = false;
+        setLoading(false);
+      }
     }
   };
+  refreshRef.current = fetchCompleted;
+
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState !== 'hidden') refreshRef.current(true);
+    };
+    const timer = window.setInterval(refresh, 10000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+      fetchSequence.current += 1;
+      fetchInFlight.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     fetchCompleted();
@@ -144,7 +177,7 @@ export const AdminCompletedPage = () => {
           </div>
           <button
             type="button"
-            onClick={fetchCompleted}
+            onClick={() => fetchCompleted()}
             className="text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl transition-colors self-start sm:self-auto"
           >
             Refresh Records
@@ -196,7 +229,7 @@ export const AdminCompletedPage = () => {
             </div>
             <button
               type="button"
-              onClick={fetchCompleted}
+              onClick={() => fetchCompleted()}
               className="inline-flex items-center space-x-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition-colors shadow-xs cursor-pointer"
             >
               <span>Retry</span>
@@ -218,7 +251,7 @@ export const AdminCompletedPage = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={fetchCompleted}
+                  onClick={() => fetchCompleted()}
                   className="text-xs font-bold text-amber-950 bg-amber-200/80 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors shrink-0 self-start sm:self-auto cursor-pointer"
                 >
                   Retry
