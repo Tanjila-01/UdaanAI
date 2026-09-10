@@ -1,21 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Send, LogOut, User as UserIcon, LayoutDashboard, Menu, X, ChevronRight } from 'lucide-react';
+import { getAccountAction } from '../../utils/accountActions';
+import { Send, LogOut, User as UserIcon, Shield, LayoutDashboard, Menu, X, ArrowRight } from 'lucide-react';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 
 /**
  * Modern, minimal Navbar component for Udaan AI public and marketing pages.
- * Enforces single clear primary CTA, clean wayfinding section anchors,
- * and responsive mobile drawer.
+ * Accurately reflects auth states (Guest, Incomplete Student, Complete Student, Admin).
  */
 export const Navbar = () => {
-  const { user, profile, logout } = useAuth();
+  const { user, profile, loading, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const accountAction = getAccountAction(user, profile, loading);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -25,8 +27,8 @@ export const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 
@@ -65,21 +67,21 @@ export const Navbar = () => {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
-          ? 'bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-xs py-3'
-          : 'bg-white/80 backdrop-blur-xs py-4 border-b border-slate-100'
-        }`}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        isScrolled
+          ? 'bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-xs py-2.5'
+          : 'bg-white/90 backdrop-blur-xs py-3.5 border-b border-slate-100'
+      }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-
         {/* Left: Brand Logo & Tagline */}
-        <Link to="/" className="flex items-center space-x-3 group">
-          <div className="w-10 h-10 rounded-xl bg-[#005F60] flex items-center justify-center text-white shadow-xs group-hover:scale-105 transition-transform">
-            <Send className="w-5 h-5 text-white animate-paper-plane" />
+        <Link to="/" className="flex items-center space-x-2.5 group">
+          <div className="w-9 h-9 rounded-xl bg-[#005F60] flex items-center justify-center text-white shadow-xs group-hover:scale-105 transition-transform">
+            <Send className="w-4 h-4 text-white animate-paper-plane" />
           </div>
           <div>
-            <div className="flex items-center space-x-2">
-              <span className="font-extrabold text-xl tracking-tight text-slate-900">
+            <div className="flex items-center space-x-1.5">
+              <span className="font-extrabold text-lg tracking-tight text-slate-900">
                 Udaan AI
               </span>
               <Badge variant="primary" size="sm">
@@ -93,39 +95,46 @@ export const Navbar = () => {
         </Link>
 
         {/* Center: Curated Public Section Anchors */}
-        <nav className="hidden lg:flex items-center space-x-1 bg-slate-100/90 p-1.5 rounded-xl border border-slate-200/80 backdrop-blur-xs">
+        <nav className="hidden lg:flex items-center space-x-1 bg-slate-100/90 p-1 rounded-xl border border-slate-200/80 backdrop-blur-xs">
           {navLinks.map((link) => (
             <a
               key={link.label}
               href={link.href}
               onClick={(e) => handleNavClick(e, link.href)}
-              className="px-4 py-1.5 rounded-lg text-xs font-bold text-slate-800 hover:text-[#005F60] hover:bg-white transition-all cursor-pointer"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-800 hover:text-[#005F60] hover:bg-white transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-[#005F60] outline-none"
             >
               {link.label}
             </a>
           ))}
         </nav>
 
-        {/* Right: Focused Actions (One Clear Primary Action) */}
-        <div className="hidden sm:flex items-center space-x-3">
-          {user ? (
+        {/* Right: Focused Actions (Reflecting Exact Session State) */}
+        <div className="hidden sm:flex items-center space-x-2.5 min-w-[200px] justify-end">
+          {accountAction.isLoading ? (
+            <div className="h-9 w-32 bg-slate-100 animate-pulse rounded-xl" aria-label="Loading session" />
+          ) : user ? (
             <>
-              <Link to={profile ? "/dashboard" : "/onboarding"}>
-                <Button variant="primary" size="sm" leftIcon={<LayoutDashboard className="w-4 h-4" />}>
-                  Dashboard
+              <Link to={accountAction.destination}>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  leftIcon={accountAction.isAdmin ? <Shield className="w-3.5 h-3.5" /> : <LayoutDashboard className="w-3.5 h-3.5" />}
+                  className="bg-[#005F60] hover:bg-[#004D4E] text-white font-bold"
+                >
+                  {accountAction.label}
                 </Button>
               </Link>
 
-              <div className="flex items-center space-x-2 text-xs bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg text-slate-800 font-bold">
+              <div className="flex items-center space-x-1.5 text-xs bg-slate-100 border border-slate-200 px-2.5 py-1.5 rounded-lg text-slate-800 font-bold">
                 <UserIcon className="w-3.5 h-3.5 text-[#005F60]" />
-                <span className="truncate max-w-[120px]">{user.full_name}</span>
+                <span className="truncate max-w-[120px]">{user.full_name || user.email}</span>
               </div>
 
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleLogout}
-                className="text-rose-600 hover:bg-rose-50"
+                className="text-rose-600 hover:bg-rose-50 px-2"
                 aria-label="Logout"
               >
                 <LogOut className="w-4 h-4" />
@@ -138,14 +147,14 @@ export const Navbar = () => {
                   Login
                 </Button>
               </Link>
-              <Link to="/register">
+              <Link to={accountAction.destination}>
                 <Button
                   variant="secondary"
                   size="sm"
                   className="bg-[#E06D14] hover:bg-[#C2580E] text-white shadow-2xs font-extrabold"
-                  rightIcon={<ChevronRight className="w-4 h-4" />}
+                  rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
                 >
-                  Sign Up
+                  {accountAction.label}
                 </Button>
               </Link>
             </>
@@ -156,7 +165,7 @@ export const Navbar = () => {
         <button
           type="button"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="lg:hidden p-2 rounded-lg text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+          className="lg:hidden p-2 rounded-lg text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#005F60] outline-none"
           aria-label="Toggle Navigation Menu"
           aria-expanded={mobileMenuOpen}
         >
@@ -168,7 +177,7 @@ export const Navbar = () => {
       {mobileMenuOpen && (
         <div className="lg:hidden bg-white border-b border-slate-200 px-4 pt-3 pb-6 space-y-4 shadow-lg animate-in slide-in-from-top-2 duration-200">
           <div className="flex flex-col space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3.5 py-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 py-1">
               Navigation
             </span>
             {navLinks.map((link) => (
@@ -176,7 +185,7 @@ export const Navbar = () => {
                 key={link.label}
                 href={link.href}
                 onClick={(e) => handleNavClick(e, link.href)}
-                className="px-3.5 py-2.5 rounded-lg text-xs font-bold text-slate-800 hover:bg-teal-50 hover:text-[#005F60] transition-colors"
+                className="px-3 py-2 rounded-lg text-xs font-bold text-slate-800 hover:bg-teal-50 hover:text-[#005F60] transition-colors"
               >
                 {link.label}
               </a>
@@ -187,15 +196,30 @@ export const Navbar = () => {
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1">
               Account
             </span>
-            {user ? (
-              <Link
-                to={profile ? "/dashboard" : "/onboarding"}
-                onClick={() => setMobileMenuOpen(false)}
-                className="w-full text-center py-2.5 rounded-lg bg-[#005F60] text-white text-xs font-bold shadow-xs flex items-center justify-center space-x-2"
-              >
-                <LayoutDashboard className="w-4 h-4" />
-                <span>Go to Dashboard</span>
-              </Link>
+            {accountAction.isLoading ? (
+              <div className="h-10 w-full bg-slate-100 animate-pulse rounded-lg" />
+            ) : user ? (
+              <div className="space-y-2">
+                <Link
+                  to={accountAction.destination}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full text-center py-2.5 rounded-lg bg-[#005F60] text-white text-xs font-bold shadow-xs flex items-center justify-center space-x-2"
+                >
+                  {accountAction.isAdmin ? <Shield className="w-4 h-4" /> : <LayoutDashboard className="w-4 h-4" />}
+                  <span>{accountAction.label}</span>
+                </Link>
+                <div className="flex items-center justify-between px-2 pt-1 text-xs text-slate-600 font-medium">
+                  <span className="truncate max-w-[200px]">{user.full_name || user.email}</span>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="text-rose-600 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              </div>
             ) : (
               <div className="grid grid-cols-2 gap-2">
                 <Link
@@ -206,11 +230,11 @@ export const Navbar = () => {
                   Login
                 </Link>
                 <Link
-                  to="/register"
+                  to={accountAction.destination}
                   onClick={() => setMobileMenuOpen(false)}
                   className="text-center py-2.5 rounded-lg bg-[#E06D14] text-white text-xs font-bold hover:bg-[#C2580E] transition-colors shadow-2xs"
                 >
-                  Sign Up
+                  {accountAction.label}
                 </Link>
               </div>
             )}

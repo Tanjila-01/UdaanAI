@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { submitWorkshopRequestApi } from '../../api/client';
-import { X, CheckCircle2, AlertCircle, Building2, User, Sparkles, Send } from 'lucide-react';
+import { X, CheckCircle2, AlertCircle, Building2, User, Sparkles, Send, Info } from 'lucide-react';
 
 const KARNATAKA_DISTRICTS = [
   'Bagalkot', 'Ballari', 'Belagavi', 'Bengaluru Rural', 'Bengaluru Urban',
@@ -27,25 +27,49 @@ const TOPIC_OPTIONS = [
   { id: 'polytechnic_vs_puc', label: 'Polytechnic vs PUC Deep Dive', desc: 'Technical hands-on diploma vs 2-yr PU course' },
 ];
 
-export const WorkshopRequestModal = ({ isOpen, onClose }) => {
+const INITIAL_FORM_STATE = {
+  institution_name: '',
+  institution_type: 'high_school',
+  district: 'Bengaluru Urban',
+  city: '',
+  student_count: 100,
+  contact_name: '',
+  contact_phone: '',
+  contact_email: '',
+  preferred_mode: 'offline',
+  preferred_topics: ['career_guidance'],
+  preferred_date: '',
+  message: '',
+};
+
+export const WorkshopRequestModal = ({ isOpen, onClose, initialTopic }) => {
+  const defaultTopics = useMemo(() => {
+    if (initialTopic && TOPIC_OPTIONS.some((t) => t.id === initialTopic)) {
+      return [initialTopic];
+    }
+    return ['career_guidance'];
+  }, [initialTopic]);
+
   const [formData, setFormData] = useState({
-    institution_name: '',
-    institution_type: 'high_school',
-    district: 'Bengaluru Urban',
-    city: '',
-    student_count: 100,
-    contact_name: '',
-    contact_phone: '',
-    contact_email: '',
-    preferred_mode: 'offline',
-    preferred_topics: ['career_guidance'],
-    preferred_date: '',
-    message: '',
+    ...INITIAL_FORM_STATE,
+    preferred_topics: defaultTopics,
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
+
+  // Sync initial topic and reset success/error whenever modal is opened
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        ...INITIAL_FORM_STATE,
+        preferred_topics: defaultTopics,
+      });
+      setSubmittedSuccess(false);
+      setError(null);
+    }
+  }, [isOpen, defaultTopics]);
 
   if (!isOpen) return null;
 
@@ -96,6 +120,10 @@ export const WorkshopRequestModal = ({ isOpen, onClose }) => {
   const handleResetAndClose = () => {
     setSubmittedSuccess(false);
     setError(null);
+    setFormData({
+      ...INITIAL_FORM_STATE,
+      preferred_topics: ['career_guidance'],
+    });
     onClose();
   };
 
@@ -145,6 +173,14 @@ export const WorkshopRequestModal = ({ isOpen, onClose }) => {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Informative Booking Disclaimer */}
+              <div className="bg-teal-50/80 border border-teal-200 rounded-2xl p-3.5 flex items-start space-x-2.5 text-xs text-teal-950 font-medium leading-relaxed">
+                <Info className="w-4 h-4 text-[#005F60] shrink-0 mt-0.5" />
+                <span>
+                  <strong>Workshop Request Notice:</strong> Submitting this form requests an educational workshop for your school, college, or polytechnic. It does not confirm a scheduled booking or reserve individual attendee seats. Our coordinator will review your request and contact you to discuss scheduling.
+                </span>
+              </div>
+
               {error && (
                 <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 flex items-start space-x-2 text-rose-800 text-xs">
                   <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-rose-600" />

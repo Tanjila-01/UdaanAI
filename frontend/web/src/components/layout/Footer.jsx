@@ -66,8 +66,8 @@ export const Footer = () => {
               For Institutions
             </h4>
             <ul className="flex flex-col gap-2.5 text-xs text-slate-300 font-medium">
-              <li><a href="#school-invitation" className="hover:text-white transition-colors">Register Your Institution</a></li>
-              <li><a href="#workshops" className="hover:text-white transition-colors">Register for Workshop</a></li>
+              <li><a href="#school-invitation" className="hover:text-white transition-colors">Institution Outreach</a></li>
+              <li><a href="#workshops" className="hover:text-white transition-colors">Request a Workshop</a></li>
             </ul>
           </div>
 

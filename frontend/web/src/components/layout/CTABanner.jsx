@@ -1,10 +1,11 @@
 import React from 'react';
 import { cn } from '../../utils/cn';
 import Button from '../ui/Button';
-import { Send, ArrowRight } from 'lucide-react';
+import { Compass, ArrowRight } from 'lucide-react';
 
 /**
- * Reusable CTABanner component with paper plane flight motif.
+ * Clean, compact CTABanner component for Udaan AI closing section.
+ * Designed with balanced typography, restrained padding, and clear action hierarchy.
  *
  * @param {Object} props
  * @param {string} props.title
@@ -18,7 +19,7 @@ import { Send, ArrowRight } from 'lucide-react';
 export const CTABanner = ({
   title,
   description,
-  primaryCtaText = 'Explore Careers',
+  primaryCtaText = 'Explore Pathways',
   onPrimaryCtaClick,
   secondaryCtaText,
   onSecondaryCtaClick,
@@ -28,38 +29,33 @@ export const CTABanner = ({
   return (
     <div
       className={cn(
-        'relative bg-gradient-to-br from-[#005F60] to-[#004D4E] rounded-3xl p-8 sm:p-12 text-white shadow-xl min-h-fit border border-teal-700/50',
+        'relative bg-[#005F60] rounded-2xl p-6 sm:p-8 text-white shadow-sm border border-teal-800/40 overflow-hidden',
         className
       )}
       {...props}
     >
-      {/* Background paper plane guidance motif */}
-      <div className="absolute right-6 top-6 opacity-10 pointer-events-none animate-paper-plane hidden sm:block">
-        <Send className="w-48 h-48 text-white" />
-      </div>
+      <div className="max-w-3xl flex flex-col gap-3">
+        <div className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-teal-200">
+          <Compass className="w-3.5 h-3.5 text-teal-300" />
+          <span>Karnataka Education Guidance</span>
+        </div>
 
-      <div className="relative z-10 max-w-2xl flex flex-col gap-4">
-        <span className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-widest text-teal-200">
-          <Send className="w-3.5 h-3.5 text-orange-400" />
-          <span>Karnataka Career Guidance</span>
-        </span>
-
-        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight">
+        <h2 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-white tracking-tight leading-snug">
           {title}
         </h2>
 
-        <p className="text-sm sm:text-base text-teal-50/90 leading-relaxed font-medium">
+        <p className="text-xs sm:text-sm text-teal-100/90 leading-relaxed font-medium max-w-2xl">
           {description}
         </p>
 
-        <div className="flex flex-wrap items-center gap-3.5 pt-3">
+        <div className="flex flex-wrap items-center gap-3 pt-2">
           {primaryCtaText && (
             <Button
               variant="secondary"
-              size="lg"
+              size="md"
               onClick={onPrimaryCtaClick}
-              className="bg-[#E06D14] hover:bg-[#C2580E] text-white font-bold shadow-md hover:shadow-lg transition-all duration-200 px-6"
-              rightIcon={<ArrowRight className="w-4.5 h-4.5 text-white" />}
+              className="bg-[#E06D14] hover:bg-[#C2580E] text-white font-bold px-5 h-10 text-xs sm:text-sm shadow-xs"
+              rightIcon={<ArrowRight className="w-4 h-4 text-white" />}
             >
               {primaryCtaText}
             </Button>
@@ -69,7 +65,7 @@ export const CTABanner = ({
             <button
               type="button"
               onClick={onSecondaryCtaClick}
-              className="h-12 px-6 rounded-xl font-bold text-sm text-white bg-white/10 hover:bg-white/20 border border-white/35 hover:border-white/60 transition-all duration-200 shadow-2xs cursor-pointer flex items-center justify-center"
+              className="h-10 px-4 rounded-xl font-bold text-xs sm:text-sm text-teal-100 hover:text-white bg-white/10 hover:bg-white/15 border border-white/20 transition-colors cursor-pointer flex items-center justify-center"
             >
               {secondaryCtaText}
             </button>

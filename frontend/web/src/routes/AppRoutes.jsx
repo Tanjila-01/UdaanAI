@@ -13,6 +13,7 @@ import AdminOverviewPage from '../pages/admin/AdminOverviewPage';
 import AdminRequestsPage from '../pages/admin/AdminRequestsPage';
 import AdminScheduledPage from '../pages/admin/AdminScheduledPage';
 import AdminCompletedPage from '../pages/admin/AdminCompletedPage';
+import AdminPathwayPreviewPage from '../pages/admin/AdminPathwayPreviewPage';
 import AdminLoginPage from '../pages/admin/AdminLoginPage';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { PublicOnlyRoute } from '../components/PublicOnlyRoute';
@@ -110,6 +111,14 @@ const AppRoutes = () => {
         element={
           <AdminRoute>
             <AdminCompletedPage />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/pathways"
+        element={
+          <AdminRoute>
+            <AdminPathwayPreviewPage />
           </AdminRoute>
         }
       />
