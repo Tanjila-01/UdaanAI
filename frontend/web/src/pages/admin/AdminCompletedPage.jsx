@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { getAdminWorkshopRequestsApi } from '../../api/client';
+import React, { useState, useEffect, useRef } from 'react';
+import { getAdminWorkshopRequestsApi, getWorkshopFeedbackLinkApi } from '../../api/client';
 import { normalizeApiError } from '../../utils/errorHandler';
 import AdminLayout from '../../components/layout/AdminLayout';
 import {
@@ -35,28 +35,44 @@ export const AdminCompletedPage = () => {
   const [selectedWorkshop, setSelectedWorkshop] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
 
+  const [linkState, setLinkState] = useState({});
+  const copyingRef = useRef(false);
+
   const handleCopyFeedbackLink = async (workshop) => {
-    if (!workshop) return;
-    const token = workshop.coordinator_feedback?.feedback_token;
-    if (!token) return;
-    const url = `${window.location.origin}/workshops/feedback/${token}`;
+    if (!workshop || copyingRef.current) return;
+    copyingRef.current = true;
+    setCopiedId(null);
+    setLinkState({ id: workshop.id, loading: true });
     try {
-      if (navigator.clipboard?.writeText) {
+      const result = await getWorkshopFeedbackLinkApi(workshop.id);
+      if (!result.feedback_url) throw new Error('No feedback link was returned. Please retry.');
+      const url = new URL(result.feedback_url, window.location.origin).href;
+      try {
+        if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
         await navigator.clipboard.writeText(url);
-      } else {
-        const textarea = document.createElement('textarea');
-        textarea.value = url;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
+        setCopiedId(workshop.id);
+        setLinkState({ id: workshop.id });
+      } catch {
+        setLinkState({ id: workshop.id, url });
       }
-      setCopiedId(workshop.id);
-      setTimeout(() => setCopiedId(null), 2500);
-    } catch {
-      // ignore
+    } catch (err) {
+      setLinkState({ id: workshop.id, error: normalizeApiError(err, 'Could not retrieve feedback link. Please retry.') });
+    } finally {
+      copyingRef.current = false;
     }
   };
+
+  const renderLinkStatus = (id) => linkState.id !== id ? null : (
+    <div className="text-xs mt-2 text-left">
+      {linkState.loading && <p role="status">Getting feedback link...</p>}
+      {linkState.error && <p role="alert" className="text-red-700">{linkState.error}</p>}
+      {linkState.url && <label className="block">Copy this feedback link manually:
+        <input aria-label="Feedback link" readOnly value={linkState.url}
+          onFocus={(event) => event.target.select()}
+          className="block w-full border rounded p-2 mt-1" />
+      </label>}
+    </div>
+  );
 
   const fetchCompleted = async () => {
     try {
@@ -276,8 +292,8 @@ export const AdminCompletedPage = () => {
                         {w.schedule?.assigned_facilitator || '—'}
                       </td>
                       <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end space-x-1.5">
-                          {w.coordinator_feedback?.feedback_token && (
+                        <div className="flex items-center justify-end gap-2">
+                          {(
                             <button
                               type="button"
                               onClick={(e) => {
@@ -285,7 +301,8 @@ export const AdminCompletedPage = () => {
                                 handleCopyFeedbackLink(w);
                               }}
                               title="Copy Feedback Link"
-                              className="text-xs font-bold text-slate-700 hover:text-[#005F60] bg-slate-100 hover:bg-teal-50 px-2.5 py-1.5 rounded-lg transition-colors inline-flex items-center space-x-1"
+                              disabled={!!linkState.loading}
+                              className="inline-flex h-11 min-w-[120px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-teal-200 bg-white px-3 text-xs font-semibold text-[#005F60] shadow-sm transition-colors hover:border-teal-400 hover:bg-teal-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
                             >
                               {copiedId === w.id ? (
                                 <>
@@ -295,7 +312,7 @@ export const AdminCompletedPage = () => {
                               ) : (
                                 <>
                                   <Copy className="w-3.5 h-3.5" />
-                                  <span>Copy Link</span>
+                                  <span>{linkState.loading && linkState.id === w.id ? 'Getting link…' : 'Copy Link'}</span>
                                 </>
                               )}
                             </button>
@@ -306,12 +323,13 @@ export const AdminCompletedPage = () => {
                               e.stopPropagation();
                               setSelectedWorkshop(w);
                             }}
-                            className="text-xs font-bold text-[#005F60] hover:text-[#004D4E] bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg transition-colors inline-flex items-center space-x-1"
+                            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-transparent bg-teal-50 px-3 text-xs font-semibold text-[#005F60] transition-colors hover:bg-teal-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2"
                           >
                             <span>View Details</span>
                             <ChevronRight className="w-3.5 h-3.5" />
                           </button>
                         </div>
+                        {renderLinkStatus(w.id)}
                       </td>
                     </tr>
                   ))}
@@ -374,15 +392,16 @@ export const AdminCompletedPage = () => {
 
                 {/* Coordinator Feedback Section */}
                 <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
                       Coordinator feedback via shared link
                     </div>
-                    {selectedWorkshop.coordinator_feedback?.feedback_token && (
+                    {(
                       <button
                         type="button"
                         onClick={() => handleCopyFeedbackLink(selectedWorkshop)}
-                        className="text-xs font-bold text-[#005F60] hover:text-[#004D4E] bg-teal-50 hover:bg-teal-100 border border-teal-200/80 px-2.5 py-1 rounded-lg transition-colors inline-flex items-center space-x-1"
+                        disabled={!!linkState.loading}
+                        className="inline-flex h-11 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-teal-200 bg-white px-4 text-xs font-semibold text-[#005F60] shadow-sm transition-colors hover:border-teal-400 hover:bg-teal-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
                       >
                         {copiedId === selectedWorkshop.id ? (
                           <>
@@ -392,13 +411,14 @@ export const AdminCompletedPage = () => {
                         ) : (
                           <>
                             <Copy className="w-3.5 h-3.5" />
-                            <span>Copy Feedback Link</span>
+                            <span>{linkState.loading && linkState.id === selectedWorkshop.id ? 'Getting link…' : 'Copy Feedback Link'}</span>
                           </>
                         )}
                       </button>
                     )}
                   </div>
 
+                  {renderLinkStatus(selectedWorkshop.id)}
                   {selectedWorkshop.coordinator_feedback?.submitted_at ? (
                     <div className="space-y-2 pt-1">
                       <div className="flex items-center space-x-2">

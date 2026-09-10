@@ -8,6 +8,7 @@ import * as authContext from '../../../context/AuthContext';
 
 vi.mock('../../../api/client', () => ({
   getAdminWorkshopRequestsApi: vi.fn(),
+  getWorkshopFeedbackLinkApi: vi.fn(),
 }));
 
 vi.mock('../../../context/AuthContext', () => ({
@@ -140,7 +141,8 @@ describe('AdminCompletedPage Zero-Value and Null Display', () => {
       },
     };
 
-    apiClient.getAdminWorkshopRequestsApi.mockResolvedValue([mockAwaiting]);
+    apiClient.getAdminWorkshopRequestsApi.mockResolvedValue([mockCompletedZero]);
+    apiClient.getWorkshopFeedbackLinkApi.mockResolvedValue({ feedback_url: '/workshops/feedback/secret-tok-123' });
 
     // Mock clipboard
     const writeTextMock = vi.fn().mockResolvedValue();
@@ -165,7 +167,8 @@ describe('AdminCompletedPage Zero-Value and Null Display', () => {
     expect(copyLinkBtns.length).toBeGreaterThan(0);
     fireEvent.click(copyLinkBtns[0]);
 
-    expect(writeTextMock).toHaveBeenCalledWith(expect.stringContaining('/workshops/feedback/secret-tok-123'));
+    await waitFor(() => expect(writeTextMock).toHaveBeenCalledWith(expect.stringContaining('/workshops/feedback/secret-tok-123')));
+    expect(apiClient.getWorkshopFeedbackLinkApi).toHaveBeenCalledWith('comp-1');
 
     // Open drawer
     fireEvent.click(screen.getByText('Govt PU College Hubballi'));
