@@ -48,7 +48,7 @@ export const PATHWAY_ID_TO_NODE_MAP = {
 };
 
 export const getVisualNodeId = (pathwayId) => {
-  if (!pathwayId) return 'c10';
+  if (!pathwayId) return null;
   return PATHWAY_ID_TO_NODE_MAP[pathwayId] || pathwayId;
 };
 
@@ -203,7 +203,7 @@ export const STRUCTURAL_NODES = {
 };
 
 const EducationPathwayMap = ({
-  selectedNodeId = 'puc-science',
+  selectedNodeId = null,
   onSelectNode,
   studentProfile,
   recommendations

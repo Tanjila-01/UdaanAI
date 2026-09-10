@@ -1,7 +1,8 @@
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import List, Optional
 from uuid import UUID
+from zoneinfo import ZoneInfo
 from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict
 
 KARNATAKA_DISTRICTS = [
@@ -46,7 +47,17 @@ class PublicWorkshopRequestCreate(BaseModel):
     preferred_mode: str = Field(...)
     preferred_topics: List[str] = Field(...)
     preferred_date: Optional[date] = None
+    submission_id: Optional[str] = Field(None, max_length=64)
     message: Optional[str] = Field(None, max_length=1000)
+
+    @field_validator("preferred_date")
+    @classmethod
+    def validate_preferred_date(cls, v: Optional[date]) -> Optional[date]:
+        if v is not None:
+            today_kolkata = datetime.now(ZoneInfo("Asia/Kolkata")).date()
+            if v < today_kolkata:
+                raise ValueError("Please choose today or a future date.")
+        return v
 
     @field_validator("institution_type")
     @classmethod
@@ -114,6 +125,18 @@ class WorkshopScheduleCreate(BaseModel):
     assigned_facilitator: Optional[str] = Field(None, max_length=255)
     internal_notes: Optional[str] = Field(None, max_length=2000)
 
+    @field_validator("scheduled_start")
+    @classmethod
+    def validate_scheduled_start(cls, v: datetime) -> datetime:
+        if v.tzinfo is None:
+            raise ValueError(
+                "Scheduled start timestamp must be timezone-aware (e.g. ISO 8601 with offset like '+05:30' or 'Z'). Ambiguous timezone-free timestamps are not allowed."
+            )
+        start_utc = v.astimezone(timezone.utc)
+        if start_utc < datetime.now(timezone.utc):
+            raise ValueError("Workshop scheduled start time cannot be in the past.")
+        return v
+
     @field_validator("mode")
     @classmethod
     def validate_mode(cls, v: str) -> str:
@@ -130,6 +153,19 @@ class WorkshopScheduleUpdate(BaseModel):
     venue_or_meeting_link: Optional[str] = Field(None, min_length=2, max_length=1000)
     assigned_facilitator: Optional[str] = Field(None, max_length=255)
     internal_notes: Optional[str] = Field(None, max_length=2000)
+
+    @field_validator("scheduled_start")
+    @classmethod
+    def validate_scheduled_start(cls, v: Optional[datetime]) -> Optional[datetime]:
+        if v is not None:
+            if v.tzinfo is None:
+                raise ValueError(
+                    "Scheduled start timestamp must be timezone-aware (e.g. ISO 8601 with offset like '+05:30' or 'Z'). Ambiguous timezone-free timestamps are not allowed."
+                )
+            start_utc = v.astimezone(timezone.utc)
+            if start_utc < datetime.now(timezone.utc):
+                raise ValueError("Workshop scheduled start time cannot be in the past.")
+        return v
 
     @field_validator("mode")
     @classmethod

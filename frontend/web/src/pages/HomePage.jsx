@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getAccountAction } from '../utils/accountActions';
-import EducationPathwayMap, { STRUCTURAL_NODES } from '../components/product/EducationPathwayMap';
+import EducationPathwayMap, { STRUCTURAL_NODES, getVisualNodeId } from '../components/product/EducationPathwayMap';
+import PathwayDetailPanel from '../components/product/PathwayDetailPanel';
 import ExploreAuthPrompt from '../components/product/ExploreAuthPrompt';
 import WorkshopRequestModal from '../components/product/WorkshopRequestModal';
+import { getPathwayDetailApi } from '../api/client';
+import { getCanonicalPathwayId } from '../utils/pathwayAdapter';
 
 // Layout & UI Components
 import Navbar from '../components/layout/Navbar';
@@ -34,12 +37,16 @@ import {
   Zap,
   Route as RouteIcon,
   Map as MapIcon,
-  TrendingUp
+  TrendingUp,
+  AlertCircle,
 } from 'lucide-react';
 
 const HomePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawPathwayParam = searchParams.get('pathway_id') || searchParams.get('id') || searchParams.get('node');
+
   const { user, profile, loading } = useAuth();
   const accountAction = getAccountAction(user, profile, loading);
 
@@ -51,41 +58,125 @@ const HomePage = () => {
   const [workshopModalOpen, setWorkshopModalOpen] = useState(false);
   const [selectedWorkshopTopic, setSelectedWorkshopTopic] = useState('career_guidance');
   const [targetNodeLabel, setTargetNodeLabel] = useState('');
-  const [selectedPublicNodeId, setSelectedPublicNodeId] = useState('puc-science');
+  const [selectedPublicNodeId, setSelectedPublicNodeId] = useState(null);
+
+  // State for Public Read-Only Pathway Details
+  const [publicPathwayDetail, setPublicPathwayDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState(null);
+  const [isPathwayUnavailable, setIsPathwayUnavailable] = useState(false);
+  const activeFetchRequestIdRef = useRef(0);
 
   // State for Merged Capability Flow (Section 4)
   const [activeFlowStep, setActiveFlowStep] = useState(0);
 
-  // Smooth scroll to section when URL hash is present
+  // Smooth scroll to section when URL hash is present (with reduced-motion awareness)
   useEffect(() => {
     if (location.hash) {
       const targetId = location.hash.replace('#', '');
-      const element = document.getElementById(targetId);
-      if (element) {
-        setTimeout(() => {
-          element.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
+      const prefersReducedMotion =
+        typeof window !== 'undefined' &&
+        typeof window.matchMedia === 'function' &&
+        Boolean(window.matchMedia('(prefers-reduced-motion: reduce)')?.matches);
+      const behavior = prefersReducedMotion ? 'auto' : 'smooth';
+
+      const scrollToTarget = () => {
+        const element = document.getElementById(targetId);
+        if (element) {
+          element.scrollIntoView({ behavior });
+          return true;
+        }
+        return false;
+      };
+
+      if (!scrollToTarget()) {
+        const timer = setTimeout(scrollToTarget, 100);
+        return () => clearTimeout(timer);
       }
     }
   }, [location.hash]);
+
+  const fetchPathwayDetail = async (pathwayId) => {
+    if (!pathwayId) {
+      setPublicPathwayDetail(null);
+      setDetailLoading(false);
+      setDetailError(null);
+      setIsPathwayUnavailable(false);
+      return;
+    }
+
+    const canonicalId = getCanonicalPathwayId(pathwayId);
+    const requestId = ++activeFetchRequestIdRef.current;
+    setDetailLoading(true);
+    setDetailError(null);
+    setIsPathwayUnavailable(false);
+
+    try {
+      const data = await getPathwayDetailApi(canonicalId);
+      // Stale response protection
+      if (requestId !== activeFetchRequestIdRef.current) return;
+
+      if (!data) {
+        setIsPathwayUnavailable(true);
+        setPublicPathwayDetail(null);
+      } else {
+        setPublicPathwayDetail(data);
+        setIsPathwayUnavailable(false);
+      }
+    } catch (err) {
+      if (requestId !== activeFetchRequestIdRef.current) return;
+      if (err.response?.status === 404) {
+        setIsPathwayUnavailable(true);
+        setPublicPathwayDetail(null);
+      } else {
+        setDetailError(err);
+        setPublicPathwayDetail(null);
+      }
+    } finally {
+      if (requestId === activeFetchRequestIdRef.current) {
+        setDetailLoading(false);
+      }
+    }
+  };
+
+  const handleRetryDetail = () => {
+    if (rawPathwayParam) {
+      fetchPathwayDetail(rawPathwayParam);
+    }
+  };
+
+  // Sync pathway from URL search param (supports refresh and Back/Forward)
+  useEffect(() => {
+    if (rawPathwayParam) {
+      const visualNode = getVisualNodeId(rawPathwayParam) || rawPathwayParam;
+      setSelectedPublicNodeId(visualNode);
+      fetchPathwayDetail(rawPathwayParam);
+    } else {
+      setSelectedPublicNodeId(null);
+      setPublicPathwayDetail(null);
+      setDetailLoading(false);
+      setDetailError(null);
+      setIsPathwayUnavailable(false);
+    }
+  }, [rawPathwayParam]);
 
   // Click handler for public homepage map nodes
   const handlePublicNodeClick = (nodeId) => {
     const node = STRUCTURAL_NODES[nodeId];
     const pathwayLabel = node ? node.label : 'this pathway';
-    setSelectedPublicNodeId(nodeId);
+    const pathwayId = node?.pathwayId || nodeId;
 
     if (!user) {
       // Logged out visitor -> Show Auth Prompt Modal
+      setSelectedPublicNodeId(nodeId);
       setTargetNodeLabel(pathwayLabel);
       setAuthPromptOpen(true);
     } else if (user.role === 'admin') {
-      // Admin -> Navigate to admin preview route (does not require student profile)
-      const pathwayId = node?.pathwayId || nodeId;
-      navigate(`/admin/pathways?pathway_id=${encodeURIComponent(pathwayId)}`);
+      // Admin -> Show selected pathway's read-only details within the public homepage
+      setSelectedPublicNodeId(nodeId);
+      setSearchParams({ pathway_id: pathwayId }, { replace: false });
     } else {
       // Logged in student -> Navigate to student /pathways
-      const pathwayId = node?.pathwayId || nodeId;
       navigate(`/pathways?pathway_id=${encodeURIComponent(pathwayId)}`);
     }
   };
@@ -458,14 +549,14 @@ const HomePage = () => {
                   <Link 
                     to={
                       user?.role === 'admin'
-                        ? (activeFlowStep === 1 || activeFlowStep === 2 ? "/admin/pathways" : "/admin")
+                        ? (activeFlowStep === 1 || activeFlowStep === 2 ? "/#pathways" : "/admin")
                         : (user ? flowSteps[activeFlowStep].targetRoute : "/register")
                     } 
                     className="pt-1"
                   >
                     <Button variant="primary" size="md" rightIcon={<ArrowRight className="w-4 h-4" />}>
                       {user?.role === 'admin'
-                        ? (activeFlowStep === 1 || activeFlowStep === 2 ? "Preview Pathways" : "Admin Dashboard")
+                        ? (activeFlowStep === 1 || activeFlowStep === 2 ? "Explore Pathways" : "Admin Dashboard")
                         : (user ? flowSteps[activeFlowStep].ctaLabel : (activeFlowStep === 1 ? "Explore Pathways" : "Try This Step Now"))}
                     </Button>
                   </Link>
@@ -670,6 +761,51 @@ const HomePage = () => {
                 onSelectNode={handlePublicNodeClick}
               />
             </div>
+
+            {/* Read-Only Public Pathway Detail Presentation */}
+            {(rawPathwayParam || detailLoading || detailError || isPathwayUnavailable || user?.role === 'admin') && (
+              <div id="pathway-detail-section" className="mt-8 max-w-4xl mx-auto">
+                <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-200">
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="primary" size="sm" className="bg-teal-50 text-[#005F60] border-teal-200">
+                      Public Catalog Preview
+                    </Badge>
+                    <span className="text-xs text-slate-500 font-medium">Read-Only Information</span>
+                  </div>
+                  {rawPathwayParam && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedPublicNodeId(null);
+                        setSearchParams({}, { replace: false });
+                      }}
+                      className="text-xs text-slate-500 hover:text-slate-800 font-medium cursor-pointer"
+                    >
+                      Clear selection
+                    </button>
+                  )}
+                </div>
+
+                {isPathwayUnavailable ? (
+                  <div className="bg-amber-50 border border-amber-200 rounded-3xl p-6 text-center space-y-3 font-sans">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto">
+                      <AlertCircle className="w-6 h-6" />
+                    </div>
+                    <h4 className="text-sm font-extrabold text-slate-800">Pathway Details Unavailable</h4>
+                    <p className="text-xs text-slate-600 max-w-sm mx-auto">
+                      The selected pathway is currently not available in the public catalog. Please select another stream or option on the map above.
+                    </p>
+                  </div>
+                ) : (
+                  <PathwayDetailPanel
+                    detail={publicPathwayDetail}
+                    loading={detailLoading}
+                    error={detailError}
+                    onRetry={handleRetryDetail}
+                  />
+                )}
+              </div>
+            )}
 
           </Container>
         </section>
@@ -889,7 +1025,7 @@ const HomePage = () => {
       </main>
 
       {/* GLOBAL FOOTER */}
-      <Footer />
+      <Footer onRequestWorkshop={() => handleOpenWorkshopModal('career_guidance')} />
 
       {/* Public Exploration Auth Prompt Modal */}
       <ExploreAuthPrompt

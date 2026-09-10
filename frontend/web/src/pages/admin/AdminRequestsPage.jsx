@@ -303,6 +303,11 @@ export const AdminRequestsPage = () => {
 
       // Convert local date + time to ISO-8601 string
       const isoDatetime = new Date(`${scheduleForm.date}T${scheduleForm.time}:00`).toISOString();
+      if (new Date(isoDatetime).getTime() < Date.now()) {
+        setScheduleError('Workshop scheduled start time cannot be in the past.');
+        setActionLoading(false);
+        return;
+      }
 
       const payload = {
         scheduled_start: isoDatetime,

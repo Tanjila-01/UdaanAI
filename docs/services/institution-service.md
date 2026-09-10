@@ -26,14 +26,17 @@ COMPLETED and CANCELLED are final states. The current service has no action for 
 
 ## 3. What does it do today?
 
-- Accepts validated public workshop requests.
+- Accepts validated public workshop requests with date enforcement (preferred date must be today or a future calendar date in `Asia/Kolkata`, or omitted).
+- Protects against duplicate submissions using database-backed unique constraints:
+  - Submission ID binding: Each submission ID is bound to the normalized request payload hash; network retries return the original record safely, while reusing an ID with altered data returns a 409 conflict.
+  - Active duplicate enforcement: A partial unique database index prevents duplicate active requests (`NEW`, `CONTACTED`, `SCHEDULED`) based on normalized institution, email, district, mode, preferred date, and sorted preferred topics. Different institutions or different topics/dates are not blocked.
 - Shows administrators request counts and lists.
 - Filters requests by status, district, mode or search.
-- Records contact status and confirmed schedules.
+- Records contact status and confirmed schedules with timezone-aware start times (rejecting timezone-naive timestamps and past start times).
 - Saves completion, attendance and feedback details.
 - Cancels a request while retaining its history and reason.
 
-**What it does not do:** It does not send an email or call an institution when Contacted is selected. It is not a general searchable institution directory. The current workshop dashboard is provided by this service, not Admin analytics.
+**What it does not do:** It does not send an email or call an institution when Contacted is selected. It does not impose an artificial global one-workshop-at-a-time rule, as distinct facilitators can run simultaneous sessions (code inspection confirmed missing duplicate protection, but the historical cause of observed same-time records remains unconfirmed). The current workshop dashboard is provided by this service, not Admin analytics.
 
 ## 4. Which parts does it connect to?
 
@@ -45,8 +48,10 @@ COMPLETED and CANCELLED are final states. The current service has no action for 
 | Auth token settings | Used locally to validate administrator access |
 
 ## 5. What information does it save?
+ 
+**workshop_requests** stores institution/contact details, preferences, submission tracking (`submission_id`, `payload_hash`, and indexed `active_duplicate_hash`) and status. **workshop_schedules** stores timing (in UTC with timezone requirements), delivery mode, location/link, facilitator, notes and completion details.
 
-**workshop_requests** stores institution/contact details, preferences and status. **workshop_schedules** stores timing, delivery mode, location/link, facilitator, notes and completion details.
+Alembic migration `002_add_sub_and_dup_hashes` establishes a unique index on `submission_id` and a partial unique index on `active_duplicate_hash` for active statuses (`NEW`, `CONTACTED`, `SCHEDULED`). Real multi-threaded concurrency was verified directly against the live PostgreSQL container.
 
 ## 6. How do I run and check it?
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { submitWorkshopRequestApi } from '../../api/client';
 import { X, CheckCircle2, AlertCircle, Building2, User, Sparkles, Send, Info } from 'lucide-react';
 
@@ -42,6 +42,14 @@ const INITIAL_FORM_STATE = {
   message: '',
 };
 
+const getTodayKolkata = () => {
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+  } catch {
+    return new Date().toISOString().split('T')[0];
+  }
+};
+
 export const WorkshopRequestModal = ({ isOpen, onClose, initialTopic }) => {
   const defaultTopics = useMemo(() => {
     if (initialTopic && TOPIC_OPTIONS.some((t) => t.id === initialTopic)) {
@@ -49,6 +57,11 @@ export const WorkshopRequestModal = ({ isOpen, onClose, initialTopic }) => {
     }
     return ['career_guidance'];
   }, [initialTopic]);
+
+  const todayKolkata = useMemo(() => getTodayKolkata(), [isOpen]);
+  const isSubmittingRef = useRef(false);
+  const submissionIdRef = useRef(null);
+  const lastSubmittedPayloadStringRef = useRef(null);
 
   const [formData, setFormData] = useState({
     ...INITIAL_FORM_STATE,
@@ -58,18 +71,93 @@ export const WorkshopRequestModal = ({ isOpen, onClose, initialTopic }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
+  const previouslyFocusedElementRef = useRef(null);
+  const modalContainerRef = useRef(null);
 
-  // Sync initial topic and reset success/error whenever modal is opened
+  // Sync initial topic, reset success/error, lock scroll, and capture/restore focus
   useEffect(() => {
     if (isOpen) {
+      previouslyFocusedElementRef.current = document.activeElement;
       setFormData({
         ...INITIAL_FORM_STATE,
         preferred_topics: defaultTopics,
       });
       setSubmittedSuccess(false);
       setError(null);
+
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+
+      // Move focus inside the modal dialog
+      const focusTimer = setTimeout(() => {
+        if (modalContainerRef.current) {
+          const focusable = modalContainerRef.current.querySelectorAll(
+            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          );
+          if (focusable.length > 0) {
+            focusable[0].focus();
+          } else {
+            modalContainerRef.current.focus();
+          }
+        }
+      }, 30);
+
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        clearTimeout(focusTimer);
+      };
+    } else if (previouslyFocusedElementRef.current) {
+      const prevEl = previouslyFocusedElementRef.current;
+      previouslyFocusedElementRef.current = null;
+      setTimeout(() => {
+        prevEl?.focus?.();
+      }, 0);
     }
   }, [isOpen, defaultTopics]);
+
+  // Handle Tab trapping and Escape key
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        handleResetAndClose();
+        return;
+      }
+
+      if (e.key === 'Tab' && modalContainerRef.current) {
+        const focusable = Array.from(
+          modalContainerRef.current.querySelectorAll(
+            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          )
+        );
+
+        if (focusable.length === 0) {
+          e.preventDefault();
+          return;
+        }
+
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === first || document.activeElement === modalContainerRef.current) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -92,18 +180,49 @@ export const WorkshopRequestModal = ({ isOpen, onClose, initialTopic }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading || isSubmittingRef.current) return;
+
+    if (formData.preferred_date && formData.preferred_date < todayKolkata) {
+      setError('Please choose today or a future date.');
+      return;
+    }
+
+    isSubmittingRef.current = true;
     setError(null);
     setLoading(true);
 
     try {
-      const payload = {
-        ...formData,
-        student_count: parseInt(formData.student_count, 10),
-        preferred_date: formData.preferred_date || null,
+      const cleanPayload = {
+        institution_name: formData.institution_name.trim(),
+        institution_type: formData.institution_type,
+        contact_name: formData.contact_name.trim(),
+        contact_phone: formData.contact_phone.trim(),
+        contact_email: formData.contact_email.trim().toLowerCase(),
+        district: formData.district,
         city: formData.city.trim() || null,
+        student_count: parseInt(formData.student_count, 10),
+        preferred_mode: formData.preferred_mode,
+        preferred_topics: [...formData.preferred_topics].sort(),
+        preferred_date: formData.preferred_date || null,
         message: formData.message.trim() || null,
       };
-      await submitWorkshopRequestApi(payload);
+
+      const payloadSignature = JSON.stringify(cleanPayload);
+      if (!submissionIdRef.current || lastSubmittedPayloadStringRef.current !== payloadSignature) {
+        submissionIdRef.current = (typeof crypto !== 'undefined' && crypto.randomUUID)
+          ? crypto.randomUUID()
+          : `sub_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        lastSubmittedPayloadStringRef.current = payloadSignature;
+      }
+
+      const finalPayload = {
+        ...cleanPayload,
+        submission_id: submissionIdRef.current,
+      };
+
+      await submitWorkshopRequestApi(finalPayload);
+      submissionIdRef.current = null;
+      lastSubmittedPayloadStringRef.current = null;
       setSubmittedSuccess(true);
     } catch (err) {
       const detail = err.response?.data?.detail;
@@ -114,10 +233,13 @@ export const WorkshopRequestModal = ({ isOpen, onClose, initialTopic }) => {
       }
     } finally {
       setLoading(false);
+      isSubmittingRef.current = false;
     }
   };
 
   const handleResetAndClose = () => {
+    submissionIdRef.current = null;
+    lastSubmittedPayloadStringRef.current = null;
     setSubmittedSuccess(false);
     setError(null);
     setFormData({
@@ -129,7 +251,15 @@ export const WorkshopRequestModal = ({ isOpen, onClose, initialTopic }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-white border border-slate-200 rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-150">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="workshop-modal-title"
+        aria-describedby="workshop-modal-desc"
+        tabIndex={-1}
+        ref={modalContainerRef}
+        className="bg-white border border-slate-200 rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-150 outline-none"
+      >
         {/* Header */}
         <div className="bg-slate-900 text-white px-6 py-5 flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center space-x-3">
@@ -137,14 +267,15 @@ export const WorkshopRequestModal = ({ isOpen, onClose, initialTopic }) => {
               <Building2 className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-extrabold text-white leading-tight">Request an Institutional Workshop</h2>
-              <p className="text-xs text-slate-400">For Karnataka schools, colleges, and polytechnics</p>
+              <h2 id="workshop-modal-title" className="text-lg font-extrabold text-white leading-tight">Request an Institutional Workshop</h2>
+              <p id="workshop-modal-desc" className="text-xs text-slate-400">For Karnataka schools, colleges, and polytechnics</p>
             </div>
           </div>
           <button
             type="button"
             onClick={handleResetAndClose}
-            className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors"
+            aria-label="Close modal"
+            className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -361,6 +492,7 @@ export const WorkshopRequestModal = ({ isOpen, onClose, initialTopic }) => {
                     <input
                       type="date"
                       name="preferred_date"
+                      min={todayKolkata}
                       value={formData.preferred_date}
                       onChange={handleChange}
                       className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#005F60]"

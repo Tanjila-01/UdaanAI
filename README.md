@@ -332,6 +332,8 @@ flowchart TD
 
 COMPLETED and CANCELLED are final states in the current implementation. A cancelled request cannot be scheduled again. Marking Contacted records status; it does not send a message or make a call.
 
+The administrator console is focused strictly on workshop operations. Dedicated pathway preview screens are removed from the admin console; administrators inspect education pathways directly on the public homepage map with inline read-only details. Any existing links or bookmarks to `/admin/pathways` automatically redirect to the public homepage map view (`/?pathway_id=...#pathways`).
+
 ---
 
 ## 6. Understand the project folders
@@ -528,6 +530,7 @@ These are historical results, not a claim that tests were re-run for this wordin
 | Fresh installation | Recommendation migration dependency gap and full setup verification remain |
 | Database reliability | Migration and backup/restore checks remain |
 | Security and deployment | Session revocation, production secrets, rate limiting, TLS and monitoring remain |
+| Legal & Support destinations | Policy pages (Privacy, Terms) and official support channel remain outstanding product work (nonfunctional placeholder anchors removed from local footer) |
 | Educational content | Sources, eligibility claims and pathway relationships need review |
 | Recommendations | Rules exist; stale results and some strong wording need improvement |
 | Kannada and accessibility | Full translation and usability validation remain |

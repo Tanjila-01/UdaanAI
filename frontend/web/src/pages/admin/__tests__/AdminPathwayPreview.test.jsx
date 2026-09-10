@@ -1,11 +1,11 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import AdminPathwayPreviewPage from '../AdminPathwayPreviewPage';
-import PathwaysPage from '../../PathwaysPage';
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router-dom';
 import HomePage from '../../HomePage';
-import AdminRoute from '../../../components/AdminRoute';
+import PathwaysPage from '../../PathwaysPage';
+import AdminLayout from '../../../components/layout/AdminLayout';
+import AppRoutes, { AdminPathwaysRedirect } from '../../../routes/AppRoutes';
 import { ProtectedRoute } from '../../../components/ProtectedRoute';
 import * as apiClient from '../../../api/client';
 import * as authContext from '../../../context/AuthContext';
@@ -66,12 +66,13 @@ const samplePathways = [
   },
 ];
 
-describe('Admin Pathway Preview Journey & Route Protection', () => {
+describe('Admin Pathway Preview Journey, Homepage Integration & Route Compatibility', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
     sidebarContext.useSidebar.mockReturnValue({
       isCollapsed: false,
+      toggleSidebar: vi.fn(),
     });
 
     apiClient.getPathwaysApi.mockResolvedValue({
@@ -81,7 +82,12 @@ describe('Admin Pathway Preview Journey & Route Protection', () => {
 
     apiClient.getPathwayDetailApi.mockImplementation(async (id) => {
       const match = samplePathways.find((p) => p.id === id);
-      return match || samplePathways[0];
+      if (!match) {
+        const error = new Error('Pathway not found');
+        error.response = { status: 404 };
+        throw error;
+      }
+      return match;
     });
   });
 
@@ -89,8 +95,62 @@ describe('Admin Pathway Preview Journey & Route Protection', () => {
     vi.restoreAllMocks();
   });
 
-  it('admin stream click on HomePage navigates to /admin/pathways with matching query', async () => {
-    // Authenticated admin user without a student profile
+  it('/admin/pathways redirects to / with query parameters and #pathways preserved', async () => {
+    const LocationWatcher = () => {
+      const location = useLocation();
+      return (
+        <div data-testid="location-display">
+          {location.pathname}
+          {location.search}
+          {location.hash}
+        </div>
+      );
+    };
+
+    render(
+      <MemoryRouter initialEntries={['/admin/pathways?pathway_id=puc-science']}>
+        <Routes>
+          <Route path="/admin/pathways" element={<AdminPathwaysRedirect />} />
+          <Route
+            path="/"
+            element={
+              <div>
+                <LocationWatcher />
+                <div>Home Page Mock</div>
+              </div>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    const display = await screen.findByTestId('location-display');
+    expect(display.textContent).toBe('/?pathway_id=puc-science#pathways');
+  });
+
+  it('admin sidebar does not contain Pathway Preview link', () => {
+    authContext.useAuth.mockReturnValue({
+      user: { id: 'admin-1', email: 'admin@udaan.ai', role: 'admin' },
+      profile: null,
+      loading: false,
+      logout: vi.fn(),
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin']}>
+        <AdminLayout>
+          <div>Admin Content</div>
+        </AdminLayout>
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByText(/Pathway Preview/i)).toBeNull();
+    expect(screen.getAllByText(/Workshop Requests/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/^Scheduled$/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/^Completed$/i).length).toBeGreaterThan(0);
+  });
+
+  it('admin stream click on HomePage stays on HomePage and displays read-only details without navigating away', async () => {
     authContext.useAuth.mockReturnValue({
       user: { id: 'admin-1', email: 'admin@udaan.ai', role: 'admin' },
       profile: null,
@@ -100,132 +160,77 @@ describe('Admin Pathway Preview Journey & Route Protection', () => {
 
     render(
       <MemoryRouter initialEntries={['/']}>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/admin/pathways" element={<div data-testid="admin-pathways-page">Admin Pathways Route</div>} />
-        </Routes>
+        <HomePage />
       </MemoryRouter>
     );
 
-    // Find a map node to click
+    // Click on the Science Stream button
     const scienceNode = await screen.findByRole('button', { name: /Explore Science Stream/i });
-    expect(scienceNode).toBeTruthy();
     fireEvent.click(scienceNode);
 
-    // Verifies admin is navigated directly to /admin/pathways, not /pathways
-    expect(await screen.findByTestId('admin-pathways-page')).toBeTruthy();
-  });
-
-  it('admin without a student profile can load and refresh the preview page', async () => {
-    authContext.useAuth.mockReturnValue({
-      user: { id: 'admin-1', email: 'admin@udaan.ai', role: 'admin' },
-      profile: null,
-      loading: false,
-      logout: vi.fn(),
-    });
-
-    render(
-      <MemoryRouter initialEntries={['/admin/pathways?pathway_id=puc-science']}>
-        <AdminPathwayPreviewPage />
-      </MemoryRouter>
-    );
-
-    // Shows "Pathway preview" badge
-    expect(await screen.findByText('Pathway preview')).toBeTruthy();
-    // Shows clear return link to admin dashboard
-    const returnLink = screen.getByRole('link', { name: /Back to Admin Dashboard/i });
-    expect(returnLink).toBeTruthy();
-    expect(returnLink.getAttribute('href')).toBe('/admin');
-
-    // Confirms pathway content loads
+    // Confirms pathway content loads inline within public layout
     expect(await screen.findByRole('heading', { name: 'PUC Science Stream' })).toBeTruthy();
-  });
-
-  it('preview makes NO personal student-data or goal write requests', async () => {
-    authContext.useAuth.mockReturnValue({
-      user: { id: 'admin-1', email: 'admin@udaan.ai', role: 'admin' },
-      profile: null,
-      loading: false,
-      logout: vi.fn(),
-    });
-
-    render(
-      <MemoryRouter initialEntries={['/admin/pathways?pathway_id=puc-science']}>
-        <AdminPathwayPreviewPage />
-      </MemoryRouter>
-    );
-
-    await screen.findByText('Pathway preview');
-
-    // Verify catalog APIs were called
-    expect(apiClient.getPathwaysApi).toHaveBeenCalled();
+    expect(screen.getByText(/Premier science education preparing students for STEM careers/i)).toBeTruthy();
 
     // Verify NO student-specific profile, recommendation, or goal write APIs were called
     expect(apiClient.getMyProfileApi).not.toHaveBeenCalled();
     expect(apiClient.getLatestRecommendationsApi).not.toHaveBeenCalled();
     expect(apiClient.createStudentGoalApi).not.toHaveBeenCalled();
 
-    // Verify goal selection action is NOT displayed
+    // Verify student goal actions are not present in read-only panel
     expect(screen.queryByText('Choose This Direction')).toBeNull();
     expect(screen.queryByText('Choose Option Goal')).toBeNull();
   });
 
-  it('guests cannot enter admin-only preview route and are redirected to /admin/login', async () => {
-    // Unauthenticated visitor
+  it('handles loading, retry, and unavailable states for pathway details', async () => {
     authContext.useAuth.mockReturnValue({
-      user: null,
+      user: { id: 'admin-1', email: 'admin@udaan.ai', role: 'admin' },
       profile: null,
       loading: false,
       logout: vi.fn(),
     });
 
-    render(
-      <MemoryRouter initialEntries={['/admin/pathways']}>
-        <Routes>
-          <Route
-            path="/admin/pathways"
-            element={
-              <AdminRoute>
-                <AdminPathwayPreviewPage />
-              </AdminRoute>
-            }
-          />
-          <Route path="/admin/login" element={<div data-testid="admin-login-page">Admin Login Page</div>} />
-        </Routes>
-      </MemoryRouter>
-    );
-
-    expect(await screen.findByTestId('admin-login-page')).toBeTruthy();
-    expect(screen.queryByText('Pathway preview')).toBeNull();
-  });
-
-  it('students cannot enter admin-only preview route and are redirected to /dashboard', async () => {
-    // Authenticated student
-    authContext.useAuth.mockReturnValue({
-      user: { id: 'student-1', role: 'student' },
-      profile: { id: 'profile-1', is_complete: true },
-      loading: false,
-      logout: vi.fn(),
+    // Test error state and retry
+    let callCount = 0;
+    apiClient.getPathwayDetailApi.mockImplementation(async () => {
+      callCount += 1;
+      if (callCount === 1) {
+        throw new Error('Network error loading pathway');
+      }
+      return samplePathways[0];
     });
 
     render(
-      <MemoryRouter initialEntries={['/admin/pathways']}>
-        <Routes>
-          <Route
-            path="/admin/pathways"
-            element={
-              <AdminRoute>
-                <AdminPathwayPreviewPage />
-              </AdminRoute>
-            }
-          />
-          <Route path="/dashboard" element={<div data-testid="student-dashboard">Student Dashboard</div>} />
-        </Routes>
+      <MemoryRouter initialEntries={['/?pathway_id=puc-science#pathways']}>
+        <HomePage />
       </MemoryRouter>
     );
 
-    expect(await screen.findByTestId('student-dashboard')).toBeTruthy();
-    expect(screen.queryByText('Pathway preview')).toBeNull();
+    // Initial load fails and shows retry button
+    expect(await screen.findByText(/Network error loading pathway/i)).toBeTruthy();
+    const retryBtn = screen.getByRole('button', { name: /Retry/i });
+    expect(retryBtn).toBeTruthy();
+
+    // Click retry
+    fireEvent.click(retryBtn);
+
+    // Successfully loads after retry
+    expect(await screen.findByRole('heading', { name: 'PUC Science Stream' })).toBeTruthy();
+
+    // Test 404 / unavailable state
+    apiClient.getPathwayDetailApi.mockImplementation(async () => {
+      const err = new Error('Pathway not found');
+      err.response = { status: 404 };
+      throw err;
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/?pathway_id=non-existent-id#pathways']}>
+        <HomePage />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText(/Pathway Details Unavailable/i)).toBeTruthy();
   });
 
   it('existing student pathway behavior still works on /pathways', async () => {

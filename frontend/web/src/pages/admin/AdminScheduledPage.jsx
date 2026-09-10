@@ -199,6 +199,11 @@ export const AdminScheduledPage = () => {
       setActionError(null);
       setEditError(null);
       const isoDatetime = new Date(`${editForm.date}T${editForm.time}:00`).toISOString();
+      if (new Date(isoDatetime).getTime() < Date.now()) {
+        setEditError('Workshop scheduled start time cannot be in the past.');
+        setActionLoading(false);
+        return;
+      }
       const payload = {
         scheduled_start: isoDatetime,
         duration_minutes: parseInt(editForm.duration_minutes, 10),

@@ -10,7 +10,6 @@ import {
   ShieldCheck,
   School,
   ExternalLink,
-  Compass,
 } from 'lucide-react';
 
 export const AdminLayout = ({ children }) => {
@@ -23,7 +22,6 @@ export const AdminLayout = ({ children }) => {
     { label: 'Workshop Requests', path: '/admin/requests', icon: ClipboardList },
     { label: 'Scheduled', path: '/admin/scheduled', icon: CalendarCheck },
     { label: 'Completed', path: '/admin/completed', icon: CheckCircle2 },
-    { label: 'Pathway Preview', path: '/admin/pathways', icon: Compass },
   ];
 
   const handleLogout = async () => {

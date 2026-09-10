@@ -23,8 +23,10 @@ settings.DB_SCHEMA = ""
 settings.JWT_SECRET_KEY = "test_institution_jwt_secret_key_32_bytes_long"
 settings.JWT_ALGORITHM = "HS256"
 
+from fastapi import HTTPException
 from app.db.session import Base, get_db
 from app.models.workshop import WorkshopRequest, WorkshopSchedule
+from app.services.workshop_service import WorkshopService
 
 test_engine = create_engine(
     "sqlite:///:memory:",
@@ -498,3 +500,290 @@ def test_institution_token_validation_matrix():
     res_valid_student = client.get("/workshops/admin/overview", headers={"Authorization": f"Bearer {valid_student_token}"})
     assert res_valid_student.status_code == 403
     assert "Admin privileges required" in res_valid_student.json()["detail"]
+
+
+# ============================================================================
+# 5. WORKSHOP DATE VALIDATION & TIMEZONE HANDLING TESTS
+# ============================================================================
+
+def test_public_request_past_date_rejected():
+    from zoneinfo import ZoneInfo
+    today_kolkata = datetime.now(ZoneInfo("Asia/Kolkata")).date()
+    yesterday = today_kolkata - timedelta(days=1)
+
+    payload = valid_payload()
+    payload["preferred_date"] = yesterday.isoformat()
+    response = client.post("/workshops/requests", json=payload)
+    assert response.status_code == 422
+    err_text = str(response.json())
+    assert "Please choose today or a future date." in err_text
+
+
+def test_public_request_today_and_future_date_accepted():
+    from zoneinfo import ZoneInfo
+    today_kolkata = datetime.now(ZoneInfo("Asia/Kolkata")).date()
+
+    # 1. Today in Asia/Kolkata is accepted
+    payload_today = valid_payload()
+    payload_today["institution_name"] = "Today School"
+    payload_today["contact_email"] = "today@school.edu"
+    payload_today["preferred_date"] = today_kolkata.isoformat()
+    res_today = client.post("/workshops/requests", json=payload_today)
+    assert res_today.status_code == 201
+
+    # 2. Future date is accepted
+    payload_future = valid_payload()
+    payload_future["institution_name"] = "Future School"
+    payload_future["contact_email"] = "future@school.edu"
+    payload_future["preferred_date"] = (today_kolkata + timedelta(days=45)).isoformat()
+    res_future = client.post("/workshops/requests", json=payload_future)
+    assert res_future.status_code == 201
+
+    # 3. Omitted date is accepted
+    payload_none = valid_payload()
+    payload_none["institution_name"] = "Omitted Date School"
+    payload_none["contact_email"] = "omitted@school.edu"
+    payload_none["preferred_date"] = None
+    res_none = client.post("/workshops/requests", json=payload_none)
+    assert res_none.status_code == 201
+
+
+def test_admin_schedule_past_time_and_naive_rejected():
+    # Setup request to schedule
+    payload = valid_payload()
+    payload["institution_name"] = "Schedule Validation School"
+    payload["contact_email"] = "sched@school.edu"
+    res = client.post("/workshops/requests", json=payload)
+    req_id = res.json()["id"]
+
+    admin_token = make_jwt(role="admin")
+    headers = {"Authorization": f"Bearer {admin_token}"}
+
+    # 1. Reject past start time
+    past_utc = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
+    res_past = client.post(
+        f"/workshops/admin/requests/{req_id}/schedule",
+        json={
+            "scheduled_start": past_utc,
+            "duration_minutes": 60,
+            "mode": "offline",
+            "venue_or_meeting_link": "Room 101",
+        },
+        headers=headers,
+    )
+    assert res_past.status_code in {400, 422}
+    assert "Workshop scheduled start time cannot be in the past." in str(res_past.json())
+
+    # 2. Reject ambiguous timezone-free timestamp (e.g. 2026-10-15T10:00:00 without offset or Z)
+    res_naive = client.post(
+        f"/workshops/admin/requests/{req_id}/schedule",
+        json={
+            "scheduled_start": "2026-11-15T10:00:00",
+            "duration_minutes": 60,
+            "mode": "offline",
+            "venue_or_meeting_link": "Room 101",
+        },
+        headers=headers,
+    )
+    assert res_naive.status_code == 422
+    assert "timezone-aware" in str(res_naive.json())
+
+    # 3. Accept valid future timezone-aware timestamp
+    future_utc = (datetime.now(timezone.utc) + timedelta(days=10)).isoformat()
+    res_valid = client.post(
+        f"/workshops/admin/requests/{req_id}/schedule",
+        json={
+            "scheduled_start": future_utc,
+            "duration_minutes": 60,
+            "mode": "offline",
+            "venue_or_meeting_link": "Room 101",
+        },
+        headers=headers,
+    )
+    assert res_valid.status_code == 200
+    assert res_valid.json()["status"] == "SCHEDULED"
+
+
+# ============================================================================
+# 6. IDEMPOTENCY, DUPLICATE PREVENTION & CONCURRENCY TESTS
+# ============================================================================
+
+def test_submission_id_idempotent_network_retry():
+    payload = valid_payload()
+    payload["submission_id"] = "sub-idempotent-1"
+
+    # Initial submission
+    res1 = client.post("/workshops/requests", json=payload)
+    assert res1.status_code == 201
+    id1 = res1.json()["id"]
+
+    # Retry of exact same submission with same submission_id
+    res2 = client.post("/workshops/requests", json=payload)
+    assert res2.status_code in {200, 201}
+    assert res2.json()["id"] == id1
+
+    # Verify only 1 database row exists
+    db = TestingSessionLocal()
+    count = db.query(WorkshopRequest).filter(WorkshopRequest.submission_id == "sub-idempotent-1").count()
+    db.close()
+    assert count == 1
+
+
+def test_submission_id_changed_payload_conflict():
+    payload1 = valid_payload()
+    payload1["submission_id"] = "sub-conflict-test"
+    payload1["student_count"] = 100
+
+    res1 = client.post("/workshops/requests", json=payload1)
+    assert res1.status_code == 201
+
+    # Reusing submission_id with modified payload must return 409 conflict
+    payload2 = valid_payload()
+    payload2["submission_id"] = "sub-conflict-test"
+    payload2["student_count"] = 350
+
+    res2 = client.post("/workshops/requests", json=payload2)
+    assert res2.status_code == 409
+    assert "Submission ID conflict" in res2.json()["detail"]
+
+
+def test_active_identical_request_rejected():
+    payload = valid_payload()
+    payload["institution_name"] = "National High School"
+    payload["contact_email"] = "principal@national.edu"
+    payload["district"] = "Bengaluru Urban"
+    payload["preferred_topics"] = ["career_guidance", "ai_literacy"]
+
+    res1 = client.post("/workshops/requests", json=payload)
+    assert res1.status_code == 201
+
+    # Attempt to submit identical active request (different submission_id or no submission_id)
+    payload_dup = valid_payload()
+    payload_dup["institution_name"] = " national high school "  # normalization check
+    payload_dup["contact_email"] = "PRINCIPAL@national.edu "
+    payload_dup["district"] = "Bengaluru Urban"
+    payload_dup["preferred_topics"] = ["ai_literacy", "career_guidance"]  # sorted match
+    payload_dup["submission_id"] = "different-submission-id"
+
+    res2 = client.post("/workshops/requests", json=payload_dup)
+    assert res2.status_code == 409
+    assert res2.json()["detail"] == "This workshop request has already been submitted."
+    # Ensure no previous requester data leaked
+    assert "id" not in res2.json()
+    assert "contact_phone" not in res2.json()
+
+
+def test_distinct_institutions_same_preferred_date_allowed():
+    payload1 = valid_payload()
+    payload1["institution_name"] = "Institution Alpha"
+    payload1["contact_email"] = "alpha@edu.in"
+    payload1["preferred_date"] = "2026-11-20"
+    res1 = client.post("/workshops/requests", json=payload1)
+    assert res1.status_code == 201
+
+    payload2 = valid_payload()
+    payload2["institution_name"] = "Institution Beta"
+    payload2["contact_email"] = "beta@edu.in"
+    payload2["preferred_date"] = "2026-11-20"  # same date, different institution
+    res2 = client.post("/workshops/requests", json=payload2)
+    assert res2.status_code == 201
+
+
+def test_same_institution_different_request_allowed():
+    payload1 = valid_payload()
+    payload1["institution_name"] = "St. Marys College"
+    payload1["contact_email"] = "info@stmarys.edu"
+    payload1["preferred_topics"] = ["career_guidance"]
+    res1 = client.post("/workshops/requests", json=payload1)
+    assert res1.status_code == 201
+
+    # Same institution with different topic is allowed
+    payload2 = valid_payload()
+    payload2["institution_name"] = "St. Marys College"
+    payload2["contact_email"] = "info@stmarys.edu"
+    payload2["preferred_topics"] = ["future_skills"]
+    res2 = client.post("/workshops/requests", json=payload2)
+    assert res2.status_code == 201
+
+
+def test_active_duplicate_allowed_after_cancellation():
+    payload = valid_payload()
+    payload["institution_name"] = "Resubmit College"
+    payload["contact_email"] = "admin@resubmit.edu"
+    res1 = client.post("/workshops/requests", json=payload)
+    assert res1.status_code == 201
+    req_id = res1.json()["id"]
+
+    # Cancel first request
+    admin_token = make_jwt(role="admin")
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    client.post(
+        f"/workshops/admin/requests/{req_id}/cancel",
+        json={"cancellation_reason": "Date postponed to next academic term."},
+        headers=headers,
+    )
+
+    # Re-submitting identical request is now allowed because previous request is terminal CANCELLED
+    res2 = client.post("/workshops/requests", json=payload)
+    assert res2.status_code == 201
+
+
+def test_submission_id_integrity_race_handling(monkeypatch):
+    payload = valid_payload()
+    payload["submission_id"] = "race-sub-100"
+
+    # First submission succeeds normally
+    res1 = client.post("/workshops/requests", json=payload)
+    assert res1.status_code == 201
+    id1 = res1.json()["id"]
+
+    # Now simulate concurrent race where another thread already committed:
+    # We call create_public_request directly where db.commit raises IntegrityError
+    db = TestingSessionLocal()
+    from app.schemas.workshop import PublicWorkshopRequestCreate
+    data = PublicWorkshopRequestCreate(**payload)
+
+    orig_commit = db.commit
+    def fail_commit_once():
+        # Restore real commit before rollback in exception handler
+        db.commit = orig_commit
+        from sqlalchemy.exc import IntegrityError
+        raise IntegrityError("mock race insert", {}, Exception("UNIQUE constraint failed"))
+
+    db.commit = fail_commit_once
+    recovered = WorkshopService.create_public_request(db, data)
+    assert str(recovered.id) == id1
+    db.close()
+
+
+def test_active_duplicate_integrity_race_handling():
+    payload1 = valid_payload()
+    payload1["institution_name"] = "Race Active Dup Academy"
+    payload1["contact_email"] = "race@academy.edu"
+    payload1["submission_id"] = "sub-race-1"
+
+    res1 = client.post("/workshops/requests", json=payload1)
+    assert res1.status_code == 201
+
+    # Simulate race where second request (with different submission_id) commits at same time
+    payload2 = valid_payload()
+    payload2["institution_name"] = "Race Active Dup Academy"
+    payload2["contact_email"] = "race@academy.edu"
+    payload2["submission_id"] = "sub-race-2"
+
+    db = TestingSessionLocal()
+    from app.schemas.workshop import PublicWorkshopRequestCreate
+    data2 = PublicWorkshopRequestCreate(**payload2)
+
+    orig_commit = db.commit
+    def fail_commit_dup():
+        db.commit = orig_commit
+        from sqlalchemy.exc import IntegrityError
+        raise IntegrityError("mock duplicate race", {}, Exception("UNIQUE constraint failed: active_duplicate_hash"))
+
+    db.commit = fail_dup = fail_commit_dup
+    with pytest.raises(HTTPException) as exc_info:
+        WorkshopService.create_public_request(db, data2)
+    assert exc_info.value.status_code == 409
+    assert exc_info.value.detail == "This workshop request has already been submitted."
+    db.close()

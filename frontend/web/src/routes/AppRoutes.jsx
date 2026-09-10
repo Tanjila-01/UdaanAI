@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import HomePage from '../pages/HomePage';
 import RegisterPage from '../pages/RegisterPage';
 import LoginPage from '../pages/LoginPage';
@@ -13,11 +13,18 @@ import AdminOverviewPage from '../pages/admin/AdminOverviewPage';
 import AdminRequestsPage from '../pages/admin/AdminRequestsPage';
 import AdminScheduledPage from '../pages/admin/AdminScheduledPage';
 import AdminCompletedPage from '../pages/admin/AdminCompletedPage';
-import AdminPathwayPreviewPage from '../pages/admin/AdminPathwayPreviewPage';
 import AdminLoginPage from '../pages/admin/AdminLoginPage';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { PublicOnlyRoute } from '../components/PublicOnlyRoute';
 import { AdminRoute } from '../components/AdminRoute';
+
+export const AdminPathwaysRedirect = () => {
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const pathwayId = searchParams.get('pathway_id') || searchParams.get('id') || searchParams.get('node');
+  const targetSearch = pathwayId ? `?pathway_id=${encodeURIComponent(pathwayId)}` : '';
+  return <Navigate to={{ pathname: '/', search: targetSearch, hash: '#pathways' }} replace />;
+};
 
 const AppRoutes = () => {
   return (
@@ -116,11 +123,7 @@ const AppRoutes = () => {
       />
       <Route
         path="/admin/pathways"
-        element={
-          <AdminRoute>
-            <AdminPathwayPreviewPage />
-          </AdminRoute>
-        }
+        element={<AdminPathwaysRedirect />}
       />
       <Route path="*" element={<HomePage />} />
     </Routes>
