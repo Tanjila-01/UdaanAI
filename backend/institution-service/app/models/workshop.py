@@ -76,6 +76,16 @@ class WorkshopRequest(Base):
         uselist=False,
         cascade="all, delete-orphan",
     )
+    feedback = relationship(
+        "WorkshopFeedback",
+        back_populates="request",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+
+    @property
+    def coordinator_feedback(self):
+        return self.feedback
 
 
 class WorkshopSchedule(Base):
@@ -116,3 +126,37 @@ class WorkshopSchedule(Base):
     )
 
     request = relationship("WorkshopRequest", back_populates="schedule")
+
+
+class WorkshopFeedback(Base):
+    __tablename__ = "workshop_feedbacks"
+    __table_args__ = (
+        Index("ix_workshop_feedbacks_feedback_token", "feedback_token", unique=True),
+        schema_args,
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    request_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey(f"{settings.DB_SCHEMA}.workshop_requests.id" if settings.DB_SCHEMA else "workshop_requests.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+    feedback_token = Column(String(64), nullable=False, unique=True)
+    rating = Column(Integer, nullable=True)
+    comments = Column(String(1000), nullable=True)
+    submitted_at = Column(DateTime(timezone=True), nullable=True)
+
+    created_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    request = relationship("WorkshopRequest", back_populates="feedback")

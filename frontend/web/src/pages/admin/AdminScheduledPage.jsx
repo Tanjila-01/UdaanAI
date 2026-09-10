@@ -141,9 +141,18 @@ export const AdminScheduledPage = () => {
     setIsCancelModalOpen(true);
   };
 
+  const isWorkshopPremature = (workshop) => {
+    if (!workshop?.schedule?.scheduled_start) return false;
+    return new Date(workshop.schedule.scheduled_start).getTime() > Date.now();
+  };
+
   const handleCompleteSubmit = async (e) => {
     e.preventDefault();
     if (!selectedWorkshop || actionLoading) return;
+    if (isWorkshopPremature(selectedWorkshop)) {
+      setCompleteError('Cannot mark workshop as completed before its scheduled start time.');
+      return;
+    }
     try {
       setActionLoading(true);
       setActionError(null);
@@ -465,6 +474,23 @@ export const AdminScheduledPage = () => {
               </button>
             </div>
 
+            {isWorkshopPremature(selectedWorkshop) && (
+              <div
+                role="alert"
+                className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start space-x-2 text-amber-800 text-xs"
+              >
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <span>
+                  Cannot mark workshop as completed before its scheduled start time (
+                  {new Date(selectedWorkshop.schedule.scheduled_start).toLocaleString('en-IN', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                  })}
+                  ).
+                </span>
+              </div>
+            )}
+
             {completeError && (
               <div
                 role="alert"
@@ -529,7 +555,7 @@ export const AdminScheduledPage = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={actionLoading}
+                  disabled={actionLoading || isWorkshopPremature(selectedWorkshop)}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-5 py-2 rounded-xl shadow-xs disabled:opacity-50"
                 >
                   {actionLoading ? 'Saving...' : 'Confirm Completion'}

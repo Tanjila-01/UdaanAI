@@ -14,6 +14,7 @@ import AdminRequestsPage from '../pages/admin/AdminRequestsPage';
 import AdminScheduledPage from '../pages/admin/AdminScheduledPage';
 import AdminCompletedPage from '../pages/admin/AdminCompletedPage';
 import AdminLoginPage from '../pages/admin/AdminLoginPage';
+import WorkshopFeedbackPage from '../pages/WorkshopFeedbackPage';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { PublicOnlyRoute } from '../components/PublicOnlyRoute';
 import { AdminRoute } from '../components/AdminRoute';
@@ -31,6 +32,7 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/design-system" element={<DesignSystemShowcasePage />} />
+      <Route path="/workshops/feedback/:token" element={<WorkshopFeedbackPage />} />
       <Route
         path="/register"
         element={

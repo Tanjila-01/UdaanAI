@@ -312,5 +312,19 @@ export const cancelWorkshopApi = async (requestId, data) => {
   return response.data;
 };
 
+// --- Coordinator Feedback APIs ---
 
+export const getWorkshopFeedbackContextApi = async (token) => {
+  const response = await apiClient.get(`/api/v1/workshops/feedback/${encodeURIComponent(token)}`);
+  return response.data;
+};
 
+export const submitWorkshopFeedbackApi = async (token, data) => {
+  const response = await apiClient.post(`/api/v1/workshops/feedback/${encodeURIComponent(token)}`, data);
+  return response.data;
+};
+
+export const getWorkshopFeedbackLinkApi = async (requestId) => {
+  const response = await apiClient.get(`/api/v1/workshops/admin/requests/${encodeURIComponent(requestId)}/feedback-link`);
+  return response.data;
+};

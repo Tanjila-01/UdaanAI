@@ -268,7 +268,7 @@ export const WorkshopRequestModal = ({ isOpen, onClose, initialTopic }) => {
             </div>
             <div>
               <h2 id="workshop-modal-title" className="text-lg font-extrabold text-white leading-tight">Request an Institutional Workshop</h2>
-              <p id="workshop-modal-desc" className="text-xs text-slate-400">For Karnataka schools, colleges, and polytechnics</p>
+              <p id="workshop-modal-desc" className="text-xs text-slate-400">For school and college coordinators requesting a group workshop. Individual student registration is not available.</p>
             </div>
           </div>
           <button
@@ -308,7 +308,7 @@ export const WorkshopRequestModal = ({ isOpen, onClose, initialTopic }) => {
               <div className="bg-teal-50/80 border border-teal-200 rounded-2xl p-3.5 flex items-start space-x-2.5 text-xs text-teal-950 font-medium leading-relaxed">
                 <Info className="w-4 h-4 text-[#005F60] shrink-0 mt-0.5" />
                 <span>
-                  <strong>Workshop Request Notice:</strong> Submitting this form requests an educational workshop for your school, college, or polytechnic. It does not confirm a scheduled booking or reserve individual attendee seats. Our coordinator will review your request and contact you to discuss scheduling.
+                  <strong>Workshop Request Notice:</strong> For school and college coordinators requesting a group workshop. Individual student registration is not available. Submitting this form requests an educational workshop for your school, college, or polytechnic. Our coordinator will review your request and contact you to discuss scheduling.
                 </span>
               </div>
 

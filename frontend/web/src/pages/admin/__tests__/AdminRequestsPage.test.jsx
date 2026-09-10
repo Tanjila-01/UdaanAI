@@ -69,6 +69,14 @@ const mockRequest2 = {
   created_at: '2026-09-02T10:00:00Z',
 };
 
+const mockStartedRequest2 = {
+  ...mockRequest2,
+  schedule: {
+    ...mockRequest2.schedule,
+    scheduled_start: '2026-08-20T14:30:00.000Z',
+  },
+};
+
 const mockRequest3 = {
   id: 'req-3',
   institution_name: 'National High School Bangalore',
@@ -620,8 +628,42 @@ describe('AdminRequestsPage', () => {
   });
 
   describe('Workshop completion, validation, and error recovery', () => {
-    it('starts completion fields blank, validates invalid inputs, and preserves optional blank API contract as null', async () => {
+    it('shows premature completion warning banner and disables completion submission in requests drawer before scheduled start time', async () => {
+      // mockRequest2 has scheduled_start in the future (November 2026)
       apiClient.getAdminWorkshopRequestsApi.mockResolvedValue([mockRequest2]);
+
+      render(
+        <MemoryRouter initialEntries={['/admin/requests']}>
+          <AdminRequestsPage />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('St Joseph School Belagavi')).toBeTruthy();
+      });
+
+      // Open drawer for scheduled request
+      fireEvent.click(screen.getByRole('button', { name: /Open/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText('Confirmed Workshop Schedule')).toBeTruthy();
+      });
+
+      // Click "Mark Completed" in drawer footer
+      fireEvent.click(screen.getByRole('button', { name: /Mark Completed/i }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Complete Workshop' })).toBeTruthy();
+      });
+
+      // Verify premature warning banner is displayed and submit button is disabled
+      expect(screen.getByText(/Cannot mark workshop as completed before its scheduled start time/i)).toBeTruthy();
+      const submitBtn = within(screen.getByRole('dialog')).getByRole('button', { name: /Mark Completed/i });
+      expect(submitBtn.disabled).toBe(true);
+    });
+
+    it('starts completion fields blank, validates invalid inputs, and preserves optional blank API contract as null', async () => {
+      apiClient.getAdminWorkshopRequestsApi.mockResolvedValue([mockStartedRequest2]);
 
       render(
         <MemoryRouter initialEntries={['/admin/requests']}>
@@ -711,7 +753,7 @@ describe('AdminRequestsPage', () => {
     });
 
     it('shows normalized error inside complete dialog, preserves explicit 0 inputs on failure, and updates drawer/list on retry', async () => {
-      apiClient.getAdminWorkshopRequestsApi.mockResolvedValue([mockRequest2]);
+      apiClient.getAdminWorkshopRequestsApi.mockResolvedValue([mockStartedRequest2]);
 
       render(
         <MemoryRouter initialEntries={['/admin/requests?status=SCHEDULED']}>
@@ -774,10 +816,10 @@ describe('AdminRequestsPage', () => {
 
       // 2. Retry with success
       const completedZero = {
-        ...mockRequest2,
+        ...mockStartedRequest2,
         status: 'COMPLETED',
         schedule: {
-          ...mockRequest2.schedule,
+          ...mockStartedRequest2.schedule,
           actual_attendance: 0,
           feedback_score: 0,
           completion_notes: 'Zero turnout due to heavy rain',
@@ -818,14 +860,14 @@ describe('AdminRequestsPage', () => {
         status: 'SCHEDULED',
         schedule: {
           id: 'sch-3',
-          scheduled_start: '2026-12-10T11:00:00.000Z',
+          scheduled_start: '2026-08-21T11:00:00.000Z',
           duration_minutes: 90,
           mode: 'offline',
           venue_or_meeting_link: 'Main Auditorium',
           assigned_facilitator: 'Dr. Ramesh',
         },
       };
-      apiClient.getAdminWorkshopRequestsApi.mockResolvedValue([mockRequest2, mockScheduledAnother]);
+      apiClient.getAdminWorkshopRequestsApi.mockResolvedValue([mockStartedRequest2, mockScheduledAnother]);
 
       render(
         <MemoryRouter initialEntries={['/admin/requests']}>

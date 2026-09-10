@@ -209,6 +209,50 @@ class WorkshopCancelRequest(BaseModel):
     cancellation_reason: str = Field(..., min_length=3, max_length=500)
 
 
+# --- Coordinator Feedback Schemas ---
+
+class CoordinatorFeedbackSummaryResponse(BaseModel):
+    feedback_token: str
+    rating: Optional[int] = None
+    comments: Optional[str] = None
+    submitted_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CoordinatorFeedbackContextResponse(BaseModel):
+    institution_name: str
+    preferred_topics: List[str]
+    mode: str
+    completed_at: Optional[datetime] = None
+    already_submitted: bool
+    submitted_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CoordinatorFeedbackSubmission(BaseModel):
+    rating: int = Field(..., ge=1, le=5)
+    comments: Optional[str] = Field(None, max_length=1000)
+
+    @field_validator("comments")
+    @classmethod
+    def clean_comments(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            v = v.strip()
+            if not v:
+                return None
+            if len(v) > 1000:
+                raise ValueError("Comments cannot exceed 1000 characters.")
+        return v
+
+
+class AdminFeedbackLinkResponse(BaseModel):
+    request_id: UUID
+    feedback_token: str
+    feedback_url: str
+
+
 class AdminWorkshopRequestResponse(BaseModel):
     id: UUID
     institution_name: str
@@ -229,6 +273,7 @@ class AdminWorkshopRequestResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     schedule: Optional[WorkshopScheduleResponse] = None
+    coordinator_feedback: Optional[CoordinatorFeedbackSummaryResponse] = None
 
     model_config = ConfigDict(from_attributes=True)
 

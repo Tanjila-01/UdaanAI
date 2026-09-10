@@ -15,6 +15,9 @@ from app.schemas.workshop import (
     WorkshopCancelRequest,
     AdminWorkshopRequestResponse,
     AdminOverviewResponse,
+    CoordinatorFeedbackContextResponse,
+    CoordinatorFeedbackSubmission,
+    AdminFeedbackLinkResponse,
 )
 
 router = APIRouter(prefix="/workshops", tags=["Workshops"])
@@ -170,3 +173,56 @@ def cancel_workshop(
 ):
     """Transitions request to CANCELLED and records audit reason without deleting records."""
     return WorkshopService.cancel_request(db, request_id, data)
+
+
+# ============================================================================
+# COORDINATOR FEEDBACK ENDPOINTS
+# ============================================================================
+
+@router.get(
+    "/feedback/{token}",
+    response_model=CoordinatorFeedbackContextResponse,
+    summary="Get minimal public context for coordinator feedback form",
+)
+def get_feedback_context(
+    token: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Returns minimal workshop details (institution name, topic, mode, completed date)
+    for coordinator feedback. Strictly omits coordinator contact details and internal notes.
+    """
+    return WorkshopService.get_feedback_context(db, token)
+
+
+@router.post(
+    "/feedback/{token}",
+    status_code=status.HTTP_200_OK,
+    summary="Submit coordinator feedback for completed workshop",
+)
+def submit_coordinator_feedback(
+    token: str,
+    data: CoordinatorFeedbackSubmission,
+    db: Session = Depends(get_db),
+):
+    """
+    Accepts one coordinator feedback submission (rating 1-5, optional comments up to 1000 chars).
+    Enforces atomic one-response restriction in database.
+    """
+    return WorkshopService.submit_coordinator_feedback(db, token, data)
+
+
+@router.get(
+    "/admin/requests/{request_id}/feedback-link",
+    response_model=AdminFeedbackLinkResponse,
+    summary="Get or generate coordinator feedback link for completed workshop",
+)
+def get_admin_feedback_link(
+    request_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin_user),
+):
+    """
+    Generates or retrieves unguessable token link for manual coordinator sharing by admin.
+    """
+    return WorkshopService.get_admin_feedback_link(db, request_id)

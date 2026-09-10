@@ -1,6 +1,7 @@
 import hashlib
 import json
 import re
+import secrets
 import uuid
 from datetime import date, datetime, timezone, timedelta
 from typing import List, Optional
@@ -10,7 +11,7 @@ from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
 
-from app.models.workshop import WorkshopRequest, WorkshopSchedule
+from app.models.workshop import WorkshopRequest, WorkshopSchedule, WorkshopFeedback
 from app.schemas.workshop import (
     PublicWorkshopRequestCreate,
     WorkshopScheduleCreate,
@@ -19,6 +20,9 @@ from app.schemas.workshop import (
     WorkshopCancelRequest,
     AdminOverviewResponse,
     AdminOverviewMetrics,
+    CoordinatorFeedbackContextResponse,
+    CoordinatorFeedbackSubmission,
+    AdminFeedbackLinkResponse,
 )
 
 
@@ -221,7 +225,10 @@ class WorkshopService:
         mode_filter: Optional[str] = None,
         search_query: Optional[str] = None,
     ) -> List[WorkshopRequest]:
-        query = db.query(WorkshopRequest).options(joinedload(WorkshopRequest.schedule))
+        query = db.query(WorkshopRequest).options(
+            joinedload(WorkshopRequest.schedule),
+            joinedload(WorkshopRequest.feedback),
+        )
 
         if status_filter and status_filter.strip().upper() != "ALL":
             query = query.filter(WorkshopRequest.status == status_filter.strip().upper())
@@ -243,13 +250,30 @@ class WorkshopService:
                 )
             )
 
-        return query.order_by(WorkshopRequest.created_at.desc()).all()
+        results = query.order_by(WorkshopRequest.created_at.desc()).all()
+
+        # Ensure historical completed workshops have an unguessable feedback token
+        needs_token = [r for r in results if r.status == "COMPLETED" and not r.feedback]
+        if needs_token:
+            for r in needs_token:
+                fb = WorkshopFeedback(
+                    id=uuid.uuid4(),
+                    request_id=r.id,
+                    feedback_token=secrets.token_urlsafe(32),
+                )
+                db.add(fb)
+            db.commit()
+
+        return results
 
     @staticmethod
     def get_request_by_id(db: Session, request_id: uuid.UUID) -> WorkshopRequest:
         req = (
             db.query(WorkshopRequest)
-            .options(joinedload(WorkshopRequest.schedule))
+            .options(
+                joinedload(WorkshopRequest.schedule),
+                joinedload(WorkshopRequest.feedback),
+            )
             .filter(WorkshopRequest.id == request_id)
             .first()
         )
@@ -258,6 +282,15 @@ class WorkshopService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Workshop request '{request_id}' not found.",
             )
+        if req.status == "COMPLETED" and not req.feedback:
+            fb = WorkshopFeedback(
+                id=uuid.uuid4(),
+                request_id=req.id,
+                feedback_token=secrets.token_urlsafe(32),
+            )
+            db.add(fb)
+            db.commit()
+            db.refresh(req)
         return req
 
     @staticmethod
@@ -429,6 +462,18 @@ class WorkshopService:
             )
 
         now = datetime.now(timezone.utc)
+        sched_start = req.schedule.scheduled_start
+        if sched_start.tzinfo is None:
+            start_utc = sched_start.replace(tzinfo=timezone.utc)
+        else:
+            start_utc = sched_start.astimezone(timezone.utc)
+
+        if now < start_utc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot mark workshop as completed before its scheduled start time.",
+            )
+
         schedule = req.schedule
         schedule.actual_attendance = data.actual_attendance
         schedule.completion_notes = data.completion_notes.strip() if data.completion_notes else None
@@ -439,9 +484,132 @@ class WorkshopService:
         req.status = "COMPLETED"
         req.updated_at = now
 
+        if not req.feedback:
+            fb = WorkshopFeedback(
+                id=uuid.uuid4(),
+                request_id=req.id,
+                feedback_token=secrets.token_urlsafe(32),
+            )
+            db.add(fb)
+
         db.commit()
         db.refresh(req)
         return req
+
+    @staticmethod
+    def ensure_feedback_token(db: Session, req: WorkshopRequest) -> str:
+        if req.status != "COMPLETED":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Feedback links are only available for completed workshops.",
+            )
+        if req.feedback:
+            return req.feedback.feedback_token
+        token = secrets.token_urlsafe(32)
+        fb = WorkshopFeedback(
+            id=uuid.uuid4(),
+            request_id=req.id,
+            feedback_token=token,
+        )
+        db.add(fb)
+        db.commit()
+        db.refresh(req)
+        return token
+
+    @staticmethod
+    def get_admin_feedback_link(db: Session, request_id: uuid.UUID) -> AdminFeedbackLinkResponse:
+        req = WorkshopService.get_request_by_id(db, request_id)
+        token = WorkshopService.ensure_feedback_token(db, req)
+        return AdminFeedbackLinkResponse(
+            request_id=req.id,
+            feedback_token=token,
+            feedback_url=f"/workshops/feedback/{token}",
+        )
+
+    @staticmethod
+    def get_feedback_context(db: Session, token: str) -> CoordinatorFeedbackContextResponse:
+        clean_token = token.strip()
+        fb = (
+            db.query(WorkshopFeedback)
+            .options(joinedload(WorkshopFeedback.request).joinedload(WorkshopRequest.schedule))
+            .filter(WorkshopFeedback.feedback_token == clean_token)
+            .first()
+        )
+        if not fb or not fb.request:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Invalid or expired feedback link.",
+            )
+
+        req = fb.request
+        return CoordinatorFeedbackContextResponse(
+            institution_name=req.institution_name,
+            preferred_topics=req.preferred_topics,
+            mode=req.schedule.mode if req.schedule else req.preferred_mode,
+            completed_at=req.schedule.completed_at if req.schedule else None,
+            already_submitted=fb.submitted_at is not None,
+            submitted_at=fb.submitted_at,
+        )
+
+    @staticmethod
+    def submit_coordinator_feedback(
+        db: Session, token: str, data: CoordinatorFeedbackSubmission
+    ) -> dict:
+        clean_token = token.strip()
+        fb = (
+            db.query(WorkshopFeedback)
+            .options(joinedload(WorkshopFeedback.request))
+            .filter(WorkshopFeedback.feedback_token == clean_token)
+            .first()
+        )
+        if not fb or not fb.request:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Invalid or expired feedback link.",
+            )
+
+        if fb.request.status != "COMPLETED":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Workshop is not completed.",
+            )
+
+        if fb.submitted_at is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Feedback has already been submitted for this workshop.",
+            )
+
+        now = datetime.now(timezone.utc)
+        clean_comments = data.comments.strip() if data.comments else None
+        rows_updated = (
+            db.query(WorkshopFeedback)
+            .filter(
+                WorkshopFeedback.id == fb.id,
+                WorkshopFeedback.submitted_at.is_(None),
+            )
+            .update(
+                {
+                    "rating": data.rating,
+                    "comments": clean_comments,
+                    "submitted_at": now,
+                    "updated_at": now,
+                },
+                synchronize_session="fetch",
+            )
+        )
+        db.commit()
+        if rows_updated == 0:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Feedback has already been submitted for this workshop.",
+            )
+
+        return {
+            "message": "Thank you! Your feedback has been recorded.",
+            "rating": data.rating,
+            "submitted_at": now.isoformat(),
+        }
 
     @staticmethod
     def cancel_request(

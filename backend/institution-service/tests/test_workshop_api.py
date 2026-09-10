@@ -246,12 +246,23 @@ def test_full_operational_lifecycle():
     assert update_res.status_code == 200
     assert update_res.json()["schedule"]["assigned_facilitator"] == "Prof. Ananya Sharma & Dr. Vivek"
 
-    # 6. Complete Workshop (SCHEDULED -> COMPLETED)
+    # 6. Premature Completion Rejection
     complete_payload = {
         "actual_attendance": 235,
         "completion_notes": "High engagement, interactive Q&A session on polytechnic vs science.",
         "feedback_score": 4.8,
     }
+    comp_premature = client.post(f"/workshops/admin/requests/{req_id}/complete", json=complete_payload, headers=headers)
+    assert comp_premature.status_code == 400
+    assert "Cannot mark workshop as completed before its scheduled start time." in comp_premature.json()["detail"]
+
+    # 7. Complete Workshop after scheduled start time (SCHEDULED -> COMPLETED)
+    db = TestingSessionLocal()
+    req_rec = db.query(WorkshopRequest).filter_by(id=uuid.UUID(req_id)).first()
+    req_rec.schedule.scheduled_start = datetime.now(timezone.utc) - timedelta(minutes=30)
+    db.commit()
+    db.close()
+
     comp_res = client.post(f"/workshops/admin/requests/{req_id}/complete", json=complete_payload, headers=headers)
     assert comp_res.status_code == 200
     comp_data = comp_res.json()
@@ -259,6 +270,9 @@ def test_full_operational_lifecycle():
     assert comp_data["schedule"]["actual_attendance"] == 235
     assert comp_data["schedule"]["feedback_score"] == 4.8
     assert comp_data["schedule"]["completed_at"] is not None
+    assert comp_data["coordinator_feedback"] is not None
+    assert comp_data["coordinator_feedback"]["feedback_token"] is not None
+    assert comp_data["coordinator_feedback"]["submitted_at"] is None
 
 
 def test_illegal_lifecycle_transitions():
@@ -986,4 +1000,288 @@ def test_duplicate_check_matches_legacy_active_records():
     # Once legacy record is COMPLETED, identical request is permitted
     dup_res2 = client.post("/workshops/requests", json=dup_payload)
     assert dup_res2.status_code == 201
+
+
+def test_premature_completion_rejected_and_completed_after_start():
+    token = make_jwt()
+    headers = {"Authorization": f"Bearer {token}"}
+
+    create_res = client.post("/workshops/requests", json=valid_payload())
+    req_id = create_res.json()["id"]
+
+    # Schedule for 2 hours in the future
+    future_start = (datetime.now(timezone.utc) + timedelta(hours=2)).isoformat()
+    sched_res = client.post(
+        f"/workshops/admin/requests/{req_id}/schedule",
+        json={
+            "scheduled_start": future_start,
+            "duration_minutes": 60,
+            "mode": "offline",
+            "venue_or_meeting_link": "Room 201",
+        },
+        headers=headers,
+    )
+    assert sched_res.status_code == 200
+
+    # Premature completion must be rejected with 400
+    comp_fail = client.post(
+        f"/workshops/admin/requests/{req_id}/complete",
+        json={"actual_attendance": 100},
+        headers=headers,
+    )
+    assert comp_fail.status_code == 400
+    assert "Cannot mark workshop as completed before its scheduled start time." in comp_fail.json()["detail"]
+
+    # Move schedule start to past in DB to simulate completion after workshop started
+    db = TestingSessionLocal()
+    rec = db.query(WorkshopRequest).filter_by(id=uuid.UUID(req_id)).first()
+    rec.schedule.scheduled_start = datetime.now(timezone.utc) - timedelta(minutes=15)
+    db.commit()
+    db.close()
+
+    # Now completion succeeds
+    comp_success = client.post(
+        f"/workshops/admin/requests/{req_id}/complete",
+        json={"actual_attendance": 120},
+        headers=headers,
+    )
+    assert comp_success.status_code == 200
+    assert comp_success.json()["status"] == "COMPLETED"
+
+
+def test_coordinator_feedback_public_context_privacy():
+    token = make_jwt()
+    headers = {"Authorization": f"Bearer {token}"}
+
+    payload = valid_payload()
+    payload["contact_name"] = "Private Coordinator"
+    payload["contact_phone"] = "9988776655"
+    payload["contact_email"] = "private@school.edu"
+    create_res = client.post("/workshops/requests", json=payload)
+    req_id = create_res.json()["id"]
+
+    future_start = (datetime.now(timezone.utc) + timedelta(days=2)).isoformat()
+    sched_res = client.post(
+        f"/workshops/admin/requests/{req_id}/schedule",
+        json={
+            "scheduled_start": future_start,
+            "duration_minutes": 60,
+            "mode": "offline",
+            "venue_or_meeting_link": "Auditorium A",
+            "internal_notes": "Internal confidential admin notes about school funding",
+        },
+        headers=headers,
+    )
+    assert sched_res.status_code == 200
+
+    # Move schedule to past in DB
+    db = TestingSessionLocal()
+    rec = db.query(WorkshopRequest).filter_by(id=uuid.UUID(req_id)).first()
+    rec.schedule.scheduled_start = datetime.now(timezone.utc) - timedelta(hours=3)
+    db.commit()
+    db.close()
+
+    comp_res = client.post(
+        f"/workshops/admin/requests/{req_id}/complete",
+        json={"actual_attendance": 80, "feedback_score": 4.5},
+        headers=headers,
+    )
+    assert comp_res.status_code == 200
+    fb_token = comp_res.json()["coordinator_feedback"]["feedback_token"]
+    assert fb_token is not None
+
+    # Public context access
+    pub_res = client.get(f"/workshops/feedback/{fb_token}")
+    assert pub_res.status_code == 200
+    data = pub_res.json()
+    assert data["institution_name"] == payload["institution_name"]
+    assert data["mode"] == "offline"
+    assert data["already_submitted"] is False
+    assert data["submitted_at"] is None
+
+    # CRITICAL: Verify coordinator contact details and internal notes are NEVER exposed in response
+    pub_text = pub_res.text
+    assert "Private Coordinator" not in pub_text
+    assert "9988776655" not in pub_text
+    assert "private@school.edu" not in pub_text
+    assert "confidential" not in pub_text
+    assert "funding" not in pub_text
+
+    # Invalid token check
+    inv_res = client.get("/workshops/feedback/non_existent_token_123")
+    assert inv_res.status_code == 404
+    assert "Invalid or expired feedback link." in inv_res.json()["detail"]
+
+
+def test_coordinator_feedback_validation_and_duplicate_prevention():
+    token = make_jwt()
+    headers = {"Authorization": f"Bearer {token}"}
+
+    create_res = client.post("/workshops/requests", json=valid_payload())
+    req_id = create_res.json()["id"]
+
+    future_start = (datetime.now(timezone.utc) + timedelta(days=2)).isoformat()
+    sched_res = client.post(
+        f"/workshops/admin/requests/{req_id}/schedule",
+        json={
+            "scheduled_start": future_start,
+            "mode": "online",
+            "venue_or_meeting_link": "https://meet.google.com/abc",
+        },
+        headers=headers,
+    )
+    assert sched_res.status_code == 200
+
+    # Move schedule to past in DB
+    db = TestingSessionLocal()
+    rec = db.query(WorkshopRequest).filter_by(id=uuid.UUID(req_id)).first()
+    rec.schedule.scheduled_start = datetime.now(timezone.utc) - timedelta(hours=2)
+    db.commit()
+    db.close()
+
+    comp_res = client.post(
+        f"/workshops/admin/requests/{req_id}/complete",
+        json={"actual_attendance": 50},
+        headers=headers,
+    )
+    assert comp_res.status_code == 200
+    fb_token = comp_res.json()["coordinator_feedback"]["feedback_token"]
+
+    # 1. Validation: rating below 1
+    res_low = client.post(f"/workshops/feedback/{fb_token}", json={"rating": 0})
+    assert res_low.status_code in {400, 422}
+
+    # 2. Validation: rating above 5
+    res_high = client.post(f"/workshops/feedback/{fb_token}", json={"rating": 6})
+    assert res_high.status_code in {400, 422}
+
+    # 3. Validation: comments exceeding 1000 characters
+    long_comments = "A" * 1001
+    res_long = client.post(f"/workshops/feedback/{fb_token}", json={"rating": 5, "comments": long_comments})
+    assert res_long.status_code in {400, 422}
+
+    # 4. Valid initial submission
+    res_valid = client.post(
+        f"/workshops/feedback/{fb_token}",
+        json={"rating": 5, "comments": "Excellent workshop for our students!"},
+    )
+    assert res_valid.status_code == 200
+    assert "recorded" in res_valid.json()["message"]
+
+    # 5. Duplicate submission prevention (atomic rejection)
+    res_dup = client.post(
+        f"/workshops/feedback/{fb_token}",
+        json={"rating": 4, "comments": "Second attempt to submit"},
+    )
+    assert res_dup.status_code == 409
+    assert "Feedback has already been submitted for this workshop." in res_dup.json()["detail"]
+
+    # Public context now reflects already_submitted = True
+    context_res = client.get(f"/workshops/feedback/{fb_token}")
+    assert context_res.status_code == 200
+    assert context_res.json()["already_submitted"] is True
+    assert context_res.json()["submitted_at"] is not None
+
+
+def test_coordinator_feedback_separation_from_admin_score():
+    token = make_jwt()
+    headers = {"Authorization": f"Bearer {token}"}
+
+    create_res = client.post("/workshops/requests", json=valid_payload())
+    req_id = create_res.json()["id"]
+
+    future_start = (datetime.now(timezone.utc) + timedelta(days=2)).isoformat()
+    sched_res = client.post(
+        f"/workshops/admin/requests/{req_id}/schedule",
+        json={
+            "scheduled_start": future_start,
+            "mode": "offline",
+            "venue_or_meeting_link": "Campus Hall",
+        },
+        headers=headers,
+    )
+    assert sched_res.status_code == 200
+
+    # Move schedule to past in DB
+    db = TestingSessionLocal()
+    rec = db.query(WorkshopRequest).filter_by(id=uuid.UUID(req_id)).first()
+    rec.schedule.scheduled_start = datetime.now(timezone.utc) - timedelta(hours=5)
+    db.commit()
+    db.close()
+
+    # Admin enters feedback_score = 3.5 upon completion
+    comp_res = client.post(
+        f"/workshops/admin/requests/{req_id}/complete",
+        json={"actual_attendance": 65, "feedback_score": 3.5},
+        headers=headers,
+    )
+    assert comp_res.status_code == 200
+    assert comp_res.json()["schedule"]["feedback_score"] == 3.5
+    # Coordinator feedback is separate and currently Awaiting (rating is None, submitted_at is None)
+    coord_fb = comp_res.json()["coordinator_feedback"]
+    assert coord_fb["rating"] is None
+    assert coord_fb["submitted_at"] is None
+    fb_token = coord_fb["feedback_token"]
+
+    # Coordinator submits a rating of 5
+    sub_res = client.post(
+        f"/workshops/feedback/{fb_token}",
+        json={"rating": 5, "comments": "Coordinator loved it"},
+    )
+    assert sub_res.status_code == 200
+
+    # Admin inspects completed workshop request
+    admin_get = client.get(f"/workshops/admin/requests", headers=headers)
+    assert admin_get.status_code == 200
+    req_item = next(r for r in admin_get.json() if r["id"] == req_id)
+    # Admin score remains 3.5
+    assert req_item["schedule"]["feedback_score"] == 3.5
+    # Coordinator feedback is 5 and recorded separately
+    assert req_item["coordinator_feedback"]["rating"] == 5
+    assert req_item["coordinator_feedback"]["comments"] == "Coordinator loved it"
+    assert req_item["coordinator_feedback"]["submitted_at"] is not None
+
+
+def test_admin_feedback_link_endpoint():
+    token = make_jwt()
+    headers = {"Authorization": f"Bearer {token}"}
+
+    create_res = client.post("/workshops/requests", json=valid_payload())
+    req_id = create_res.json()["id"]
+
+    # Cannot get feedback link for non-completed workshop (currently NEW)
+    link_fail = client.get(f"/workshops/admin/requests/{req_id}/feedback-link", headers=headers)
+    assert link_fail.status_code == 400
+    assert "only available for completed workshops" in link_fail.json()["detail"]
+
+    # Schedule and Complete
+    future_start = (datetime.now(timezone.utc) + timedelta(days=2)).isoformat()
+    sched_res = client.post(
+        f"/workshops/admin/requests/{req_id}/schedule",
+        json={"scheduled_start": future_start, "mode": "offline", "venue_or_meeting_link": "Hall 1"},
+        headers=headers,
+    )
+    assert sched_res.status_code == 200
+
+    db = TestingSessionLocal()
+    rec = db.query(WorkshopRequest).filter_by(id=uuid.UUID(req_id)).first()
+    rec.schedule.scheduled_start = datetime.now(timezone.utc) - timedelta(hours=2)
+    db.commit()
+    db.close()
+
+    comp_res = client.post(
+        f"/workshops/admin/requests/{req_id}/complete",
+        json={"actual_attendance": 40},
+        headers=headers,
+    )
+    assert comp_res.status_code == 200
+
+    # Now admin can copy feedback link
+    link_res = client.get(f"/workshops/admin/requests/{req_id}/feedback-link", headers=headers)
+    assert link_res.status_code == 200
+    data = link_res.json()
+    assert data["request_id"] == req_id
+    assert data["feedback_token"] is not None
+    assert data["feedback_url"].startswith("/workshops/feedback/")
+
 

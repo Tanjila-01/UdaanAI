@@ -826,7 +826,7 @@ const HomePage = () => {
                   Workshops We Can Arrange
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-600 font-medium mt-1 max-w-xl">
-                  Schools, PU colleges, and polytechnics across Karnataka can request structured career orientation and guidance sessions for their students.
+                  For school and college coordinators requesting a group workshop. Individual student registration is not available.
                 </p>
               </div>
               <button

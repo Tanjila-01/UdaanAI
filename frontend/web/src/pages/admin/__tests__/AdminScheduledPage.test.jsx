@@ -57,6 +57,22 @@ const mockScheduled2 = {
   status: 'SCHEDULED',
 };
 
+const mockStartedScheduled1 = {
+  ...mockScheduled1,
+  schedule: {
+    ...mockScheduled1.schedule,
+    scheduled_start: '2026-08-15T10:30:00.000Z',
+  },
+};
+
+const mockStartedScheduled2 = {
+  ...mockScheduled2,
+  schedule: {
+    ...mockScheduled2.schedule,
+    scheduled_start: '2026-08-20T14:00:00.000Z',
+  },
+};
+
 describe('AdminScheduledPage Cancellation Recovery', () => {
   beforeEach(() => {
     vi.resetAllMocks();
@@ -199,7 +215,8 @@ describe('AdminScheduledPage Cancellation Recovery', () => {
   });
 
   describe('AdminScheduledPage Workshop Completion', () => {
-    it('does not prefill attendance from student_count, validates inputs, and submits null for blank optional values', async () => {
+    it('shows premature completion warning banner and disables completion submission before scheduled start time', async () => {
+      // mockScheduled1 has scheduled_start in the future (October 2026)
       apiClient.getAdminWorkshopRequestsApi.mockResolvedValue([mockScheduled1]);
 
       render(
@@ -220,7 +237,34 @@ describe('AdminScheduledPage Cancellation Recovery', () => {
         expect(screen.getByRole('heading', { name: 'Mark Workshop Completed' })).toBeTruthy();
       });
 
-      // 1. Verify actual attendance starts BLANK, NOT prefilled with mockScheduled1.student_count (150)
+      // Verify premature warning banner is displayed and submit button is disabled
+      expect(screen.getByText(/Cannot mark workshop as completed before its scheduled start time/i)).toBeTruthy();
+      const submitBtn = screen.getByRole('button', { name: /Confirm Completion/i });
+      expect(submitBtn.disabled).toBe(true);
+    });
+
+    it('does not prefill attendance from student_count, validates inputs, and submits null for blank optional values', async () => {
+      apiClient.getAdminWorkshopRequestsApi.mockResolvedValue([mockStartedScheduled1]);
+
+      render(
+        <MemoryRouter initialEntries={['/admin/scheduled']}>
+          <AdminScheduledPage />
+        </MemoryRouter>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Govt Model Higher Primary School')).toBeTruthy();
+      });
+
+      // Click "Complete" action button
+      const completeBtn = screen.getByRole('button', { name: /Complete/i });
+      fireEvent.click(completeBtn);
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Mark Workshop Completed' })).toBeTruthy();
+      });
+
+      // 1. Verify actual attendance starts BLANK, NOT prefilled with mockStartedScheduled1.student_count (150)
       const attInput = screen.getByLabelText(/Actual Student Attendance/i);
       const feedbackInput = screen.getByLabelText(/Feedback Score/i);
       const notesInput = screen.getByLabelText(/Completion Notes/i);
@@ -253,7 +297,7 @@ describe('AdminScheduledPage Cancellation Recovery', () => {
       fireEvent.change(feedbackInput, { target: { value: '' } });
 
       apiClient.completeWorkshopApi.mockResolvedValueOnce({
-        ...mockScheduled1,
+        ...mockStartedScheduled1,
         status: 'COMPLETED',
       });
       apiClient.getAdminWorkshopRequestsApi.mockResolvedValueOnce([]);
@@ -272,7 +316,7 @@ describe('AdminScheduledPage Cancellation Recovery', () => {
     });
 
     it('shows normalized error in dialog, preserves explicit 0 inputs on failure, and updates list on retry', async () => {
-      apiClient.getAdminWorkshopRequestsApi.mockResolvedValue([mockScheduled1]);
+      apiClient.getAdminWorkshopRequestsApi.mockResolvedValue([mockStartedScheduled1]);
 
       render(
         <MemoryRouter initialEntries={['/admin/scheduled']}>
@@ -328,10 +372,10 @@ describe('AdminScheduledPage Cancellation Recovery', () => {
 
       // 2. Retry with success
       apiClient.completeWorkshopApi.mockResolvedValueOnce({
-        ...mockScheduled1,
+        ...mockStartedScheduled1,
         status: 'COMPLETED',
         schedule: {
-          ...mockScheduled1.schedule,
+          ...mockStartedScheduled1.schedule,
           actual_attendance: 0,
           feedback_score: 0,
           completion_notes: 'Zero attendance recorded',
@@ -356,7 +400,7 @@ describe('AdminScheduledPage Cancellation Recovery', () => {
     });
 
     it('resets complete form and clears stale errors when switching workshops', async () => {
-      apiClient.getAdminWorkshopRequestsApi.mockResolvedValue([mockScheduled1, mockScheduled2]);
+      apiClient.getAdminWorkshopRequestsApi.mockResolvedValue([mockStartedScheduled1, mockStartedScheduled2]);
 
       render(
         <MemoryRouter initialEntries={['/admin/scheduled']}>

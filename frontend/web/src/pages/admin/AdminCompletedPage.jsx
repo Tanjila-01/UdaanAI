@@ -12,6 +12,8 @@ import {
   X,
   AlertTriangle,
   ChevronRight,
+  Copy,
+  Check,
 } from 'lucide-react';
 
 const KARNATAKA_DISTRICTS = [
@@ -31,6 +33,30 @@ export const AdminCompletedPage = () => {
   const [districtFilter, setDistrictFilter] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedWorkshop, setSelectedWorkshop] = useState(null);
+  const [copiedId, setCopiedId] = useState(null);
+
+  const handleCopyFeedbackLink = async (workshop) => {
+    if (!workshop) return;
+    const token = workshop.coordinator_feedback?.feedback_token;
+    if (!token) return;
+    const url = `${window.location.origin}/workshops/feedback/${token}`;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = url;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopiedId(workshop.id);
+      setTimeout(() => setCopiedId(null), 2500);
+    } catch {
+      // ignore
+    }
+  };
 
   const fetchCompleted = async () => {
     try {
@@ -97,7 +123,7 @@ export const AdminCompletedPage = () => {
               <h1 className="text-2xl font-extrabold text-slate-950 tracking-tight">Completed Workshops</h1>
             </div>
             <p className="text-xs text-slate-500 font-medium mt-1">
-              Historical archive of conducted sessions, verified student attendance, and feedback metrics.
+              Historical archive of completed sessions, recorded student attendance, and feedback metrics.
             </p>
           </div>
           <button
@@ -201,11 +227,11 @@ export const AdminCompletedPage = () => {
               <table className="w-full text-left text-xs text-slate-700">
                 <thead className="bg-slate-50 border-b border-slate-200/60 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
                   <tr>
-                    <th className="py-3.5 px-4">Conducted Date</th>
+                    <th className="py-3.5 px-4">Completion Recorded</th>
                     <th className="py-3.5 px-4">Institution</th>
                     <th className="py-3.5 px-4">District</th>
                     <th className="py-3.5 px-4">Mode</th>
-                    <th className="py-3.5 px-4">Attendance</th>
+                    <th className="py-3.5 px-4">Recorded Attendance</th>
                     <th className="py-3.5 px-4">Rating</th>
                     <th className="py-3.5 px-4">Facilitator</th>
                     <th className="py-3.5 px-4 text-right">Audit</th>
@@ -250,17 +276,42 @@ export const AdminCompletedPage = () => {
                         {w.schedule?.assigned_facilitator || '—'}
                       </td>
                       <td className="py-3.5 px-4 text-right">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedWorkshop(w);
-                          }}
-                          className="text-xs font-bold text-[#005F60] hover:text-[#004D4E] bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg transition-colors inline-flex items-center space-x-1"
-                        >
-                          <span>View Details</span>
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center justify-end space-x-1.5">
+                          {w.coordinator_feedback?.feedback_token && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCopyFeedbackLink(w);
+                              }}
+                              title="Copy Feedback Link"
+                              className="text-xs font-bold text-slate-700 hover:text-[#005F60] bg-slate-100 hover:bg-teal-50 px-2.5 py-1.5 rounded-lg transition-colors inline-flex items-center space-x-1"
+                            >
+                              {copiedId === w.id ? (
+                                <>
+                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span className="text-emerald-700">Copied</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3.5 h-3.5" />
+                                  <span>Copy Link</span>
+                                </>
+                              )}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedWorkshop(w);
+                            }}
+                            className="text-xs font-bold text-[#005F60] hover:text-[#004D4E] bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg transition-colors inline-flex items-center space-x-1"
+                          >
+                            <span>View Details</span>
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -281,7 +332,7 @@ export const AdminCompletedPage = () => {
               <div className="bg-slate-900 text-white p-6 flex items-start justify-between border-b border-slate-800 sticky top-0 z-10">
                 <div>
                   <span className="bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
-                    Conducted & Verified
+                    Marked Completed
                   </span>
                   <h2 className="text-lg font-extrabold text-white mt-1 leading-tight">
                     {selectedWorkshop.institution_name}
@@ -303,13 +354,13 @@ export const AdminCompletedPage = () => {
                 {/* Metrics Pill */}
                 <div className="grid grid-cols-2 gap-3 bg-emerald-50/60 border border-emerald-200 rounded-2xl p-4">
                   <div>
-                    <div className="text-[10px] font-bold uppercase text-emerald-800">Actual Attendees</div>
+                    <div className="text-[10px] font-bold uppercase text-emerald-800">Recorded Attendance</div>
                     <div className="text-xl font-black text-slate-950 mt-0.5">
                       {selectedWorkshop.schedule?.actual_attendance ?? '—'}
                     </div>
                   </div>
                   <div>
-                    <div className="text-[10px] font-bold uppercase text-emerald-800">Feedback Score</div>
+                    <div className="text-[10px] font-bold uppercase text-emerald-800">Admin Feedback Rating</div>
                     <div className="text-xl font-black text-slate-950 mt-0.5 flex items-center space-x-1">
                       <Star className="w-4 h-4 fill-amber-500 text-amber-500 inline" />
                       <span>
@@ -321,10 +372,72 @@ export const AdminCompletedPage = () => {
                   </div>
                 </div>
 
+                {/* Coordinator Feedback Section */}
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                      Coordinator feedback via shared link
+                    </div>
+                    {selectedWorkshop.coordinator_feedback?.feedback_token && (
+                      <button
+                        type="button"
+                        onClick={() => handleCopyFeedbackLink(selectedWorkshop)}
+                        className="text-xs font-bold text-[#005F60] hover:text-[#004D4E] bg-teal-50 hover:bg-teal-100 border border-teal-200/80 px-2.5 py-1 rounded-lg transition-colors inline-flex items-center space-x-1"
+                      >
+                        {copiedId === selectedWorkshop.id ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            <span className="text-emerald-700">Copied Link</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Copy Feedback Link</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+
+                  {selectedWorkshop.coordinator_feedback?.submitted_at ? (
+                    <div className="space-y-2 pt-1">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-black text-base text-slate-900">
+                          {selectedWorkshop.coordinator_feedback.rating} / 5
+                        </span>
+                        <div className="flex text-amber-500">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`w-4 h-4 ${
+                                star <= selectedWorkshop.coordinator_feedback.rating
+                                  ? 'fill-amber-400 text-amber-500'
+                                  : 'text-slate-200'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      {selectedWorkshop.coordinator_feedback.comments && (
+                        <div className="p-3 bg-white rounded-xl border border-slate-200 text-slate-800 italic leading-relaxed">
+                          "{selectedWorkshop.coordinator_feedback.comments}"
+                        </div>
+                      )}
+                      <div className="text-[11px] text-slate-400">
+                        Submitted on {formatDate(selectedWorkshop.coordinator_feedback.submitted_at)}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-slate-500 italic py-1">
+                      Awaiting coordinator feedback
+                    </div>
+                  )}
+                </div>
+
                 {/* Session Details */}
                 <div className="space-y-3">
                   <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                    Conducted Session Summary
+                    Completed Session Summary
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">

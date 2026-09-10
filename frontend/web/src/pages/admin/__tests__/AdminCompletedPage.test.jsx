@@ -90,12 +90,14 @@ describe('AdminCompletedPage Zero-Value and Null Display', () => {
     fireEvent.click(screen.getByText('Govt PU College Hubballi'));
 
     await waitFor(() => {
-      expect(screen.getByText('Conducted & Verified')).toBeTruthy();
+      expect(screen.getByText('Marked Completed')).toBeTruthy();
     });
 
-    // In drawer metrics: Actual Attendees displays "0" and Feedback Score displays "0 / 5.0"
+    // In drawer metrics: Recorded Attendance displays "0" and Admin Feedback Rating displays "0 / 5.0"
     expect(screen.getAllByText('0').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('0 / 5.0')).toBeTruthy();
+    expect(screen.getByText('Completion Recorded')).toBeTruthy();
+    expect(screen.getAllByText('Recorded Attendance').length).toBeGreaterThanOrEqual(1);
   });
 
   it('displays — for unknown/null attendance and feedback score', async () => {
@@ -119,12 +121,98 @@ describe('AdminCompletedPage Zero-Value and Null Display', () => {
     fireEvent.click(screen.getByText('St Anthony High School'));
 
     await waitFor(() => {
-      expect(screen.getByText('Conducted & Verified')).toBeTruthy();
+      expect(screen.getByText('Marked Completed')).toBeTruthy();
     });
 
     // Should not crash and drawer metrics should show dashes
     const drawerDashes = screen.getAllByText('—');
     expect(drawerDashes.length).toBeGreaterThan(0);
+  });
+
+  it('displays Awaiting coordinator feedback and handles Copy Feedback Link', async () => {
+    const mockAwaiting = {
+      ...mockCompletedZero,
+      coordinator_feedback: {
+        feedback_token: 'secret-tok-123',
+        rating: null,
+        comments: null,
+        submitted_at: null,
+      },
+    };
+
+    apiClient.getAdminWorkshopRequestsApi.mockResolvedValue([mockAwaiting]);
+
+    // Mock clipboard
+    const writeTextMock = vi.fn().mockResolvedValue();
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: writeTextMock,
+      },
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/admin/completed']}>
+        <AdminCompletedPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Govt PU College Hubballi')).toBeTruthy();
+    });
+
+    // Table has Copy Link button
+    const copyLinkBtns = screen.getAllByTitle('Copy Feedback Link');
+    expect(copyLinkBtns.length).toBeGreaterThan(0);
+    fireEvent.click(copyLinkBtns[0]);
+
+    expect(writeTextMock).toHaveBeenCalledWith(expect.stringContaining('/workshops/feedback/secret-tok-123'));
+
+    // Open drawer
+    fireEvent.click(screen.getByText('Govt PU College Hubballi'));
+    await waitFor(() => {
+      expect(screen.getByText('Coordinator feedback via shared link')).toBeTruthy();
+      expect(screen.getByText('Awaiting coordinator feedback')).toBeTruthy();
+    });
+  });
+
+  it('displays coordinator submitted rating and comments separately from admin rating', async () => {
+    const mockSubmitted = {
+      ...mockCompletedZero,
+      schedule: {
+        ...mockCompletedZero.schedule,
+        feedback_score: 3.5, // Admin rating
+      },
+      coordinator_feedback: {
+        feedback_token: 'secret-tok-submitted',
+        rating: 5, // Coordinator rating
+        comments: 'Outstanding session for 10th graders.',
+        submitted_at: '2026-10-15T14:30:00Z',
+      },
+    };
+
+    apiClient.getAdminWorkshopRequestsApi.mockResolvedValue([mockSubmitted]);
+
+    render(
+      <MemoryRouter initialEntries={['/admin/completed']}>
+        <AdminCompletedPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Govt PU College Hubballi')).toBeTruthy();
+    });
+
+    // Open drawer
+    fireEvent.click(screen.getByText('Govt PU College Hubballi'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Coordinator feedback via shared link')).toBeTruthy();
+      // Coordinator rating 5 / 5
+      expect(screen.getByText('5 / 5')).toBeTruthy();
+      expect(screen.getByText('"Outstanding session for 10th graders."')).toBeTruthy();
+      // Admin rating 3.5 / 5.0 remains separate
+      expect(screen.getByText('3.5 / 5.0')).toBeTruthy();
+    });
   });
 
   describe('AdminCompletedPage Loading and Error Recovery', () => {
