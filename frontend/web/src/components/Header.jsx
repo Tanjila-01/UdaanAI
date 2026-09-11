@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
 import { 
@@ -7,7 +7,8 @@ import {
   Menu, 
   X, 
   ChevronRight, 
-  AlertCircle
+  AlertCircle,
+  ExternalLink
 } from 'lucide-react';
 
 const QUICK_SEARCH_ITEMS = [
@@ -145,19 +146,19 @@ export const Header = ({ onMenuClick, onEditProfileClick }) => {
   };
 
   return (
-    <header className="bg-white border-b border-slate-200/80 sticky top-0 z-30 px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-2xs">
-      <div className="flex items-center space-x-4 flex-1 max-w-xl">
+    <header className="bg-white border-b border-slate-200/80 sticky top-0 z-30 px-4 sm:px-8 py-3.5 flex items-center justify-between gap-3 shadow-2xs">
+      <div className="flex items-center space-x-3 sm:space-x-4 flex-1 max-w-xl min-w-0">
         {/* Mobile Menu Toggle */}
         <button
           onClick={onMenuClick}
-          className="lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+          className="lg:hidden p-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
           title="Open Menu"
         >
           <Menu className="w-5 h-5" />
         </button>
 
         {/* Interactive Search Container */}
-        <div className="relative w-full" ref={searchRef}>
+        <div className="relative w-full min-w-0" ref={searchRef}>
           <div className="relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -255,9 +256,20 @@ export const Header = ({ onMenuClick, onEditProfileClick }) => {
       </div>
 
       {/* Right Controls */}
-      <div className="flex items-center space-x-3 sm:space-x-4 shrink-0 relative" ref={dropdownRef}>
+      <div className="flex items-center space-x-2 sm:space-x-3 shrink-0 relative" ref={dropdownRef}>
         {/* Student Profile Info trigger for popover */}
         <ThemeToggle />
+        <Link
+          to="/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center gap-1.5 px-2 py-1.5 sm:px-2.5 sm:py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:text-[#005F60] hover:bg-slate-100 transition-colors shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500"
+          title="Open public site in a new tab"
+          aria-label="Open public site in a new tab"
+        >
+          <span className="hidden sm:inline">Public Site</span>
+          <ExternalLink className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+        </Link>
         <button
           type="button"
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}
