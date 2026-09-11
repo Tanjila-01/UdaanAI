@@ -25,7 +25,9 @@ def generate_recommendations(
 @router.get("/me", response_model=Optional[RecommendationResponse])
 def get_my_recommendation(
     claims: dict = Depends(get_current_user_claims),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db)
 ):
     user_id = claims.get("sub")
-    return RecommendationService.get_latest_recommendation(db, user_id)
+    token = credentials.credentials if credentials else None
+    return RecommendationService.get_latest_recommendation(db, user_id, token)

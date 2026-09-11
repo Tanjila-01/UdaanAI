@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./theme.css";
 
 :root {
   /* Colors - Primary Brand */
@@ -131,4 +132,10 @@
 
 .animate-paper-plane {
   animation: paperPlaneFloat 4s ease-in-out infinite;
+}
+
+
+/* Keep hero copy readable where the illustration sits behind it on small screens. */
+@media (max-width: 1023px) {
+  :root[data-theme="dark"] #hero img { opacity: 0.15; }
 }

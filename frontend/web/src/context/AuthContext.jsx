@@ -48,13 +48,14 @@ export const AuthProvider = ({ children }) => {
     }
     setToken(data.access_token);
     setUser(data.user);
+    let profileData = null;
     try {
-      const profileData = await getMyProfileApi();
+      profileData = await getMyProfileApi();
       setProfile(profileData);
     } catch (err) {
       setProfile(null);
     }
-    return data;
+    return { ...data, profile: profileData };
   };
 
   const register = async (full_name, email, password, confirm_password) => {

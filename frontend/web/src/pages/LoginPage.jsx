@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AuthHeader from '../components/layout/AuthHeader';
 import { LogIn, AlertCircle, ArrowRight } from 'lucide-react';
@@ -7,6 +7,11 @@ import { LogIn, AlertCircle, ArrowRight } from 'lucide-react';
 const LoginPage = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const from = location.state?.from?.pathname
+    ? `${location.state.from.pathname}${location.state.from.search || ''}${location.state.from.hash || ''}`
+    : (typeof location.state?.from === 'string' ? location.state.from : null);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -28,11 +33,11 @@ const LoginPage = () => {
     try {
       const data = await login(formData.email, formData.password);
       if (data.user?.role === 'admin') {
-        navigate('/admin');
-      } else if (!data.profile) {
-        navigate('/onboarding');
+        navigate(from || '/admin');
+      } else if (!data.profile || !data.profile.is_complete) {
+        navigate('/onboarding', { state: { from: location.state?.from } });
       } else {
-        navigate('/dashboard');
+        navigate(from || '/dashboard');
       }
     } catch (err) {
       setError(err.response?.data?.detail || err.message || 'Invalid email or password');

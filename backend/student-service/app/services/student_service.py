@@ -6,6 +6,10 @@ from app.models.student_profile import StudentProfile
 from app.schemas.student_profile import ProfileCreate, ProfileUpdate, AcademicStageUpdate
 
 
+SUPPORTED_LEVELS = {"Class 8", "Class 9", "Class 10", "PUC 1", "PUC 2", "Diploma", "ITI"}
+SUPPORTED_PUC_STREAMS = {"Science", "Commerce", "Arts"}
+
+
 class StudentService:
     @staticmethod
     def normalize_and_validate_academic_fields(
@@ -16,6 +20,12 @@ class StudentService:
     ) -> tuple[Optional[str], Optional[str], Optional[str]]:
         level_str = (level or "").strip()
 
+        if not level_str or level_str not in SUPPORTED_LEVELS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid current_level '{level}'. Must be one of: {', '.join(sorted(SUPPORTED_LEVELS))}"
+            )
+
         if level_str in ["Class 8", "Class 9", "Class 10"]:
             return None, None, None
         elif level_str in ["PUC 1", "PUC 2"]:
@@ -24,7 +34,13 @@ class StudentService:
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Stream is required for {level_str} (e.g. Science, Commerce, Arts)"
                 )
-            return stream.strip(), None, None
+            clean_stream = stream.strip().title()
+            if clean_stream not in SUPPORTED_PUC_STREAMS:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid stream '{stream}'. Must be one of: Science, Commerce, Arts"
+                )
+            return clean_stream, None, None
         elif level_str == "Diploma":
             if not diploma_branch or not diploma_branch.strip():
                 raise HTTPException(
@@ -54,7 +70,7 @@ class StudentService:
         elif level == "ITI":
             required_fields.append("iti_trade")
 
-        filled = sum(1 for field in required_fields if profile_data.get(field))
+        filled = sum(1 for field in required_fields if profile_data.get(field) and str(profile_data.get(field)).strip())
         percentage = int((filled / len(required_fields)) * 100)
         is_complete = percentage == 100
         return is_complete, percentage
@@ -64,16 +80,54 @@ class StudentService:
         user_uuid = uuid.UUID(user_id_str)
         profile = db.query(StudentProfile).filter(StudentProfile.user_id == user_uuid).first()
 
-        full_name = data.full_name or full_name_claim or "Student"
+        # Validate non-academic required fields against empty or whitespace-only inputs
+        if not data.institution_name or not data.institution_name.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Institution name cannot be empty or whitespace only"
+            )
+        if not data.district or not data.district.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="District cannot be empty or whitespace only"
+            )
+        if not data.class_or_year or not data.class_or_year.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Class or year cannot be empty or whitespace only"
+            )
+        if not data.board or not data.board.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Board cannot be empty or whitespace only"
+            )
 
+        full_name = (data.full_name or full_name_claim or "Student").strip()
+        if not full_name:
+            full_name = "Student"
+
+        clean_level = data.current_level.strip()
         clean_stream, clean_diploma, clean_iti = StudentService.normalize_and_validate_academic_fields(
-            data.current_level, data.stream, data.diploma_branch, data.iti_trade
+            clean_level, data.stream, data.diploma_branch, data.iti_trade
         )
 
-        profile_dict = data.model_dump()
-        profile_dict["stream"] = clean_stream
-        profile_dict["diploma_branch"] = clean_diploma
-        profile_dict["iti_trade"] = clean_iti
+        clean_inst = data.institution_name.strip()
+        clean_dist = data.district.strip()
+        clean_class = data.class_or_year.strip()
+        clean_board = data.board.strip()
+        clean_state = (data.state or "Karnataka").strip()
+        clean_lang = data.preferred_language.strip() if data.preferred_language else "English"
+
+        profile_dict = {
+            "current_level": clean_level,
+            "class_or_year": clean_class,
+            "board": clean_board,
+            "institution_name": clean_inst,
+            "district": clean_dist,
+            "stream": clean_stream,
+            "diploma_branch": clean_diploma,
+            "iti_trade": clean_iti,
+        }
 
         is_complete, percentage = StudentService.calculate_completion(profile_dict)
 
@@ -81,32 +135,32 @@ class StudentService:
             profile = StudentProfile(
                 user_id=user_uuid,
                 full_name=full_name,
-                current_level=data.current_level,
-                class_or_year=data.class_or_year,
-                board=data.board,
+                current_level=clean_level,
+                class_or_year=clean_class,
+                board=clean_board,
                 stream=clean_stream,
                 diploma_branch=clean_diploma,
                 iti_trade=clean_iti,
-                institution_name=data.institution_name,
-                district=data.district,
-                state=data.state or "Karnataka",
-                preferred_language=data.preferred_language,
+                institution_name=clean_inst,
+                district=clean_dist,
+                state=clean_state,
+                preferred_language=clean_lang,
                 is_complete=is_complete,
                 completion_percentage=percentage,
             )
             db.add(profile)
         else:
             profile.full_name = full_name
-            profile.current_level = data.current_level
-            profile.class_or_year = data.class_or_year
-            profile.board = data.board
+            profile.current_level = clean_level
+            profile.class_or_year = clean_class
+            profile.board = clean_board
             profile.stream = clean_stream
             profile.diploma_branch = clean_diploma
             profile.iti_trade = clean_iti
-            profile.institution_name = data.institution_name
-            profile.district = data.district
-            profile.state = data.state or "Karnataka"
-            profile.preferred_language = data.preferred_language
+            profile.institution_name = clean_inst
+            profile.district = clean_dist
+            profile.state = clean_state
+            profile.preferred_language = clean_lang
             profile.is_complete = is_complete
             profile.completion_percentage = percentage
 
@@ -145,7 +199,16 @@ class StudentService:
 
         for field, value in update_dict.items():
             if value is not None:
-                setattr(profile, field, value)
+                if isinstance(value, str):
+                    clean_val = value.strip()
+                    if not clean_val and field in ["institution_name", "district", "full_name"]:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"{field.replace('_', ' ').capitalize()} cannot be empty or whitespace only"
+                        )
+                    setattr(profile, field, clean_val)
+                else:
+                    setattr(profile, field, value)
 
         current_dict = {
             "current_level": profile.current_level,
@@ -169,14 +232,21 @@ class StudentService:
     def update_academic_stage(db: Session, user_id_str: str, data: AcademicStageUpdate) -> StudentProfile:
         profile = StudentService.get_profile_by_user_id(db, user_id_str)
 
-        # Constraint 9: Validate and normalize legal combinations centrally
+        # Validate and normalize legal combinations centrally
+        clean_level = data.current_level.strip()
         clean_stream, clean_diploma, clean_iti = StudentService.normalize_and_validate_academic_fields(
-            data.current_level, data.stream, data.diploma_branch, data.iti_trade
+            clean_level, data.stream, data.diploma_branch, data.iti_trade
         )
 
-        profile.current_level = data.current_level.strip()
-        if data.class_or_year:
-            profile.class_or_year = data.class_or_year.strip()
+        profile.current_level = clean_level
+        if data.class_or_year is not None:
+            clean_class = data.class_or_year.strip()
+            if not clean_class:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Class or year cannot be empty or whitespace only"
+                )
+            profile.class_or_year = clean_class
         else:
             # Fallback sensible defaults for class_or_year based on level
             level = profile.current_level
@@ -191,8 +261,14 @@ class StudentService:
             elif level == "ITI":
                 profile.class_or_year = "1st Year ITI"
 
-        if data.board:
-            profile.board = data.board.strip()
+        if data.board is not None:
+            clean_board = data.board.strip()
+            if not clean_board:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Board cannot be empty or whitespace only"
+                )
+            profile.board = clean_board
 
         profile.stream = clean_stream
         profile.diploma_branch = clean_diploma

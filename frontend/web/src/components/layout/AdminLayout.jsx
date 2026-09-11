@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import ThemeToggle from '../ThemeToggle';
 import {
   LayoutDashboard,
   ClipboardList,
@@ -33,7 +34,7 @@ export const AdminLayout = ({ children }) => {
     <div className="min-h-screen bg-slate-100 text-slate-900 font-sans flex flex-col">
       {/* Top Admin Header */}
       <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-16 py-3 sm:py-0 flex flex-wrap sm:flex-nowrap gap-3 items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-9 h-9 rounded-xl bg-[#005F60] flex items-center justify-center text-white shadow-sm">
               <School className="w-5 h-5" />
@@ -49,14 +50,15 @@ export const AdminLayout = ({ children }) => {
             </div>
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <ThemeToggle />
             <Link
               to="/"
               target="_blank"
               className="text-xs text-slate-400 hover:text-white flex items-center space-x-1 transition-colors px-2 py-1 rounded"
               title="View public website in new tab"
             >
-              <span>Public Site</span>
+              <span className="hidden sm:inline">Public Site</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </Link>
 

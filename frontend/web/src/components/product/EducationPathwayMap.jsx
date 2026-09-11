@@ -206,7 +206,8 @@ const EducationPathwayMap = ({
   selectedNodeId = null,
   onSelectNode,
   studentProfile,
-  recommendations
+  recommendations,
+  compactMobile = false
 }) => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -302,7 +303,7 @@ const EducationPathwayMap = ({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        className="relative bg-slate-50/70 border border-slate-200/80 rounded-2xl overflow-hidden cursor-grab active:cursor-grabbing h-[340px] flex items-center justify-center"
+        className={`relative bg-slate-50/70 border border-slate-200/80 rounded-2xl overflow-hidden cursor-grab active:cursor-grabbing ${compactMobile ? "h-[210px] sm:h-[280px] lg:h-[340px]" : "h-[340px]"} flex items-center justify-center`}
       >
         <svg 
           viewBox={`0 0 ${width} ${height}`} 

@@ -359,3 +359,98 @@ def test_student_token_validation_matrix():
         res_bad_exp = client.get("/students/profile/me", headers={"Authorization": f"Bearer {bad_exp_token}"})
         assert res_bad_exp.status_code == 401
         assert res_bad_exp.json()["detail"] == "Invalid token"
+
+
+def test_profile_whitespace_and_invalid_combinations_validation():
+    uid = str(uuid.uuid4())
+    token = make_token(uid)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    base_payload = {
+        "full_name": "Test Student",
+        "current_level": "Class 10",
+        "class_or_year": "10th Standard",
+        "board": "Karnataka State Board (SSLC)",
+        "institution_name": "Govt School",
+        "district": "Bengaluru Urban",
+        "state": "Karnataka",
+        "preferred_language": "English"
+    }
+
+    # 1. Whitespace-only institution_name
+    bad_inst = dict(base_payload, institution_name="   \t  ")
+    res = client.post("/students/profile", json=bad_inst, headers=headers)
+    assert res.status_code == 400
+    assert "Institution name cannot be empty" in res.json()["detail"]
+
+    # 2. Whitespace-only district
+    bad_dist = dict(base_payload, district="   ")
+    res = client.post("/students/profile", json=bad_dist, headers=headers)
+    assert res.status_code == 400
+    assert "District cannot be empty" in res.json()["detail"]
+
+    # 3. Whitespace-only class_or_year
+    bad_class = dict(base_payload, class_or_year="  \n ")
+    res = client.post("/students/profile", json=bad_class, headers=headers)
+    assert res.status_code == 400
+    assert "Class or year cannot be empty" in res.json()["detail"]
+
+    # 4. Whitespace-only board
+    bad_board = dict(base_payload, board="   ")
+    res = client.post("/students/profile", json=bad_board, headers=headers)
+    assert res.status_code == 400
+    assert "Board cannot be empty" in res.json()["detail"]
+
+    # 5. Unsupported current_level
+    bad_level = dict(base_payload, current_level="Class 7")
+    res = client.post("/students/profile", json=bad_level, headers=headers)
+    assert res.status_code == 400
+    assert "Invalid current_level" in res.json()["detail"]
+
+    bad_level_ws = dict(base_payload, current_level="   ")
+    res = client.post("/students/profile", json=bad_level_ws, headers=headers)
+    assert res.status_code == 400
+    assert "Invalid current_level" in res.json()["detail"]
+
+    # 6. Invalid PUC stream
+    bad_puc_stream = dict(base_payload, current_level="PUC 1", stream="Aviation")
+    res = client.post("/students/profile", json=bad_puc_stream, headers=headers)
+    assert res.status_code == 400
+    assert "Invalid stream" in res.json()["detail"]
+
+    # 7. Diploma without branch
+    bad_diploma = dict(base_payload, current_level="Diploma", diploma_branch="   ")
+    res = client.post("/students/profile", json=bad_diploma, headers=headers)
+    assert res.status_code == 400
+    assert "Diploma branch is required" in res.json()["detail"]
+
+    # 8. ITI without trade
+    bad_iti = dict(base_payload, current_level="ITI", iti_trade="")
+    res = client.post("/students/profile", json=bad_iti, headers=headers)
+    assert res.status_code == 400
+    assert "ITI trade is required" in res.json()["detail"]
+
+    # 9. Valid payload with leading/trailing whitespace gets trimmed cleanly
+    padded_payload = dict(
+        base_payload,
+        institution_name="  Govt PU College  ",
+        district="  Mysuru  ",
+        current_level="PUC 2",
+        stream="  Science  "
+    )
+    res = client.post("/students/profile", json=padded_payload, headers=headers)
+    assert res.status_code == 201
+    created = res.json()
+    assert created["institution_name"] == "Govt PU College"
+    assert created["district"] == "Mysuru"
+    assert created["stream"] == "Science"
+
+    # 10. Update profile with whitespace-only field rejected
+    res_up_bad = client.put("/students/profile/me", json={"institution_name": "   "}, headers=headers)
+    assert res_up_bad.status_code == 400
+    assert "cannot be empty or whitespace only" in res_up_bad.json()["detail"]
+
+    # 11. Update academic stage with whitespace-only board rejected
+    res_stage_bad = client.put("/students/profile/academic-stage", json={"current_level": "Class 10", "board": "   "}, headers=headers)
+    assert res_stage_bad.status_code == 400
+    assert "Board cannot be empty" in res_stage_bad.json()["detail"]

@@ -398,7 +398,7 @@ const HomePage = () => {
         {/* ========================================================= */}
         {/* SECTION 3: THE CAREER CROSSROADS PROBLEM */}
         {/* ========================================================= */}
-        <section id="problem" className="py-14 sm:py-16 bg-slate-950 text-white relative overflow-hidden scroll-mt-28">
+        <section id="problem" className="py-8 sm:py-10 lg:py-12 bg-slate-950 text-white relative overflow-hidden scroll-mt-28">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-[#005F60]/20 blur-3xl pointer-events-none" />
 
           <Container size="xl">
@@ -481,10 +481,10 @@ const HomePage = () => {
         {/* ========================================================= */}
         {/* SECTION 4: GUIDED INTERACTIVE FLOW */}
         {/* ========================================================= */}
-        <section id="how-it-works" className="py-14 sm:py-16 bg-white border-b border-slate-100 scroll-mt-28">
+        <section id="how-it-works" className="py-8 sm:py-10 lg:py-12 bg-white border-b border-slate-100 scroll-mt-28">
           <Container size="xl">
 
-            <div className="text-center max-w-3xl mx-auto mb-10">
+            <div className="text-center max-w-3xl mx-auto mb-6 sm:mb-8">
               <Badge variant="primary" size="md" dot className="mb-2">
                 Guided System
               </Badge>
@@ -740,10 +740,10 @@ const HomePage = () => {
         {/* ========================================================= */}
         {/* SECTION 5: PUBLIC PATHWAY MAP PREVIEW */}
         {/* ========================================================= */}
-        <section id="pathways" className="py-14 sm:py-16 bg-slate-50 border-b border-slate-200/60 scroll-mt-28 font-sans">
+        <section id="pathways" className="py-8 sm:py-10 lg:py-12 bg-slate-50 border-b border-slate-200/60 scroll-mt-28 font-sans">
           <Container size="xl">
 
-            <div className="text-center max-w-3xl mx-auto mb-10">
+            <div className="text-center max-w-3xl mx-auto mb-6 sm:mb-8">
               <Badge variant="primary" size="md" dot className="mb-2">
                 Explore Common Routes After SSLC
               </Badge>
@@ -757,6 +757,7 @@ const HomePage = () => {
 
             <div className="max-w-7xl mx-auto bg-white/60 border border-slate-200/80 p-3 sm:p-5 rounded-3xl shadow-xs">
               <EducationPathwayMap 
+                compactMobile
                 selectedNodeId={selectedPublicNodeId}
                 onSelectNode={handlePublicNodeClick}
               />
@@ -814,10 +815,10 @@ const HomePage = () => {
         {/* ========================================================= */}
         {/* SECTION 7: WORKSHOPS WE CAN ARRANGE (HONEST INSTITUTIONAL) */}
         {/* ========================================================= */}
-        <section id="workshops" className="py-14 sm:py-16 bg-slate-50 border-b border-slate-200/60 scroll-mt-28">
+        <section id="workshops" className="py-8 sm:py-10 lg:py-12 bg-slate-50 border-b border-slate-200/60 scroll-mt-28">
           <Container size="xl">
 
-            <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-10 gap-4">
+            <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-6 sm:mb-8 gap-4">
               <div>
                 <Badge variant="primary" size="md" className="bg-teal-50 text-[#005F60] border-teal-200 mb-2">
                   For Schools & Colleges
@@ -885,10 +886,10 @@ const HomePage = () => {
         {/* ========================================================= */}
         {/* SECTION 8: GUIDANCE FOCUS AREAS */}
         {/* ========================================================= */}
-        <section id="guidance-focus" className="py-14 sm:py-16 bg-white border-b border-slate-100 scroll-mt-28">
+        <section id="guidance-focus" className="py-8 sm:py-10 lg:py-12 bg-white border-b border-slate-100 scroll-mt-28">
           <Container size="xl">
 
-            <div className="text-center max-w-2xl mx-auto mb-10">
+            <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-8">
               <Badge variant="primary" size="md" className="bg-teal-50 text-[#005F60] border-teal-200 mb-2">
                 Curricular Focus
               </Badge>
@@ -958,7 +959,7 @@ const HomePage = () => {
         {/* ========================================================= */}
         {/* SECTION 9: SCHOOL & INSTITUTION PARTICIPATION */}
         {/* ========================================================= */}
-        <section id="school-invitation" className="py-14 sm:py-16 bg-slate-950 text-white relative overflow-hidden border-b border-slate-800 scroll-mt-28">
+        <section id="school-invitation" className="py-8 sm:py-10 lg:py-12 bg-slate-950 text-white relative overflow-hidden border-b border-slate-800 scroll-mt-28">
           <Container size="xl">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
 
@@ -1004,7 +1005,7 @@ const HomePage = () => {
         {/* ========================================================= */}
         {/* SECTION 10: FINAL CALL TO ACTION */}
         {/* ========================================================= */}
-        <section id="cta" className="py-14 sm:py-16 bg-white scroll-mt-28">
+        <section id="cta" className="py-8 sm:py-10 lg:py-12 bg-white scroll-mt-28">
           <Container size="xl">
             <CTABanner
               title="Explore your next education step"

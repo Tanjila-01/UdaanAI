@@ -23,3 +23,6 @@ class RecommendationResponse(BaseModel):
     source_scoring_version: str
     disclaimer: str
     recommendations: List[RecommendationItemResponse]
+    is_outdated: bool = False
+    freshness_status: str = "current"
+    outdated_reason: Optional[str] = None

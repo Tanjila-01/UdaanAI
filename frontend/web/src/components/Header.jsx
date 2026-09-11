@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ThemeToggle from './ThemeToggle';
 import { 
   Search, 
   Menu, 
@@ -256,6 +257,7 @@ export const Header = ({ onMenuClick, onEditProfileClick }) => {
       {/* Right Controls */}
       <div className="flex items-center space-x-3 sm:space-x-4 shrink-0 relative" ref={dropdownRef}>
         {/* Student Profile Info trigger for popover */}
+        <ThemeToggle />
         <button
           type="button"
           onClick={() => setIsDropdownOpen(!isDropdownOpen)}

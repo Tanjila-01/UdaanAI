@@ -23,12 +23,14 @@ import {
   Loader2,
   Zap,
   Target,
-  ChevronRight
+  ChevronRight,
+  AlertTriangle
 } from 'lucide-react';
 import {
   getMyAssignedAssessmentApi,
   getAssessmentsApi,
   getAssessmentDetailApi,
+  getAttemptDetailApi,
   startAssessmentAttemptApi,
   submitAssessmentAnswerApi,
   completeAssessmentAttemptApi,
@@ -68,6 +70,28 @@ export const AssessmentPage = () => {
     fetchInitialData();
   }, [location.search]);
 
+  const restoreAttemptProgress = (questions, answers) => {
+    if (!answers || answers.length === 0) {
+      setSelectedAnswers({});
+      setCurrentQuestionIdx(0);
+      return;
+    }
+    const savedAnswersMap = {};
+    answers.forEach((ans) => {
+      savedAnswersMap[ans.question_id] = ans.selected_option_id;
+    });
+    setSelectedAnswers(savedAnswersMap);
+
+    const firstUnanswered = questions?.findIndex((q) => !savedAnswersMap[q.id]);
+    if (firstUnanswered !== -1 && firstUnanswered !== undefined) {
+      setCurrentQuestionIdx(firstUnanswered);
+    } else if (questions?.length > 0) {
+      setCurrentQuestionIdx(questions.length - 1);
+    } else {
+      setCurrentQuestionIdx(0);
+    }
+  };
+
   const fetchInitialData = async () => {
     setLoading(true);
     setError(null);
@@ -86,9 +110,28 @@ export const AssessmentPage = () => {
         setIsGeneratingRecs(true);
         try {
           const recRes = await getLatestRecommendationsApi();
-          setRecommendations(recRes);
+          const hasRecs = recRes && (
+            Array.isArray(recRes) ? recRes.length > 0 : (recRes.recommendations?.length > 0 || recRes.top_careers?.length > 0)
+          );
+          if (hasRecs) {
+            setRecommendations(recRes);
+          } else {
+            try {
+              const genRes = await generateRecommendationsApi();
+              setRecommendations(genRes);
+            } catch (genErr) {
+              console.error('Failed to auto-generate recommendations:', genErr);
+              setRecommendationError('Your assessment is saved, but personalised recommendations could not be generated right now.');
+            }
+          }
         } catch (recErr) {
           console.error('Failed to load existing recommendations:', recErr);
+          try {
+            const genRes = await generateRecommendationsApi();
+            setRecommendations(genRes);
+          } catch (genErr) {
+            setRecommendationError('Your assessment is saved, but personalised recommendations could not be generated right now.');
+          }
         } finally {
           setIsGeneratingRecs(false);
         }
@@ -118,7 +161,20 @@ export const AssessmentPage = () => {
       }
 
       setAssessment(assignedAssessment);
-      setStep('intro');
+      if (forceTakeMode) {
+        try {
+          const newAttempt = await startAssessmentAttemptApi(assignedAssessment.id);
+          setAttempt(newAttempt);
+          const attemptDetail = await getAttemptDetailApi(newAttempt.id).catch(() => null);
+          restoreAttemptProgress(assignedAssessment.questions, attemptDetail?.answers);
+          setStep('quiz');
+        } catch (attemptErr) {
+          console.error('Failed to start/resume attempt in take mode:', attemptErr);
+          setStep('intro');
+        }
+      } else {
+        setStep('intro');
+      }
       setLoading(false);
     } catch (err) {
       console.error('Failed to load assessment data:', err);
@@ -134,8 +190,9 @@ export const AssessmentPage = () => {
     try {
       const newAttempt = await startAssessmentAttemptApi(assessment.id);
       setAttempt(newAttempt);
+      const attemptDetail = await getAttemptDetailApi(newAttempt.id).catch(() => null);
+      restoreAttemptProgress(assessment.questions, attemptDetail?.answers);
       setStep('quiz');
-      setCurrentQuestionIdx(0);
     } catch (err) {
       console.error('Failed to start attempt:', err);
       setError(err.response?.data?.detail || 'Failed to start assessment attempt.');
@@ -223,6 +280,20 @@ export const AssessmentPage = () => {
     }
   };
 
+  const handleRetryCheckFreshness = async () => {
+    setIsGeneratingRecs(true);
+    try {
+      const recRes = await getLatestRecommendationsApi();
+      if (recRes && recRes.recommendations) {
+        setRecommendations(recRes);
+      }
+    } catch (err) {
+      console.error('Failed to check recommendation freshness:', err);
+    } finally {
+      setIsGeneratingRecs(false);
+    }
+  };
+
   const handleRetakeAssessment = async () => {
     setLoading(true);
     setError(null);
@@ -240,6 +311,8 @@ export const AssessmentPage = () => {
 
       const newAttempt = await startAssessmentAttemptApi(currentAssessment.id);
       setAttempt(newAttempt);
+      const attemptDetail = await getAttemptDetailApi(newAttempt.id).catch(() => null);
+      restoreAttemptProgress(currentAssessment.questions, attemptDetail?.answers);
       setStep('quiz');
     } catch (err) {
       console.error('Failed to retake assessment:', err);
@@ -736,6 +809,54 @@ export const AssessmentPage = () => {
                         <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs flex items-center space-x-2 text-slate-600 animate-pulse font-sans">
                           <Loader2 className="w-4 h-4 animate-spin text-[#005F60] shrink-0" />
                           <span className="font-bold">Generating personalized recommendations...</span>
+                        </div>
+                      )}
+
+                      {/* Recommendations Outdated State */}
+                      {!isGeneratingRecs && (recommendations?.freshness_status === 'outdated' || recommendations?.is_outdated) && (
+                        <div className="p-3.5 bg-amber-50/90 border border-amber-300 rounded-xl space-y-2 text-xs text-amber-950 font-sans">
+                          <div className="flex items-start space-x-2">
+                            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <p className="font-extrabold text-amber-900">Recommendations Outdated</p>
+                              <p className="text-[11px] text-amber-800 font-medium leading-relaxed">
+                                {recommendations.outdated_reason || 'Your profile or assessment inputs have changed since these recommendations were generated.'}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleRetryGenerateRecommendations}
+                            disabled={isGeneratingRecs}
+                            className="bg-[#005F60] hover:bg-teal-800 text-white font-extrabold text-xs px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 cursor-pointer"
+                          >
+                            <RefreshCw className={`w-3 h-3 ${isGeneratingRecs ? 'animate-spin' : ''}`} />
+                            <span>Update Recommendations</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Recommendations Unknown Freshness State */}
+                      {!isGeneratingRecs && recommendations?.freshness_status === 'unknown' && (
+                        <div className="p-3.5 bg-slate-50 border border-slate-300 rounded-xl space-y-2 text-xs text-slate-800 font-sans">
+                          <div className="flex items-start space-x-2">
+                            <AlertCircle className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <p className="font-extrabold text-slate-900">Unable to verify freshness</p>
+                              <p className="text-[11px] text-slate-600 font-medium leading-relaxed">
+                                {recommendations.outdated_reason || 'Unable to check whether your recommendations match your latest academic inputs. Your saved recommendations are preserved.'}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleRetryCheckFreshness}
+                            disabled={isGeneratingRecs}
+                            className="bg-slate-700 hover:bg-slate-800 text-white font-extrabold text-xs px-3 py-1.5 rounded-lg transition flex items-center space-x-1.5 cursor-pointer"
+                          >
+                            <RefreshCw className={`w-3 h-3 ${isGeneratingRecs ? 'animate-spin' : ''}`} />
+                            <span>Retry Check</span>
+                          </button>
                         </div>
                       )}
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { createProfileApi } from '../api/client';
 import AuthHeader from '../components/layout/AuthHeader';
@@ -63,6 +63,11 @@ const ITI_TRADES = [
 const OnboardingPage = () => {
   const { user, profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const from = location.state?.from?.pathname
+    ? `${location.state.from.pathname}${location.state.from.search || ''}${location.state.from.hash || ''}`
+    : (typeof location.state?.from === 'string' ? location.state.from : null);
 
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -83,7 +88,7 @@ const OnboardingPage = () => {
 
   useEffect(() => {
     if (profile && profile.is_complete) {
-      navigate('/dashboard');
+      navigate(from || '/dashboard', { replace: true });
     } else if (profile) {
       setFormData({
         current_level: profile.current_level || 'Class 10',
@@ -98,7 +103,7 @@ const OnboardingPage = () => {
         preferred_language: profile.preferred_language || 'English',
       });
     }
-  }, [profile, navigate]);
+  }, [profile, navigate, from]);
 
   const handleLevelSelect = (levelId) => {
     let boardDefault = 'Karnataka State Board (SSLC)';
@@ -179,24 +184,39 @@ const OnboardingPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
+
+    const trimmedInst = (formData.institution_name || '').trim();
+    const trimmedDist = (formData.district || '').trim();
+    const trimmedClass = (formData.class_or_year || '').trim();
+    const trimmedBoard = (formData.board || '').trim();
+
+    if (!trimmedInst) {
+      setError('Please enter your school or college name (cannot be empty or whitespace only)');
+      return;
+    }
+    if (!trimmedDist) {
+      setError('Please select your district in Karnataka');
+      return;
+    }
+
     setLoading(true);
 
     try {
       await createProfileApi({
-        full_name: user?.full_name,
+        full_name: (user?.full_name || '').trim() || undefined,
         current_level: formData.current_level,
-        class_or_year: formData.class_or_year,
-        board: formData.board,
+        class_or_year: trimmedClass,
+        board: trimmedBoard,
         stream: formData.current_level.startsWith('PUC') ? (formData.stream || null) : null,
         diploma_branch: formData.current_level === 'Diploma' ? (formData.diploma_branch || null) : null,
         iti_trade: formData.current_level === 'ITI' ? (formData.iti_trade || null) : null,
-        institution_name: formData.institution_name,
-        district: formData.district,
-        state: formData.state || 'Karnataka',
-        preferred_language: formData.preferred_language,
+        institution_name: trimmedInst,
+        district: trimmedDist,
+        state: (formData.state || 'Karnataka').trim(),
+        preferred_language: (formData.preferred_language || 'English').trim(),
       });
       await refreshProfile();
-      navigate('/dashboard');
+      navigate(from || '/dashboard', { replace: true });
     } catch (err) {
       setError(err.response?.data?.detail || err.message || 'Failed to save student profile');
     } finally {

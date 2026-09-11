@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
-import { Navigate, useNavigate, Link } from 'react-router-dom';
+import { Navigate, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { ShieldCheck, Lock, Mail, AlertCircle, ArrowRight } from 'lucide-react';
 
 const AdminLoginPage = () => {
   const { user, loading: authLoading, login, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const from = location.state?.from?.pathname
+    ? `${location.state.from.pathname}${location.state.from.search || ''}${location.state.from.hash || ''}`
+    : (typeof location.state?.from === 'string' ? location.state.from : null);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -16,7 +21,7 @@ const AdminLoginPage = () => {
   const [error, setError] = useState(null);
 
   // If already authenticated:
-  // Admin -> redirect to /admin
+  // Admin -> redirect to /admin (or target from)
   // Student -> redirect to /dashboard
   if (authLoading) {
     return (
@@ -31,7 +36,7 @@ const AdminLoginPage = () => {
 
   if (user) {
     if (user.role === 'admin') {
-      return <Navigate to="/admin" replace />;
+      return <Navigate to={from || '/admin'} replace />;
     }
     return <Navigate to="/dashboard" replace />;
   }
@@ -50,7 +55,7 @@ const AdminLoginPage = () => {
     try {
       const data = await login(cleanEmail, formData.password);
       if (data.user?.role === 'admin') {
-        navigate('/admin', { replace: true });
+        navigate(from || '/admin', { replace: true });
       } else {
         // Authenticated user is not an administrator.
         // Safely clear session to avoid retaining student token from failed admin sign in.

@@ -54,6 +54,8 @@ USER_2_ID = str(uuid.uuid4())
 MOCK_LATEST_RESULT = None
 MOCK_PROFILE = None
 MOCK_PATHWAYS = None
+MOCK_ASSESS_ERROR = None
+MOCK_PROFILE_ERROR = None
 
 
 def create_test_token(user_id: str) -> str:
@@ -78,8 +80,13 @@ def mock_http_response(status_code: int, json_data: any) -> httpx.Response:
 
 @pytest.fixture(autouse=True)
 def setup_db():
+    global MOCK_ASSESS_ERROR, MOCK_PROFILE_ERROR
+    MOCK_ASSESS_ERROR = None
+    MOCK_PROFILE_ERROR = None
     Base.metadata.create_all(bind=test_engine)
     yield
+    MOCK_ASSESS_ERROR = None
+    MOCK_PROFILE_ERROR = None
     Base.metadata.drop_all(bind=test_engine)
 
 
@@ -90,8 +97,16 @@ def mock_external_services():
     def mock_get(self, url, *args, **kwargs):
         url_str = str(url)
         if "my-latest-result" in url_str:
+            if MOCK_ASSESS_ERROR is not None:
+                if isinstance(MOCK_ASSESS_ERROR, Exception):
+                    raise MOCK_ASSESS_ERROR
+                return mock_http_response(MOCK_ASSESS_ERROR, {"detail": "Downstream error"})
             return mock_http_response(200, MOCK_LATEST_RESULT)
         elif "profile/me" in url_str:
+            if MOCK_PROFILE_ERROR is not None:
+                if isinstance(MOCK_PROFILE_ERROR, Exception):
+                    raise MOCK_PROFILE_ERROR
+                return mock_http_response(MOCK_PROFILE_ERROR, {"detail": "Downstream error"})
             if MOCK_PROFILE is None:
                 return mock_http_response(404, {"detail": "Not Found"})
             return mock_http_response(200, MOCK_PROFILE)
@@ -602,3 +617,157 @@ def test_recommendation_token_validation_matrix():
         res_bad_exp = client.get("/career-intelligence/recommendations/me", headers={"Authorization": f"Bearer {bad_exp_token}"})
         assert res_bad_exp.status_code == 401
         assert res_bad_exp.json()["detail"] == "Invalid token"
+
+
+def test_recommendation_freshness_and_user_isolation():
+    global MOCK_LATEST_RESULT, MOCK_PROFILE, MOCK_PATHWAYS
+    user_fresh = str(uuid.uuid4())
+    user_other = str(uuid.uuid4())
+    token_fresh = create_test_token(user_fresh)
+    token_other = create_test_token(user_other)
+    headers_fresh = {"Authorization": f"Bearer {token_fresh}"}
+    headers_other = {"Authorization": f"Bearer {token_other}"}
+
+    attempt_1 = str(uuid.uuid4())
+    MOCK_LATEST_RESULT = {
+        "attempt_id": attempt_1,
+        "assessment_id": "karnataka-class-10-pathway-exploration-v1",
+        "scoring_version": "rule-v1",
+        "is_current": True,
+        "dimension_scores": {
+            "science": 85,
+            "commerce": 50,
+            "arts": 30,
+            "diploma": 60,
+            "iti": 40
+        }
+    }
+
+    MOCK_PROFILE = {
+        "current_level": "Class 10",
+        "stream": None,
+        "is_complete": True,
+        "id": str(uuid.uuid4()),
+        "user_id": user_fresh
+    }
+
+    MOCK_PATHWAYS = {
+        "pathways": [
+            {
+                "id": "c10-puc",
+                "title": "Pre-University College (PUC)",
+                "education_level": "Class 10",
+                "stream": None,
+                "recommendation_dimensions": ["science"]
+            },
+            {
+                "id": "c10-diploma",
+                "title": "Polytechnic Diploma",
+                "education_level": "Class 10",
+                "stream": None,
+                "recommendation_dimensions": ["diploma"]
+            }
+        ]
+    }
+
+    # 1. Generate recommendations
+    gen_resp = client.post("/career-intelligence/recommendations/generate", headers=headers_fresh)
+    assert gen_resp.status_code == 200
+    gen_data = gen_resp.json()
+    assert gen_data["is_outdated"] is False
+    assert gen_data["freshness_status"] == "current"
+    assert gen_data["outdated_reason"] is None
+
+    # 2. Get recommendations -> should be fresh
+    get_resp = client.get("/career-intelligence/recommendations/me", headers=headers_fresh)
+    assert get_resp.status_code == 200
+    get_data = get_resp.json()
+    assert get_data["is_outdated"] is False
+    assert get_data["freshness_status"] == "current"
+
+    # 3. User isolation: other user cannot read user_fresh's recommendations
+    other_resp = client.get("/career-intelligence/recommendations/me", headers=headers_other)
+    assert other_resp.status_code == 200
+    assert other_resp.json() is None
+
+    # 4. When assessment is no longer current (e.g. stage transition in assessment-service)
+    MOCK_LATEST_RESULT["is_current"] = False
+    outdated_resp_1 = client.get("/career-intelligence/recommendations/me", headers=headers_fresh)
+    assert outdated_resp_1.status_code == 200
+    outdated_data_1 = outdated_resp_1.json()
+    assert outdated_data_1["is_outdated"] is True
+    assert outdated_data_1["freshness_status"] == "outdated"
+    assert "assessment is outdated" in outdated_data_1["outdated_reason"]
+
+    # 5. When a newer assessment attempt was taken
+    MOCK_LATEST_RESULT["is_current"] = True
+    MOCK_LATEST_RESULT["attempt_id"] = str(uuid.uuid4())
+    outdated_resp_2 = client.get("/career-intelligence/recommendations/me", headers=headers_fresh)
+    assert outdated_resp_2.status_code == 200
+    outdated_data_2 = outdated_resp_2.json()
+    assert outdated_data_2["is_outdated"] is True
+    assert outdated_data_2["freshness_status"] == "outdated"
+    assert "newer assessment attempt is available" in outdated_data_2["outdated_reason"]
+
+    # 6. When student changes profile stage (e.g. to PUC Science)
+    MOCK_LATEST_RESULT["attempt_id"] = attempt_1  # restore attempt
+    MOCK_PROFILE["current_level"] = "PUC 1"
+    MOCK_PROFILE["stream"] = "Science"
+    outdated_resp_3 = client.get("/career-intelligence/recommendations/me", headers=headers_fresh)
+    assert outdated_resp_3.status_code == 200
+    outdated_data_3 = outdated_resp_3.json()
+    assert outdated_data_3["is_outdated"] is True
+    assert outdated_data_3["freshness_status"] == "outdated"
+    assert "stage or stream has changed" in outdated_data_3["outdated_reason"]
+
+    # 7. Downstream service timeout/failure when not proven outdated -> freshness_status is "unknown"
+    global MOCK_ASSESS_ERROR, MOCK_PROFILE_ERROR
+    # Restore profile and assessment to match initial state
+    MOCK_PROFILE["current_level"] = "Class 10"
+    MOCK_PROFILE["stream"] = None
+    MOCK_LATEST_RESULT["attempt_id"] = attempt_1
+    MOCK_LATEST_RESULT["is_current"] = True
+
+    # Simulate assessment service timeout
+    MOCK_ASSESS_ERROR = httpx.RequestError("Connection timeout to assessment service")
+    unknown_resp_1 = client.get("/career-intelligence/recommendations/me", headers=headers_fresh)
+    assert unknown_resp_1.status_code == 200
+    unknown_data_1 = unknown_resp_1.json()
+    assert unknown_data_1["freshness_status"] == "unknown"
+    assert unknown_data_1["is_outdated"] is False
+    assert "Unable to verify" in unknown_data_1["outdated_reason"]
+
+    # Reset assessment error, simulate student profile 503 error
+    MOCK_ASSESS_ERROR = None
+    MOCK_PROFILE_ERROR = 503
+    unknown_resp_2 = client.get("/career-intelligence/recommendations/me", headers=headers_fresh)
+    assert unknown_resp_2.status_code == 200
+    unknown_data_2 = unknown_resp_2.json()
+    assert unknown_data_2["freshness_status"] == "unknown"
+    assert unknown_data_2["is_outdated"] is False
+
+    # 8. Crucial requirement: If any successful check already proves recommendations outdated,
+    # a different failed check must NOT erase that finding.
+    MOCK_PROFILE_ERROR = None
+    MOCK_PROFILE["current_level"] = "PUC 1"
+    MOCK_PROFILE["stream"] = "Science"  # proves outdated
+    MOCK_ASSESS_ERROR = httpx.RequestError("Downstream assessment timeout")
+    outdated_with_error_resp = client.get("/career-intelligence/recommendations/me", headers=headers_fresh)
+    assert outdated_with_error_resp.status_code == 200
+    outdated_with_error_data = outdated_with_error_resp.json()
+    assert outdated_with_error_data["freshness_status"] == "outdated"
+    assert outdated_with_error_data["is_outdated"] is True
+    assert "stage or stream has changed" in outdated_with_error_data["outdated_reason"]
+
+    # 9. Downstream recovery: when services recover and inputs match, freshness returns to "current"
+    MOCK_PROFILE["current_level"] = "Class 10"
+    MOCK_PROFILE["stream"] = None
+    MOCK_ASSESS_ERROR = None
+    MOCK_PROFILE_ERROR = None
+    recovered_resp = client.get("/career-intelligence/recommendations/me", headers=headers_fresh)
+    assert recovered_resp.status_code == 200
+    recovered_data = recovered_resp.json()
+    assert recovered_data["freshness_status"] == "current"
+    assert recovered_data["is_outdated"] is False
+    assert recovered_data["outdated_reason"] is None
+

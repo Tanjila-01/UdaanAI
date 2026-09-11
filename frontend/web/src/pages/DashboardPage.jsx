@@ -9,7 +9,8 @@ import StudentJourneyNavigator from '../components/StudentJourneyNavigator';
 import { 
   getMyLatestAssessmentResultApi, 
   getMyStudentGoalApi,
-  getLatestRecommendationsApi
+  getLatestRecommendationsApi,
+  generateRecommendationsApi
 } from '../api/client';
 import { 
   UserCheck, 
@@ -22,8 +23,12 @@ import {
   Sparkles,
   ArrowRight,
   Compass,
-  Check
+  Check,
+  AlertTriangle,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
+
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -42,16 +47,33 @@ const DashboardPage = () => {
 
   const [recommendations, setRecommendations] = useState(null);
   const [recsLoading, setRecsLoading] = useState(true);
+  const [updatingRecs, setUpdatingRecs] = useState(false);
+  const [updateRecsError, setUpdateRecsError] = useState(null);
+  const [freshnessCheckError, setFreshnessCheckError] = useState(null);
 
   const loadRecommendations = async () => {
     setRecsLoading(true);
+    setFreshnessCheckError(null);
     try {
       const res = await getLatestRecommendationsApi();
       setRecommendations(res);
     } catch (err) {
-      setRecommendations(null);
+      setFreshnessCheckError('Unable to verify recommendation freshness. Downstream service unavailable.');
     } finally {
       setRecsLoading(false);
+    }
+  };
+
+  const handleRegenerateRecommendations = async () => {
+    setUpdatingRecs(true);
+    setUpdateRecsError(null);
+    try {
+      const newRecs = await generateRecommendationsApi();
+      setRecommendations(newRecs);
+    } catch (err) {
+      setUpdateRecsError(err.response?.data?.detail || err.message || 'Failed to update recommendations. Please try again.');
+    } finally {
+      setUpdatingRecs(false);
     }
   };
 
@@ -383,8 +405,30 @@ const DashboardPage = () => {
               </div>
             )}
 
+            {/* Assessment complete but recommendation check failed */}
+            {!recsLoading && assessmentResult && !recommendations && freshnessCheckError && (
+              <div className="bg-slate-50 border border-slate-300 rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-slate-800 font-sans">
+                <div className="flex items-start space-x-3 text-center sm:text-left">
+                  <AlertCircle className="w-5 h-5 text-slate-500 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <h4 className="font-extrabold text-sm text-slate-900">Unable to verify freshness</h4>
+                    <p className="text-xs text-slate-600 max-w-xl">
+                      {freshnessCheckError}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={loadRecommendations}
+                  className="bg-slate-700 hover:bg-slate-800 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-xs shrink-0 cursor-pointer"
+                >
+                  Retry Check
+                </button>
+              </div>
+            )}
+
             {/* Assessment complete but recommendation list is empty */}
-            {!recsLoading && assessmentResult && (!recommendations || !recommendations.recommendations || recommendations.recommendations.length === 0) && (
+            {!recsLoading && assessmentResult && (!recommendations || !recommendations.recommendations || recommendations.recommendations.length === 0) && !freshnessCheckError && (
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-slate-800 font-sans">
                 <div className="space-y-1 text-center sm:text-left">
                   <h4 className="font-extrabold text-sm text-slate-900">Assessment Complete</h4>
@@ -405,6 +449,56 @@ const DashboardPage = () => {
             {/* Recommendations exist */}
             {!recsLoading && assessmentResult && recommendations && recommendations.recommendations && recommendations.recommendations.length > 0 && (
               <div className="space-y-4 font-sans">
+                {/* Outdated Recommendations Banner */}
+                {(recommendations.freshness_status === 'outdated' || recommendations.is_outdated) ? (
+                  <div className="bg-amber-50/90 border border-amber-300 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-950">
+                    <div className="flex items-start space-x-2.5">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <div className="space-y-0.5">
+                        <h4 className="font-extrabold text-xs text-amber-900">Recommendations Outdated</h4>
+                        <p className="text-[11px] text-amber-800 leading-normal font-medium">
+                          {recommendations.outdated_reason || 'Your profile or assessment inputs have changed since these recommendations were generated.'}
+                        </p>
+                        {updateRecsError && (
+                          <p className="text-[11px] text-rose-600 font-bold mt-1">
+                            {updateRecsError}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRegenerateRecommendations}
+                      disabled={updatingRecs}
+                      className="bg-[#005F60] hover:bg-teal-800 disabled:opacity-50 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-xs flex items-center space-x-1.5 shrink-0 cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${updatingRecs ? 'animate-spin' : ''}`} />
+                      <span>{updatingRecs ? 'Updating...' : 'Update Recommendations'}</span>
+                    </button>
+                  </div>
+                ) : (recommendations.freshness_status === 'unknown' || freshnessCheckError) ? (
+                  <div className="bg-slate-50 border border-slate-300 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-slate-800">
+                    <div className="flex items-start space-x-2.5">
+                      <AlertCircle className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
+                      <div className="space-y-0.5">
+                        <h4 className="font-extrabold text-xs text-slate-900">Unable to verify freshness</h4>
+                        <p className="text-[11px] text-slate-600 leading-normal font-medium">
+                          {freshnessCheckError || recommendations.outdated_reason || 'Unable to check whether your recommendations match your latest profile or assessment. Your saved recommendations are preserved.'}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={loadRecommendations}
+                      disabled={recsLoading}
+                      className="bg-slate-700 hover:bg-slate-800 disabled:opacity-50 text-white font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-xs flex items-center space-x-1.5 shrink-0 cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${recsLoading ? 'animate-spin' : ''}`} />
+                      <span>{recsLoading ? 'Checking...' : 'Retry Check'}</span>
+                    </button>
+                  </div>
+                ) : null}
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {recommendations.recommendations.map((rec) => {
                     const badgeColor = rec.match_label === 'High' 

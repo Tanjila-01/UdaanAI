@@ -124,15 +124,33 @@ const EditProfileDrawer = ({ isOpen, onClose }) => {
     e.preventDefault();
     setError(null);
     setSuccessMsg(null);
+
+    const trimmedName = (formData.full_name || '').trim();
+    const trimmedInstitution = (formData.institution_name || '').trim();
+    const trimmedDistrict = (formData.district || '').trim();
+
+    if (!trimmedName) {
+      setError('Full name cannot be empty or whitespace only.');
+      return;
+    }
+    if (!trimmedInstitution) {
+      setError('Institution name cannot be empty or whitespace only.');
+      return;
+    }
+    if (!trimmedDistrict) {
+      setError('District cannot be empty or whitespace only.');
+      return;
+    }
+
     setLoading(true);
 
     try {
       await updateMyProfileApi({
-        full_name: formData.full_name,
-        institution_name: formData.institution_name,
-        district: formData.district,
-        state: formData.state || 'Karnataka',
-        preferred_language: formData.preferred_language,
+        full_name: trimmedName,
+        institution_name: trimmedInstitution,
+        district: trimmedDistrict,
+        state: (formData.state || 'Karnataka').trim(),
+        preferred_language: (formData.preferred_language || 'English').trim(),
       });
       await refreshProfile();
       setSuccessMsg('Profile details updated successfully!');
@@ -152,13 +170,26 @@ const EditProfileDrawer = ({ isOpen, onClose }) => {
     e.preventDefault();
     setStageError(null);
     setStageSuccessMsg(null);
+
+    const trimmedClassOrYear = (stageFormData.class_or_year || '').trim();
+    const trimmedBoard = (stageFormData.board || '').trim();
+
+    if (!trimmedClassOrYear) {
+      setStageError('Class or year cannot be empty or whitespace only.');
+      return;
+    }
+    if (!trimmedBoard) {
+      setStageError('Board cannot be empty or whitespace only.');
+      return;
+    }
+
     setStageLoading(true);
 
     try {
       const payload = {
         current_level: stageFormData.current_level,
-        class_or_year: stageFormData.class_or_year,
-        board: stageFormData.board,
+        class_or_year: trimmedClassOrYear,
+        board: trimmedBoard,
         stream: stageFormData.current_level.startsWith('PUC') ? stageFormData.stream : null,
         diploma_branch: stageFormData.current_level === 'Diploma' ? stageFormData.diploma_branch : null,
         iti_trade: stageFormData.current_level === 'ITI' ? stageFormData.iti_trade : null,
