@@ -139,3 +139,29 @@
 @media (max-width: 1023px) {
   :root[data-theme="dark"] #hero img { opacity: 0.15; }
 }
+
+
+/* Keep the admin email and password fields dark, including browser autofill. */
+#admin-email-input,
+#admin-password-input {
+  background-color: #020617;
+  color: #f1f5f9;
+  caret-color: #f1f5f9;
+  color-scheme: dark;
+}
+
+#admin-email-input:is(:-webkit-autofill, :autofill),
+#admin-password-input:is(:-webkit-autofill, :autofill) {
+  -webkit-text-fill-color: #f1f5f9 !important;
+  caret-color: #f1f5f9;
+  box-shadow: inset 0 0 0 1000px #020617 !important;
+}
+
+
+/* Hide Edge's native reveal control on login password inputs in favor of custom toggle. */
+#student-password-input::-ms-reveal,
+#student-password-input::-ms-clear,
+#admin-password-input::-ms-reveal,
+#admin-password-input::-ms-clear {
+  display: none;
+}
