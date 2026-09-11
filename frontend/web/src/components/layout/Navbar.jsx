@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getAccountAction } from '../../utils/accountActions';
-import { Send, LogOut, User as UserIcon, Shield, LayoutDashboard, Menu, X, ArrowRight } from 'lucide-react';
+import { Send, LogOut, Shield, LayoutDashboard, Menu, X, ArrowRight, ChevronDown } from 'lucide-react';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import ThemeToggle from '../ThemeToggle';
@@ -16,7 +16,13 @@ export const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [navMenuOpen, setNavMenuOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+
+  const navMenuRef = useRef(null);
+  const navButtonRef = useRef(null);
+  const accountMenuRef = useRef(null);
+  const accountButtonRef = useRef(null);
 
   const accountAction = getAccountAction(user, profile, loading);
 
@@ -28,9 +34,109 @@ export const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Close mobile navigation menu on resize to desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setNavMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Handle outside click and Escape key dismissal with focus restoration
+  useEffect(() => {
+    if (!navMenuOpen && !accountMenuOpen) return;
+
+    const handleClickOutside = (event) => {
+      if (
+        navMenuOpen &&
+        navMenuRef.current &&
+        !navMenuRef.current.contains(event.target) &&
+        navButtonRef.current &&
+        !navButtonRef.current.contains(event.target)
+      ) {
+        setNavMenuOpen(false);
+      }
+
+      if (
+        accountMenuOpen &&
+        accountMenuRef.current &&
+        !accountMenuRef.current.contains(event.target) &&
+        accountButtonRef.current &&
+        !accountButtonRef.current.contains(event.target)
+      ) {
+        setAccountMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        if (accountMenuOpen) {
+          setAccountMenuOpen(false);
+          accountButtonRef.current?.focus();
+        }
+        if (navMenuOpen) {
+          setNavMenuOpen(false);
+          navButtonRef.current?.focus();
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [navMenuOpen, accountMenuOpen]);
+
+  const toggleNavMenu = () => {
+    setNavMenuOpen((prev) => {
+      if (!prev) setAccountMenuOpen(false);
+      return !prev;
+    });
+  };
+
+  const toggleAccountMenu = () => {
+    setAccountMenuOpen((prev) => {
+      if (!prev) setNavMenuOpen(false);
+      return !prev;
+    });
+  };
+
   const handleLogout = async () => {
+    setNavMenuOpen(false);
+    setAccountMenuOpen(false);
     await logout();
     navigate('/login');
+  };
+
+  const getInitials = (u) => {
+    if (!u) return 'U';
+    const name = u.full_name || u.name;
+    if (name && name.trim()) {
+      const parts = name.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      }
+      return parts[0].slice(0, 2).toUpperCase();
+    }
+    if (u.email) {
+      return u.email.slice(0, 2).toUpperCase();
+    }
+    return 'U';
+  };
+
+  const getRoleLabel = (role) => {
+    if (!role) return 'Student';
+    if (role.toLowerCase() === 'admin') return 'Admin';
+    return role.charAt(0).toUpperCase() + role.slice(1);
   };
 
   // Curated public navigation anchors mapped directly to homepage sections
@@ -44,7 +150,7 @@ export const Navbar = () => {
   const handleNavClick = (e, href) => {
     if (href.startsWith('#')) {
       e.preventDefault();
-      setMobileMenuOpen(false);
+      setNavMenuOpen(false);
 
       const targetId = href.replace('#', '');
 
@@ -95,55 +201,113 @@ export const Navbar = () => {
           </div>
         </Link>
 
-        {/* Center: Curated Public Section Anchors */}
-        <nav aria-label="Main navigation" className="hidden xl:flex flex-1 items-center justify-center gap-1">
+        {/* Center: Curated Public Section Anchors (Inline on desktop) */}
+        <nav aria-label="Main navigation" className="hidden lg:flex flex-1 items-center justify-center gap-1">
           {navLinks.map((link) => (
             <a
               key={link.label}
               href={link.href}
               onClick={(e) => handleNavClick(e, link.href)}
-              className="px-3 py-2.5 rounded-lg text-sm font-semibold whitespace-nowrap text-slate-600 hover:text-[#005F60] hover:bg-slate-50 transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-[#005F60] outline-none"
+              className="px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap text-slate-600 hover:text-[#005F60] hover:bg-slate-50 transition-all cursor-pointer focus-visible:ring-2 focus-visible:ring-[#005F60] outline-none"
             >
               {link.label}
             </a>
           ))}
         </nav>
 
-        {/* Right: Focused Actions (Reflecting Exact Session State) */}
-        <div className="ml-auto flex shrink-0 items-center gap-2">
-          <div className="hidden md:flex items-center gap-2">
-            {accountAction.isLoading ? (
-              <div className="h-9 w-32 bg-slate-100 animate-pulse rounded-xl" aria-label="Loading session" />
-            ) : user ? (
-              <>
-                <Link to={accountAction.destination}>
-                  <Button
-                    variant="primary"
-                    size="md"
-                    leftIcon={accountAction.isAdmin ? <Shield className="w-3.5 h-3.5" /> : <LayoutDashboard className="w-3.5 h-3.5" />}
-                    className="h-10 bg-[#005F60] hover:bg-[#004D4E] text-white font-semibold whitespace-nowrap"
-                  >
-                    {accountAction.label}
-                  </Button>
-                </Link>
-
-                <div title={user.full_name || user.email} className="hidden xl:flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600">
-                  <UserIcon className="w-4 h-4" aria-hidden="true" />
-                  <span className="sr-only">{user.full_name || user.email}</span>
-                </div>
-
+        {/* Right Controls: Consistent 8–12px gaps and 40–44px control heights */}
+        <div className="ml-auto flex shrink-0 items-center gap-2.5">
+          {accountAction.isLoading ? (
+            <div className="h-10 w-28 bg-slate-100 animate-pulse rounded-xl" aria-label="Loading session" />
+          ) : user ? (
+            <>
+              {/* 1. Dashboard Button (Desktop & Tablet) */}
+              <Link to={accountAction.destination} className="hidden md:inline-flex">
                 <Button
-                  variant="ghost"
+                  variant="primary"
                   size="md"
-                  onClick={handleLogout}
-                  className="h-10 w-10 p-0 text-slate-600 hover:text-rose-600 hover:bg-rose-50"
-                  aria-label="Logout"
+                  leftIcon={accountAction.isAdmin ? <Shield className="w-3.5 h-3.5" /> : <LayoutDashboard className="w-3.5 h-3.5" />}
+                  className="h-10 bg-[#005F60] hover:bg-[#004D4E] text-white font-semibold whitespace-nowrap"
                 >
-                  <LogOut className="w-4 h-4" />
+                  {accountAction.label}
                 </Button>
-              </>
-            ) : (
-              <>
+              </Link>
+
+              {/* 2. Theme Toggle */}
+              <ThemeToggle />
+
+              {/* 3. Account Menu Button & Dropdown (Available at every width) */}
+              <div className="relative">
+                <button
+                  ref={accountButtonRef}
+                  type="button"
+                  onClick={toggleAccountMenu}
+                  aria-haspopup="menu"
+                  aria-expanded={accountMenuOpen}
+                  aria-controls="user-account-menu"
+                  aria-label={`Account menu for ${user.full_name || user.email}`}
+                  className={`inline-flex items-center gap-1.5 h-10 pl-1 pr-2 rounded-full border transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#005F60] ${
+                    accountMenuOpen
+                      ? 'border-[#005F60] bg-teal-50/50 shadow-xs'
+                      : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50 bg-white'
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-full bg-[#005F60] text-white flex items-center justify-center text-xs font-bold shrink-0 shadow-2xs">
+                    {getInitials(user)}
+                  </div>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 text-slate-500 transition-transform duration-200 ${
+                      accountMenuOpen ? 'rotate-180 text-[#005F60]' : ''
+                    }`}
+                    aria-hidden="true"
+                  />
+                </button>
+
+                {accountMenuOpen && (
+                  <div
+                    id="user-account-menu"
+                    ref={accountMenuRef}
+                    role="menu"
+                    aria-label="Account options"
+                    style={{ width: 'min(280px, calc(100vw - 32px))' }}
+                    className="absolute right-0 top-full mt-2.5 z-50 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-xl p-3 flex flex-col gap-1"
+                  >
+                    {/* Signed-in user details */}
+                    <div className="px-3 py-2 flex flex-col gap-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-sm text-slate-900 truncate">
+                          {user.full_name || user.name || 'User'}
+                        </span>
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-bold tracking-wide uppercase bg-teal-50 text-[#005F60] border border-teal-200/60 shrink-0">
+                          {getRoleLabel(user.role)}
+                        </span>
+                      </div>
+                      <span className="text-xs text-slate-500 truncate" title={user.email}>
+                        {user.email}
+                      </span>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="h-px bg-slate-100 my-1" role="separator" />
+
+                    {/* Sign Out */}
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={handleLogout}
+                      className="flex items-center gap-2.5 h-10 px-3 rounded-xl text-sm font-semibold text-rose-600 hover:bg-rose-50 hover:text-rose-700 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-rose-500 outline-none w-full text-left"
+                    >
+                      <LogOut className="w-4 h-4 shrink-0" />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Guest Controls */}
+              <div className="hidden md:flex items-center gap-2.5">
                 <Link to="/login">
                   <Button variant="ghost" size="md" className="h-10 font-semibold text-slate-600 hover:text-[#005F60]">
                     Login
@@ -159,95 +323,87 @@ export const Navbar = () => {
                     {accountAction.label}
                   </Button>
                 </Link>
-              </>
+              </div>
+
+              {/* Theme Toggle */}
+              <ThemeToggle />
+            </>
+          )}
+
+          {/* Mobile Navigation Trigger and Anchored Compact Panel */}
+          <div className="relative lg:hidden">
+            <button
+              ref={navButtonRef}
+              type="button"
+              onClick={toggleNavMenu}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#005F60] outline-none"
+              aria-label="Toggle Navigation Menu"
+              aria-expanded={navMenuOpen}
+              aria-controls="public-mobile-navigation"
+            >
+              {navMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+
+            {navMenuOpen && (
+              <div
+                id="public-mobile-navigation"
+                ref={navMenuRef}
+                style={{ width: 'min(360px, calc(100vw - 32px))' }}
+                className="absolute right-0 top-full mt-2.5 z-50 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-xl p-4 flex flex-col gap-3 max-h-[calc(100dvh-88px)] overflow-y-auto"
+              >
+                <nav aria-label="Mobile navigation links" className="flex flex-col gap-1">
+                  {navLinks.map((link) => (
+                    <a
+                      key={link.label}
+                      href={link.href}
+                      onClick={(e) => handleNavClick(e, link.href)}
+                      className="flex items-center h-[44px] px-3.5 rounded-xl text-sm font-semibold text-slate-700 hover:text-[#005F60] hover:bg-slate-50 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#005F60] outline-none"
+                    >
+                      {link.label}
+                    </a>
+                  ))}
+                </nav>
+
+                {/* Mobile actions when not visible in header */}
+                {user ? (
+                  <div className="md:hidden pt-3 border-t border-slate-100 flex flex-col gap-2">
+                    <Link
+                      to={accountAction.destination}
+                      onClick={() => setNavMenuOpen(false)}
+                      className="flex items-center justify-center gap-2 h-[44px] w-full px-4 rounded-xl bg-[#005F60] hover:bg-[#004D4E] text-white text-sm font-semibold shadow-xs transition-colors"
+                    >
+                      {accountAction.isAdmin ? <Shield className="w-4 h-4" /> : <LayoutDashboard className="w-4 h-4" />}
+                      <span>{accountAction.label}</span>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="md:hidden pt-3 border-t border-slate-100 flex flex-col gap-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <Link
+                        to="/login"
+                        onClick={() => setNavMenuOpen(false)}
+                        className="flex items-center justify-center h-[44px] rounded-xl bg-slate-100 text-slate-800 text-sm font-semibold hover:bg-slate-200 transition-colors"
+                      >
+                        Login
+                      </Link>
+                      <Link
+                        to={accountAction.destination}
+                        onClick={() => setNavMenuOpen(false)}
+                        className="flex items-center justify-center h-[44px] rounded-xl bg-[#E06D14] text-white text-sm font-semibold hover:bg-[#C2580E] transition-colors shadow-2xs"
+                      >
+                        {accountAction.label}
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
-
-          {/* Mobile Toggle Button */}
-          <ThemeToggle />
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="xl:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[#005F60] outline-none"
-            aria-label="Toggle Navigation Menu"
-            aria-expanded={mobileMenuOpen}
-            aria-controls="public-mobile-navigation"
-          >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
         </div>
       </div>
-
-      {/* Mobile Drawer Dropdown */}
-      {mobileMenuOpen && (
-        <div id="public-mobile-navigation" className="xl:hidden max-h-[calc(100dvh-72px)] overflow-y-auto bg-white border-b border-slate-200 px-4 sm:px-6 pt-3 pb-6 space-y-4 shadow-lg">
-          <div className="flex flex-col space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 py-1">
-              Navigation
-            </span>
-            {navLinks.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                onClick={(e) => handleNavClick(e, link.href)}
-                className="px-3 py-3 rounded-lg text-sm font-semibold text-slate-800 hover:bg-teal-50 hover:text-[#005F60] transition-colors"
-              >
-                {link.label}
-              </a>
-            ))}
-          </div>
-
-          <div className="pt-3 border-t border-slate-100 flex flex-col space-y-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1">
-              Account
-            </span>
-            {accountAction.isLoading ? (
-              <div className="h-10 w-full bg-slate-100 animate-pulse rounded-lg" />
-            ) : user ? (
-              <div className="space-y-2">
-                <Link
-                  to={accountAction.destination}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full text-center py-2.5 rounded-lg bg-[#005F60] text-white text-xs font-bold shadow-xs flex items-center justify-center space-x-2"
-                >
-                  {accountAction.isAdmin ? <Shield className="w-4 h-4" /> : <LayoutDashboard className="w-4 h-4" />}
-                  <span>{accountAction.label}</span>
-                </Link>
-                <div className="flex items-center justify-between px-2 pt-1 text-xs text-slate-600 font-medium">
-                  <span className="truncate max-w-[200px]">{user.full_name || user.email}</span>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="text-rose-600 font-bold hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span>Sign Out</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-2">
-                <Link
-                  to="/login"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="text-center py-2.5 rounded-lg bg-slate-100 text-slate-800 text-xs font-bold hover:bg-slate-200 transition-colors"
-                >
-                  Login
-                </Link>
-                <Link
-                  to={accountAction.destination}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="text-center py-2.5 rounded-lg bg-[#E06D14] text-white text-xs font-bold hover:bg-[#C2580E] transition-colors shadow-2xs"
-                >
-                  {accountAction.label}
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </header>
   );
 };
 
 export default Navbar;
+
