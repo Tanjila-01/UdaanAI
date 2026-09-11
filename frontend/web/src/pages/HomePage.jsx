@@ -411,7 +411,7 @@ const HomePage = () => {
                 </Badge>
 
                 <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight">
-                  Class 10 Shouldn't Feel Like a Blind Choice.
+                  Many Paths Ahead. Which One Is Right for You?
                 </h2>
 
                 <p className="text-xs sm:text-sm text-slate-300 leading-relaxed font-medium">
