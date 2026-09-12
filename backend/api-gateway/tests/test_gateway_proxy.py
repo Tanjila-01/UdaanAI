@@ -18,6 +18,18 @@ from app.main import app
 client = TestClient(app)
 
 
+@patch("app.api.routes.proxy.forward_request")
+def test_local_knowledge_timeout_is_scoped(mock_forward):
+    from fastapi.responses import JSONResponse
+    mock_forward.return_value = JSONResponse({"matches": []})
+    response = client.post("/api/v1/career-intelligence/knowledge/search", json={"query": "software"})
+    assert response.status_code == 200
+    assert mock_forward.call_args.kwargs["timeout"] == 200.0
+    assert mock_forward.call_args.args[0].endswith("/career-intelligence/knowledge/search")
+    client.get("/api/v1/career-intelligence/recommendations/me")
+    assert "timeout" not in mock_forward.call_args.kwargs
+
+
 def test_gateway_health():
     res = client.get("/health")
     assert res.status_code == 200

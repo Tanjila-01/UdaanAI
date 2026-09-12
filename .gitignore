@@ -62,6 +62,7 @@ Thumbs.db
 
 # Docker / Postgres data
 postgres_data/
+backups/
 
 # Disposable local inspection output
 frontend/web/scratch/

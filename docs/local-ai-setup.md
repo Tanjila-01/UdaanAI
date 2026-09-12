@@ -24,9 +24,11 @@ memory use modest. To free model memory, stop just Ollama:
 docker compose stop ollama
 ```
 
-This installs the provider foundation, not the completed student chat/RAG feature.
-Knowledge ingestion, reviewed citations, student-context integration and the chat UI
-still need implementation. PostgreSQL and its existing data are not modified.
+This installs the provider foundation, not the completed student chat feature.
+Local knowledge ingestion and filtered retrieval have since been added; see
+[the retrieval guide](knowledge-retrieval.md). PostgreSQL now includes pgvector and
+additive knowledge tables; the existing student data was retained and backed up.
+Student-context integration, generated answers and the chat UI remain to be built.
 
 Voice must also avoid paid APIs: use local Whisper for transcription and installed
 device voices for playback where available. These voice components are not yet

@@ -47,6 +47,27 @@ app.dependency_overrides[get_db] = override_get_db
 
 client = TestClient(app)
 
+
+def test_knowledge_search_requires_login():
+    assert client.post("/career-intelligence/knowledge/search", json={"query": "software"}).status_code == 401
+
+
+def test_knowledge_search_cannot_enable_drafts():
+    headers = {"Authorization": f"Bearer {create_test_token(USER_1_ID)}"}
+    response = client.post("/career-intelligence/knowledge/search", headers=headers,
+                           json={"query": "software", "include_drafts": True})
+    assert response.status_code == 422
+
+
+def test_knowledge_search_empty_and_unavailable():
+    headers = {"Authorization": f"Bearer {create_test_token(USER_1_ID)}"}
+    with patch("app.api.routes.knowledge.retrieve", return_value=[]):
+        response = client.post("/career-intelligence/knowledge/search", headers=headers, json={"query": "software"})
+        assert response.json()["status"] == "no_verified_matches"
+    with patch("app.api.routes.knowledge.retrieve", side_effect=httpx.ConnectError("Local service offline")):
+        response = client.post("/career-intelligence/knowledge/search", headers=headers, json={"query": "software"})
+        assert response.status_code == 503
+
 USER_1_ID = str(uuid.uuid4())
 USER_2_ID = str(uuid.uuid4())
 

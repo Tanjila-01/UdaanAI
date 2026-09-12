@@ -1,0 +1,707 @@
+{
+  "schema_version": 1,
+  "documents": [
+    {
+      "id": "careers--ai-ml-engineer",
+      "file": "careers/ai-ml-engineer.md",
+      "title": "AI / Machine Learning Engineer",
+      "category": "careers",
+      "pathway_ids": [
+        "puc-science-comp",
+        "puc-science-eng",
+        "dip-family-comp"
+      ],
+      "stages": [
+        "PUC_SCIENCE",
+        "DIPLOMA"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "careers--chartered-accountant",
+      "file": "careers/chartered-accountant.md",
+      "title": "Chartered Accountant (CA)",
+      "category": "careers",
+      "pathway_ids": [
+        "puc-commerce-ca"
+      ],
+      "stages": [
+        "PUC_COMMERCE"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "careers--civil-engineer",
+      "file": "careers/civil-engineer.md",
+      "title": "Civil Engineer",
+      "category": "careers",
+      "pathway_ids": [
+        "puc-science-eng",
+        "dip-family-civil"
+      ],
+      "stages": [
+        "PUC_SCIENCE",
+        "DIPLOMA"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "careers--cybersecurity-engineer",
+      "file": "careers/cybersecurity-engineer.md",
+      "title": "Cybersecurity Engineer",
+      "category": "careers",
+      "pathway_ids": [
+        "puc-science-comp",
+        "dip-family-comp"
+      ],
+      "stages": [
+        "PUC_SCIENCE",
+        "DIPLOMA"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "careers--data-scientist",
+      "file": "careers/data-scientist.md",
+      "title": "Data Scientist",
+      "category": "careers",
+      "pathway_ids": [
+        "puc-science-comp",
+        "puc-science-pure"
+      ],
+      "stages": [
+        "PUC_SCIENCE"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "careers--doctor-mbbs",
+      "file": "careers/doctor-mbbs.md",
+      "title": "Doctor (MBBS)",
+      "category": "careers",
+      "pathway_ids": [
+        "puc-science-med"
+      ],
+      "stages": [
+        "PUC_SCIENCE"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "careers--graphic-designer",
+      "file": "careers/graphic-designer.md",
+      "title": "Graphic / UI-UX Designer",
+      "category": "careers",
+      "pathway_ids": [
+        "cross-design"
+      ],
+      "stages": [
+        "PUC_SCIENCE",
+        "PUC_ARTS"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "careers--lawyer",
+      "file": "careers/lawyer.md",
+      "title": "Lawyer",
+      "category": "careers",
+      "pathway_ids": [
+        "cross-law"
+      ],
+      "stages": [
+        "PUC_SCIENCE",
+        "PUC_COMMERCE",
+        "PUC_ARTS"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "careers--mechanical-engineer",
+      "file": "careers/mechanical-engineer.md",
+      "title": "Mechanical Engineer",
+      "category": "careers",
+      "pathway_ids": [
+        "puc-science-eng",
+        "dip-family-mech"
+      ],
+      "stages": [
+        "PUC_SCIENCE",
+        "DIPLOMA"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "careers--nursing",
+      "file": "careers/nursing.md",
+      "title": "Nurse",
+      "category": "careers",
+      "pathway_ids": [
+        "puc-science-allied"
+      ],
+      "stages": [
+        "PUC_SCIENCE"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "careers--software-engineer",
+      "file": "careers/software-engineer.md",
+      "title": "Software Engineer",
+      "category": "careers",
+      "pathway_ids": [
+        "puc-science-comp",
+        "puc-science-eng",
+        "dip-family-comp"
+      ],
+      "stages": [
+        "PUC_SCIENCE",
+        "DIPLOMA"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "careers--teacher",
+      "file": "careers/teacher.md",
+      "title": "Teacher / Educator",
+      "category": "careers",
+      "pathway_ids": [
+        "puc-arts-edu"
+      ],
+      "stages": [
+        "PUC_ARTS"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "education--bba",
+      "file": "education/bba.md",
+      "title": "BBA (Bachelor of Business Administration)",
+      "category": "education",
+      "pathway_ids": [],
+      "stages": [],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "education--bca",
+      "file": "education/bca.md",
+      "title": "BCA (Bachelor of Computer Applications)",
+      "category": "education",
+      "pathway_ids": [
+        "puc-science-comp"
+      ],
+      "stages": [
+        "PUC_SCIENCE"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "education--bcom",
+      "file": "education/bcom.md",
+      "title": "B.Com (Bachelor of Commerce)",
+      "category": "education",
+      "pathway_ids": [
+        "puc-commerce-fin",
+        "puc-commerce-ca"
+      ],
+      "stages": [
+        "PUC_COMMERCE"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "education--be-btech",
+      "file": "education/be-btech.md",
+      "title": "B.E. / B.Tech (Engineering Degree)",
+      "category": "education",
+      "pathway_ids": [
+        "puc-science-eng"
+      ],
+      "stages": [
+        "PUC_SCIENCE"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "education--bsc-computer-science",
+      "file": "education/bsc-computer-science.md",
+      "title": "B.Sc Computer Science",
+      "category": "education",
+      "pathway_ids": [
+        "puc-science-comp",
+        "puc-science-pure"
+      ],
+      "stages": [
+        "PUC_SCIENCE"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "education--diploma-engineering",
+      "file": "education/diploma-engineering.md",
+      "title": "Diploma in Engineering",
+      "category": "education",
+      "pathway_ids": [
+        "c10-diploma"
+      ],
+      "stages": [
+        "FOUNDATION"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "education--mbbs",
+      "file": "education/mbbs.md",
+      "title": "MBBS (Bachelor of Medicine, Bachelor of Surgery)",
+      "category": "education",
+      "pathway_ids": [
+        "puc-science-med"
+      ],
+      "stages": [
+        "PUC_SCIENCE"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "iti--iti-electrician",
+      "file": "iti/iti-electrician.md",
+      "title": "ITI Trade — Electrician",
+      "category": "iti",
+      "pathway_ids": [
+        "c10-iti",
+        "iti-family-elec"
+      ],
+      "stages": [
+        "FOUNDATION",
+        "ITI"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "iti--iti-overview",
+      "file": "iti/iti-overview.md",
+      "title": "ITI (Industrial Training Institute) — Overview",
+      "category": "iti",
+      "pathway_ids": [
+        "c10-iti",
+        "iti-family-elec",
+        "iti-family-mech",
+        "iti-family-comp"
+      ],
+      "stages": [
+        "FOUNDATION",
+        "ITI"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "karnataka--karnataka-education-system",
+      "file": "karnataka/karnataka-education-system.md",
+      "title": "Karnataka Education System — Structure Overview",
+      "category": "karnataka",
+      "pathway_ids": [
+        "c10-puc",
+        "c10-diploma",
+        "c10-iti"
+      ],
+      "stages": [
+        "FOUNDATION"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "karnataka--kcet",
+      "file": "karnataka/kcet.md",
+      "title": "KCET (Karnataka Common Entrance Test)",
+      "category": "karnataka",
+      "pathway_ids": [
+        "puc-science-eng",
+        "puc-science-pharm",
+        "puc-science-agri"
+      ],
+      "stages": [
+        "PUC_SCIENCE"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "puc--puc-karnataka",
+      "file": "puc/puc-karnataka.md",
+      "title": "PUC (Pre-University Course) in Karnataka",
+      "category": "puc",
+      "pathway_ids": [
+        "c10-puc"
+      ],
+      "stages": [
+        "FOUNDATION"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "streams--arts-humanities",
+      "file": "streams/arts-humanities.md",
+      "title": "Arts / Humanities Stream",
+      "category": "streams",
+      "pathway_ids": [
+        "c10-puc",
+        "cross-law",
+        "cross-design",
+        "puc-arts-media",
+        "puc-arts-bsw",
+        "puc-arts-edu"
+      ],
+      "stages": [
+        "FOUNDATION",
+        "PUC_SCIENCE",
+        "PUC_COMMERCE",
+        "PUC_ARTS"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "streams--commerce",
+      "file": "streams/commerce.md",
+      "title": "Commerce Stream",
+      "category": "streams",
+      "pathway_ids": [
+        "c10-puc",
+        "puc-commerce-ca",
+        "puc-commerce-fin"
+      ],
+      "stages": [
+        "FOUNDATION",
+        "PUC_COMMERCE"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "streams--pcmb",
+      "file": "streams/pcmb.md",
+      "title": "Science Stream — PCMB (Physics, Chemistry, Mathematics, Biology)",
+      "category": "streams",
+      "pathway_ids": [
+        "c10-puc",
+        "puc-science-eng",
+        "puc-science-med",
+        "puc-science-allied"
+      ],
+      "stages": [
+        "FOUNDATION",
+        "PUC_SCIENCE"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "streams--pcmc",
+      "file": "streams/pcmc.md",
+      "title": "Science Stream — PCMC (Physics, Chemistry, Mathematics, Computer Science)",
+      "category": "streams",
+      "pathway_ids": [
+        "c10-puc",
+        "puc-science-eng",
+        "puc-science-comp"
+      ],
+      "stages": [
+        "FOUNDATION",
+        "PUC_SCIENCE"
+      ],
+      "region": "Karnataka",
+      "language": "en",
+      "status": "draft",
+      "sources": [],
+      "reviewed_on": null,
+      "review_due": null,
+      "version": 1,
+      "scope": "Starter content; admissions, qualifications and regional claims require official verification."
+    },
+    {
+      "id": "verified--software-work",
+      "file": "verified/software-work.md",
+      "title": "Software development: work overview",
+      "category": "careers",
+      "pathway_ids": [
+        "c10-puc",
+        "puc-science-comp",
+        "dip-family-comp"
+      ],
+      "stages": [
+        "FOUNDATION",
+        "PUC_SCIENCE",
+        "PUC_COMMERCE",
+        "PUC_ARTS",
+        "DIPLOMA",
+        "ITI"
+      ],
+      "region": "general",
+      "language": "en",
+      "status": "verified",
+      "sources": [
+        {
+          "url": "https://www.bls.gov/ooh/computer-and-information-technology/software-developers.htm",
+          "publisher": "U.S. Bureau of Labor Statistics",
+          "jurisdiction": "United States",
+          "section": "What They Do"
+        }
+      ],
+      "reviewed_on": "2026-09-12",
+      "review_due": "2027-03-12",
+      "version": 1,
+      "scope": "General occupational duties only. Not evidence for Indian admissions, salaries, licensing or guaranteed outcomes."
+    },
+    {
+      "id": "verified--design-work",
+      "file": "verified/design-work.md",
+      "title": "Graphic design: work overview",
+      "category": "careers",
+      "pathway_ids": [
+        "c10-puc",
+        "cross-design"
+      ],
+      "stages": [
+        "FOUNDATION",
+        "PUC_SCIENCE",
+        "PUC_COMMERCE",
+        "PUC_ARTS",
+        "DIPLOMA",
+        "ITI"
+      ],
+      "region": "general",
+      "language": "en",
+      "status": "verified",
+      "sources": [
+        {
+          "url": "https://www.bls.gov/ooh/arts-and-design/graphic-designers.htm",
+          "publisher": "U.S. Bureau of Labor Statistics",
+          "jurisdiction": "United States",
+          "section": "What They Do"
+        }
+      ],
+      "reviewed_on": "2026-09-12",
+      "review_due": "2027-03-12",
+      "version": 1,
+      "scope": "General occupational duties only. Not evidence for Indian admissions, salaries, licensing or guaranteed outcomes."
+    },
+    {
+      "id": "verified--electrician-work",
+      "file": "verified/electrician-work.md",
+      "title": "Electrician: work overview",
+      "category": "careers",
+      "pathway_ids": [
+        "c10-iti",
+        "iti-family-elec"
+      ],
+      "stages": [
+        "FOUNDATION",
+        "PUC_SCIENCE",
+        "PUC_COMMERCE",
+        "PUC_ARTS",
+        "DIPLOMA",
+        "ITI"
+      ],
+      "region": "general",
+      "language": "en",
+      "status": "verified",
+      "sources": [
+        {
+          "url": "https://www.bls.gov/ooh/construction-and-extraction/electricians.htm",
+          "publisher": "U.S. Bureau of Labor Statistics",
+          "jurisdiction": "United States",
+          "section": "What They Do"
+        }
+      ],
+      "reviewed_on": "2026-09-12",
+      "review_due": "2027-03-12",
+      "version": 1,
+      "scope": "General occupational duties only. Not evidence for Indian admissions, salaries, licensing or guaranteed outcomes."
+    }
+  ]
+}

@@ -1,5 +1,12 @@
 # UdaanAI RAG Knowledge Base — Starter Content
 
+**Implementation update, 12 September 2026:** Keep this folder at the project root.
+Docker mounts it read-only into the AI service. `manifest.json` controls ingestion and
+review status. The original 28 documents remain drafts; `verified/` adds three narrow,
+sourced occupational overviews. See [the audit](../docs/knowledge-audit.md) and
+[the implemented workflow](../docs/knowledge-retrieval.md). The older layout and loader
+suggestions below describe the starter package, not the current setup.
+
 This folder is a starter knowledge base for the RAG implementation described in
 `UdaanAI_AI_Chat_and_RAG_Architecture.pdf`. It follows the folder layout proposed
 in the plan:

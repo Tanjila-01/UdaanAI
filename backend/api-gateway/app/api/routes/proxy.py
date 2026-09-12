@@ -8,13 +8,13 @@ router = APIRouter(prefix="/api/v1")
 security = HTTPBearer(auto_error=False)
 
 
-async def forward_request(target_url: str, request: Request, error_detail: Optional[str] = None) -> Response:
+async def forward_request(target_url: str, request: Request, error_detail: Optional[str] = None, timeout: float = 10.0) -> Response:
     body = await request.body()
     headers = dict(request.headers)
     # Strip host header to prevent target service header conflicts
     headers.pop("host", None)
 
-    async with httpx.AsyncClient(timeout=10.0) as client:
+    async with httpx.AsyncClient(timeout=timeout) as client:
         try:
             resp = await client.request(
                 method=request.method,
@@ -198,6 +198,9 @@ async def proxy_assessments_options(path: str, request: Request, credentials: Op
 async def _proxy_career(path: str, request: Request) -> Response:
     clean_path = f"/{path.lstrip('/')}" if path else ""
     target_url = f"{settings.AI_CAREER_SERVICE_URL.rstrip('/')}/career-intelligence{clean_path}"
+    if clean_path.rstrip('/') == "/knowledge/search" and request.method == "POST":
+        # Local CPU embeddings can need a cold model load; preserve existing timeouts elsewhere.
+        return await forward_request(target_url, request, error_detail="AI Career service is temporarily unavailable.", timeout=200.0)
     return await forward_request(target_url, request, error_detail="AI Career service is temporarily unavailable.")
 
 
