@@ -26,6 +26,8 @@ def test_local_knowledge_timeout_is_scoped(mock_forward):
     assert response.status_code == 200
     assert mock_forward.call_args.kwargs["timeout"] == 200.0
     assert mock_forward.call_args.args[0].endswith("/career-intelligence/knowledge/search")
+    client.post("/api/v1/career-intelligence/answers", json={"question": "software work"})
+    assert mock_forward.call_args.kwargs["timeout"] == 400.0
     client.get("/api/v1/career-intelligence/recommendations/me")
     assert "timeout" not in mock_forward.call_args.kwargs
 

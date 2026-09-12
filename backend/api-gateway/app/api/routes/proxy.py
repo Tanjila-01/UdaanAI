@@ -198,6 +198,8 @@ async def proxy_assessments_options(path: str, request: Request, credentials: Op
 async def _proxy_career(path: str, request: Request) -> Response:
     clean_path = f"/{path.lstrip('/')}" if path else ""
     target_url = f"{settings.AI_CAREER_SERVICE_URL.rstrip('/')}/career-intelligence{clean_path}"
+    if clean_path.rstrip('/') == "/answers" and request.method == "POST":
+        return await forward_request(target_url, request, error_detail="Local career answers are temporarily unavailable.", timeout=400.0)
     if clean_path.rstrip('/') == "/knowledge/search" and request.method == "POST":
         # Local CPU embeddings can need a cold model load; preserve existing timeouts elsewhere.
         return await forward_request(target_url, request, error_detail="AI Career service is temporarily unavailable.", timeout=200.0)

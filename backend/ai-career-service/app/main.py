@@ -3,6 +3,7 @@ from app.core.config import settings
 from app.api.routes.health import router as health_router
 from app.api.routes.recommendation import router as recommendation_router
 from app.api.routes.knowledge import router as knowledge_router
+from app.api.routes.answers import router as answers_router
 
 app = FastAPI(
     title=f"Udaan AI - {settings.SERVICE_NAME}",
@@ -14,3 +15,4 @@ app = FastAPI(
 app.include_router(health_router)
 app.include_router(recommendation_router)
 app.include_router(knowledge_router)
+app.include_router(answers_router)

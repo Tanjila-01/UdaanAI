@@ -1,6 +1,7 @@
 # Local knowledge ingestion and retrieval
 
-This phase implements evidence search, not LLM answers or student recommendations.
+This phase implements evidence search. A subsequent [career-answer endpoint](career-answers.md)
+now provides AI-selected source sentences and summaries of saved recommendations.
 No paid API or model is used. The existing recommendation scoring is unchanged.
 
 ## Storage and startup
@@ -108,6 +109,7 @@ evaluation. No student chat or spoken-answer feature is enabled by this phase.
 
 ## Still to implement
 
-Expand verified Karnataka/India knowledge; connect existing scored pathways and student
-context; generate grounded answers with validated citations and abstention; add chat
-history/UI, voice and evaluation. Do not present this retrieval endpoint as completed RAG chat.
+Expand verified Karnataka/India knowledge and evaluate answer relevance; add chat
+history/UI and voice. The subsequent [answer endpoint](career-answers.md) connects saved
+scoring and student context to conservative, source-based answers. The retrieval endpoint
+itself is still evidence search, not completed RAG chat.

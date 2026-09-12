@@ -25,12 +25,15 @@ class LocalAI:
             response.raise_for_status()
             return response.json()
 
-    def chat(self, messages):
-        data = self._post("/api/chat", {
+    def chat(self, messages, *, output_schema=None):
+        payload = {
             "model": settings.OLLAMA_TEXT_MODEL,
             "messages": messages, "stream": False, "think": False,
             "options": {"temperature": 0.2, "num_ctx": 4096, "num_predict": 400},
-        })
+        }
+        if output_schema is not None:
+            payload["format"] = output_schema
+        data = self._post("/api/chat", payload)
         answer = data["message"]["content"]
         if not isinstance(answer, str) or not answer.strip():
             raise ValueError("Local model returned an empty answer")

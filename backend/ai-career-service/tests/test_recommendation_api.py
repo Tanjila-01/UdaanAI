@@ -48,6 +48,26 @@ app.dependency_overrides[get_db] = override_get_db
 client = TestClient(app)
 
 
+def test_answers_auth_and_server_owned_context():
+    assert client.post("/career-intelligence/answers", json={"question": "software work"}).status_code == 401
+    headers = {"Authorization": f"Bearer {create_test_token(USER_1_ID)}"}
+    for extra in [{"user_id": USER_2_ID}, {"include_drafts": True}, {"language": "kn"}, {"question": "  "}]:
+        response = client.post("/career-intelligence/answers", headers=headers, json={"question": "software work", **extra})
+        assert response.status_code == 422
+
+
+def test_answers_busy_and_release():
+    from app.api.routes.answers import capacity
+    headers = {"Authorization": f"Bearer {create_test_token(USER_1_ID)}"}
+    capacity.acquire()
+    try:
+        assert client.post("/career-intelligence/answers", headers=headers, json={"question": "software work"}).status_code == 429
+    finally:
+        capacity.release()
+    with patch("app.api.routes.answers.answer_question", return_value={"status": "insufficient_evidence", "answer": "No evidence", "sources": [], "recommendations": [], "context_status": "not_requested"}):
+        assert client.post("/career-intelligence/answers", headers=headers, json={"question": "software work"}).status_code == 200
+
+
 def test_knowledge_search_requires_login():
     assert client.post("/career-intelligence/knowledge/search", json={"query": "software"}).status_code == 401
 
