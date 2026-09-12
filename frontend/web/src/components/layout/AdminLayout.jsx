@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   LogOut,
   ShieldCheck,
-  School,
   ExternalLink,
 } from 'lucide-react';
 
@@ -35,9 +34,9 @@ export const AdminLayout = ({ children }) => {
       {/* Top Admin Header */}
       <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-16 py-3 sm:py-0 flex flex-wrap sm:flex-nowrap gap-3 items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-9 h-9 rounded-xl bg-[#005F60] flex items-center justify-center text-white shadow-sm">
-              <School className="w-5 h-5" />
+          <Link to="/admin" className="flex items-center space-x-3 group" title="Udaan AI Admin Console">
+            <div className="w-9 h-9 rounded-xl bg-white border border-slate-700/80 flex items-center justify-center p-1 shrink-0 group-hover:scale-105 transition-transform overflow-hidden shadow-xs">
+              <img src="/logo-mark.png" alt="Udaan AI" className="w-full h-full object-contain" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
@@ -48,7 +47,7 @@ export const AdminLayout = ({ children }) => {
               </div>
               <p className="text-[11px] text-slate-400 font-medium">Workshop Operations</p>
             </div>
-          </div>
+          </Link>
 
           <div className="flex items-center gap-2 sm:gap-4">
             <ThemeToggle />

@@ -75,9 +75,9 @@ const AdminLoginPage = () => {
       {/* Top Header */}
       <header className="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-lg bg-[#005F60] flex items-center justify-center text-white shadow-xs">
-              <ShieldCheck className="w-5 h-5 text-teal-200" />
+          <Link to="/" className="flex items-center space-x-3 group" title="Udaan AI">
+            <div className="w-8 h-8 rounded-lg bg-white border border-slate-700/80 flex items-center justify-center p-1 shrink-0 group-hover:scale-105 transition-transform overflow-hidden shadow-xs">
+              <img src="/logo-mark.png" alt="Udaan AI" className="w-full h-full object-contain" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
@@ -87,7 +87,7 @@ const AdminLoginPage = () => {
                 </span>
               </div>
             </div>
-          </div>
+          </Link>
           <div className="flex items-center space-x-2">
             <span className="w-2 h-2 rounded-full bg-[#F97316]"></span>
             <span className="text-[11px] font-medium text-slate-400">Restricted Operational Portal</span>

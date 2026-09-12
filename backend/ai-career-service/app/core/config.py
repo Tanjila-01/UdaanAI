@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     STUDENT_SERVICE_URL: str = "http://localhost:8002"
     ROADMAP_SERVICE_URL: str = "http://localhost:8005"
 
+    # Local-only provider. No paid fallback.
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_TEXT_MODEL: str = "qwen3:1.7b"
+    OLLAMA_EMBEDDING_MODEL: str = "qwen3-embedding:0.6b"
+
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
