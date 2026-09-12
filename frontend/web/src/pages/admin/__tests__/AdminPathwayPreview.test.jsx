@@ -95,6 +95,33 @@ describe('Admin Pathway Preview Journey, Homepage Integration & Route Compatibil
     vi.restoreAllMocks();
   });
 
+  it('prompts visitors to sign in only after selecting a Stage 2 stream', async () => {
+    authContext.useAuth.mockReturnValue({ user: null, profile: null, loading: false });
+    render(<MemoryRouter><HomePage /></MemoryRouter>);
+    fireEvent.click(await screen.findByRole('button', { name: /Explore PUC/i }));
+    expect(screen.queryByText(/Sign in to see courses/i)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Explore Science Stream/i }));
+    expect(await screen.findByText(/Sign in to see courses/i)).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /Explore "Science Stream" in detail/i })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Continue Browsing/i }));
+    expect(screen.queryByText(/Sign in to see courses/i)).toBeNull();
+  });
+
+  it('opens the selected stream on the student pathways page for signed-in students', async () => {
+    authContext.useAuth.mockReturnValue({ user: { id: 'student-1', role: 'student' }, profile: null, loading: false });
+    const Destination = () => {
+      const location = useLocation();
+      return <div>{location.pathname}{location.search}</div>;
+    };
+    render(<MemoryRouter><Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/pathways" element={<Destination />} />
+    </Routes></MemoryRouter>);
+    fireEvent.click(await screen.findByRole('button', { name: /Explore PUC/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Explore Science Stream/i }));
+    expect(await screen.findByText('/pathways?pathway_id=puc-science')).toBeTruthy();
+  });
+
   it('/admin/pathways redirects to / with query parameters and #pathways preserved', async () => {
     const LocationWatcher = () => {
       const location = useLocation();
@@ -163,6 +190,10 @@ describe('Admin Pathway Preview Journey, Homepage Integration & Route Compatibil
         <HomePage />
       </MemoryRouter>
     );
+
+    // Click PUC route first to reveal its Stage 2 stream options
+    const pucNode = await screen.findByRole('button', { name: /Explore PUC/i });
+    fireEvent.click(pucNode);
 
     // Click on the Science Stream button
     const scienceNode = await screen.findByRole('button', { name: /Explore Science Stream/i });

@@ -121,6 +121,10 @@ describe('PathwaysPage Interactive Tests', () => {
       expect(screen.queryByText('Unable to Fetch Pathways')).toBeNull();
     });
 
+    // Click PUC route to reveal its Stage 2 streams
+    const pucBtn = await screen.findByRole('button', { name: /Explore PUC/i });
+    fireEvent.click(pucBtn);
+
     expect(await screen.findByText('Science Stream')).toBeTruthy();
     expect(screen.getByText('Commerce Stream')).toBeTruthy();
   });

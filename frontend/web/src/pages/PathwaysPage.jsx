@@ -104,9 +104,8 @@ const PathwaysPage = () => {
     const params = new URLSearchParams(location.search);
     const hasQueryParam = Boolean(params.get('pathway_id') || params.get('id') || params.get('node'));
 
-    if (profile && !hasQueryParam) {
-      const initialNode = getInitialNodeFromProfile(profile);
-      setSelectedStructuralNodeId(initialNode);
+    if (!hasQueryParam) {
+      setSelectedStructuralNodeId('c10');
       setSelectedCombinationId(null);
       setSelectedCareerDirectionId(null);
       setSelectedOptionId(null);
@@ -342,8 +341,7 @@ const PathwaysPage = () => {
 
   // Primary Page Reset Action
   const handleResetView = () => {
-    const initialNode = getInitialNodeFromProfile(profile);
-    setSelectedStructuralNodeId(initialNode);
+    setSelectedStructuralNodeId('c10');
     setSelectedCombinationId(null);
     setSelectedCareerDirectionId(null);
     setSelectedOptionId(null);

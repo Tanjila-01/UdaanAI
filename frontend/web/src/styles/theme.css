@@ -104,6 +104,7 @@ body { background-color: var(--theme-subtle); color: var(--theme-text); }
 :root[data-theme="dark"] .hover\:bg-teal-50:hover { background-color: var(--theme-tint); }
 
 :root[data-theme="dark"] .hover\:text-rose-600:hover,
+:root[data-theme="dark"] .hover\:text-rose-700:hover,
 :root[data-theme="dark"] .hover\:text-rose-800:hover,
 :root[data-theme="dark"] .text-rose-600,
 :root[data-theme="dark"] .text-rose-700,
@@ -119,7 +120,8 @@ body { background-color: var(--theme-subtle); color: var(--theme-text); }
 :root[data-theme="dark"] .to-teal-50\/40 { --tw-gradient-to: color-mix(in srgb, var(--theme-tint) 40%, transparent); }
 
 :root[data-theme="dark"] .border-emerald-200\/70,
-:root[data-theme="dark"] .border-slate-200\/70 { border-color: color-mix(in srgb, var(--theme-border) 70%, transparent); }
+:root[data-theme="dark"] .border-slate-200\/70,
+:root[data-theme="dark"] .border-teal-200\/70 { border-color: color-mix(in srgb, var(--theme-border) 70%, transparent); }
 
 :root[data-theme="dark"] .border-emerald-200\/50,
 :root[data-theme="dark"] .border-slate-200\/50 { border-color: color-mix(in srgb, var(--theme-border) 50%, transparent); }
@@ -155,6 +157,7 @@ body { background-color: var(--theme-subtle); color: var(--theme-text); }
 :root[data-theme="dark"] .group:hover .group-hover\:text-\[\#005F60\],
 :root[data-theme="dark"] .hover\:text-\[\#004D4E\]:hover,
 :root[data-theme="dark"] .hover\:text-\[\#005F60\]:hover,
+:root[data-theme="dark"] .hover\:text-teal-900:hover,
 :root[data-theme="dark"] .text-\[\#004D4E\],
 :root[data-theme="dark"] .text-\[\#005F60\],
 :root[data-theme="dark"] .text-teal-700,

@@ -163,21 +163,27 @@ const HomePage = () => {
   // Click handler for public homepage map nodes
   const handlePublicNodeClick = (nodeId) => {
     const node = STRUCTURAL_NODES[nodeId];
-    const pathwayLabel = node ? node.label : 'this pathway';
     const pathwayId = node?.pathwayId || nodeId;
 
-    if (!user) {
-      // Logged out visitor -> Show Auth Prompt Modal
-      setSelectedPublicNodeId(nodeId);
-      setTargetNodeLabel(pathwayLabel);
+    // Stage 0 and Stage 1 remain freely explorable; Stage 2 opens details or sign-in.
+    setSelectedPublicNodeId(nodeId);
+
+    if (!user && node?.stage === 2) {
+      setTargetNodeLabel(node.label);
       setAuthPromptOpen(true);
-    } else if (user.role === 'admin') {
+      return;
+    }
+
+    if (user?.role === 'admin') {
       // Admin -> Show selected pathway's read-only details within the public homepage
-      setSelectedPublicNodeId(nodeId);
-      setSearchParams({ pathway_id: pathwayId }, { replace: false });
-    } else {
-      // Logged in student -> Navigate to student /pathways
-      navigate(`/pathways?pathway_id=${encodeURIComponent(pathwayId)}`);
+      if (pathwayId) {
+        setSearchParams({ pathway_id: pathwayId }, { replace: false });
+      }
+    } else if (user) {
+      // Logged in student clicking a stage 2 stream/family -> Navigate to student /pathways
+      if (node && node.stage === 2 && pathwayId) {
+        navigate(`/pathways?pathway_id=${encodeURIComponent(pathwayId)}`);
+      }
     }
   };
 
