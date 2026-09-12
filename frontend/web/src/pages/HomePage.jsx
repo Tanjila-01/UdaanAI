@@ -22,7 +22,6 @@ import ProgressBar from '../components/ui/ProgressBar';
 import WorkshopCard from '../components/product/WorkshopCard';
 
 import {
-  Send,
   ArrowRight,
   Sparkles,
   Compass,
@@ -292,10 +291,10 @@ const HomePage = () => {
         {/* ========================================================= */}
         {/* SECTION 1: HERO SECTION */}
         {/* ========================================================= */}
-        <section id="hero" className="relative pt-16 pb-12 lg:pt-20 lg:pb-16 bg-white overflow-hidden scroll-mt-28 border-b border-slate-100">
+        <section id="hero" className="relative pt-16 pb-12 lg:pt-32 lg:pb-16 bg-white overflow-hidden scroll-mt-28 border-b border-slate-100">
 
           {/* RIGHT ARTWORK INTEGRATION */}
-          <div className="absolute top-0 right-0 bottom-0 w-full lg:w-[58%] xl:w-[55%] h-full pointer-events-none flex items-center justify-end z-0">
+          <div className="absolute top-0 lg:top-12 right-0 bottom-0 w-full lg:w-[58%] xl:w-[55%] h-full lg:h-auto pointer-events-none flex items-center justify-end z-0">
             <div className="relative w-full h-full flex items-center justify-end">
               <div className="absolute inset-y-0 left-0 w-24 sm:w-36 lg:w-48 bg-gradient-to-r from-white via-white/85 to-transparent z-10" />
               <div className="absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-white to-transparent z-10" />
@@ -311,12 +310,6 @@ const HomePage = () => {
 
           <Container size="xl" className="relative z-10">
             <div className="max-w-xl lg:max-w-md xl:max-w-lg flex flex-col items-start gap-4">
-
-              {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-50 border border-teal-200 text-[#004D4E] text-[11px] font-bold tracking-wide uppercase shadow-2xs">
-                <Send className="w-3.5 h-3.5 text-[#C2580E] animate-paper-plane" />
-                <span>AI Career Platform for Karnataka</span>
-              </div>
 
               {/* Headline */}
               <h1 className="text-3xl sm:text-4xl lg:text-[40px] xl:text-[46px] font-extrabold text-slate-950 tracking-tight leading-[1.15]">

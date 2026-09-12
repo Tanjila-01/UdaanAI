@@ -56,8 +56,8 @@ const Sidebar = ({ isOpen, onClose }) => {
             
             {/* Logo */}
             <Link to="/dashboard" className="flex items-center space-x-2.5 group" title="Udaan AI Dashboard">
-              <div className="w-10 h-10 rounded-2xl bg-[#005F60] flex items-center justify-center text-white shadow-md shadow-[#005F60]/20 group-hover:scale-105 transition-transform shrink-0">
-                <Sparkles className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 rounded-2xl bg-white border border-slate-200/80 flex items-center justify-center p-1 shadow-sm group-hover:scale-105 transition-transform shrink-0 overflow-hidden">
+                <img src="/logo-mark.png" alt="Udaan AI" className="w-full h-full object-contain" />
               </div>
               
               {!isCollapsed && (

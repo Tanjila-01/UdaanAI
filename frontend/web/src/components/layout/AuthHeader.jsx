@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Send, ArrowLeft, LogOut, User as UserIcon } from 'lucide-react';
+import { ArrowLeft, LogOut, User as UserIcon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
@@ -23,8 +23,8 @@ export const AuthHeader = () => {
         
         {/* Left: Brand Logo linking to Homepage */}
         <Link to="/" className="flex items-center space-x-3 group">
-          <div className="w-10 h-10 rounded-xl bg-[#005F60] flex items-center justify-center text-white shadow-xs group-hover:scale-105 transition-transform">
-            <Send className="w-5 h-5 text-white animate-paper-plane" />
+          <div className="w-10 h-10 rounded-xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-center p-1 group-hover:scale-105 transition-transform overflow-hidden">
+            <img src="/logo-mark.png" alt="Udaan AI" className="w-full h-full object-contain" />
           </div>
           <div>
             <div className="flex items-center space-x-2">

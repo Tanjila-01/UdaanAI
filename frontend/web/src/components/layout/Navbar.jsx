@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getAccountAction } from '../../utils/accountActions';
-import { Send, LogOut, Shield, LayoutDashboard, Menu, X, ArrowRight, ChevronDown } from 'lucide-react';
+import { LogOut, Shield, LayoutDashboard, Menu, X, ArrowRight, ChevronDown } from 'lucide-react';
 import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import ThemeToggle from '../ThemeToggle';
@@ -183,8 +183,8 @@ export const Navbar = () => {
       <div className="max-w-7xl mx-auto h-16 lg:h-[72px] px-4 sm:px-6 lg:px-8 flex items-center gap-6">
         {/* Left: Brand Logo & Tagline */}
         <Link to="/" className="flex shrink-0 items-center gap-2.5 group">
-          <div className="w-9 h-9 rounded-xl bg-[#005F60] flex items-center justify-center text-white shadow-xs group-hover:scale-105 transition-transform">
-            <Send className="w-4 h-4 text-white animate-paper-plane" />
+          <div className="w-9 h-9 rounded-xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-center p-1 group-hover:scale-105 transition-transform overflow-hidden">
+            <img src="/logo-mark.png" alt="Udaan AI" className="w-full h-full object-contain" />
           </div>
           <div>
             <div className="flex items-center space-x-1.5">

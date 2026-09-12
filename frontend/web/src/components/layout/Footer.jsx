@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Send } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getAccountAction } from '../../utils/accountActions';
 import WorkshopRequestModal from '../product/WorkshopRequestModal';
@@ -78,8 +77,8 @@ export const Footer = ({ onRequestWorkshop }) => {
               aria-label="Udaan AI Home"
               className="inline-flex items-center space-x-3 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 rounded-xl"
             >
-              <div className="w-9 h-9 rounded-xl bg-[#005F60] flex items-center justify-center text-white shrink-0 group-hover:scale-105 transition-transform">
-                <Send className="w-4 h-4 text-white" />
+              <div className="w-9 h-9 rounded-xl bg-white border border-slate-700/80 flex items-center justify-center p-1 shrink-0 group-hover:scale-105 transition-transform overflow-hidden shadow-xs">
+                <img src="/logo-mark.png" alt="Udaan AI" className="w-full h-full object-contain" />
               </div>
               <span className="font-extrabold text-xl text-white tracking-tight">
                 Udaan AI

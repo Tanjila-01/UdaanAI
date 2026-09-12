@@ -190,9 +190,6 @@ body { background-color: var(--theme-subtle); color: var(--theme-text); }
 
 :root[data-theme="dark"] .via-white\/85 { --tw-gradient-via: color-mix(in srgb, var(--theme-surface) 85%, transparent); }
 
-:root[data-theme="dark"] .text-\[\#C2580E\],
-:root[data-theme="dark"] .text-\[\#E06D14\] { color: #fdba74; }
-
 :root[data-theme="dark"] .bg-slate-100\/90 { background-color: color-mix(in srgb, var(--theme-subtle) 90%, transparent); }
 
 :root[data-theme="dark"] .bg-white\/80,
@@ -204,6 +201,9 @@ body { background-color: var(--theme-subtle); color: var(--theme-text); }
 :root[data-theme="dark"] .bg-slate-200\/80,
 :root[data-theme="dark"] .hover\:bg-slate-100\/80:hover,
 :root[data-theme="dark"] .hover\:bg-slate-50\/80:hover { background-color: color-mix(in srgb, var(--theme-subtle) 80%, transparent); }
+
+:root[data-theme="dark"] .text-\[\#C2580E\],
+:root[data-theme="dark"] .text-\[\#E06D14\] { color: #fdba74; }
 
 :root[data-theme="dark"] .text-blue-600,
 :root[data-theme="dark"] .text-blue-700,
