@@ -65,9 +65,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                   <span className="font-black text-lg tracking-tight text-[#0F172A] block leading-tight">
                     Udaan AI
                   </span>
-                  <span className="text-[9px] text-[#005F60] font-extrabold uppercase tracking-wider block">
-                    Karnataka Student
-                  </span>
+                  
                 </div>
               )}
               {/* Mobile text */}
@@ -75,9 +73,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 <span className="font-black text-lg tracking-tight text-[#0F172A] block leading-tight">
                   Udaan AI
                 </span>
-                <span className="text-[9px] text-[#005F60] font-extrabold uppercase tracking-wider block">
-                  Karnataka Student
-                </span>
+                
               </div>
             </Link>
 
