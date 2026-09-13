@@ -5,6 +5,7 @@ import { useSidebar } from '../context/SidebarContext';
 import { 
   Home, 
   Compass, 
+  MessageCircle,
   Sparkles, 
   Map, 
   LogOut, 
@@ -23,6 +24,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { label: 'Dashboard', icon: Home, path: '/dashboard' },
     { label: 'Career Discovery Assessment', icon: Sparkles, path: '/assessment' },
     { label: 'Explore Pathways', icon: Compass, path: '/pathways' },
+    { label: 'AI Career Advisor', icon: MessageCircle, path: '/student/ai-career' },
     { label: 'My Career Roadmap', icon: Map, path: '/my-roadmap' },
   ];
 

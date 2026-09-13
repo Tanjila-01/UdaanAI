@@ -8,6 +8,7 @@ import DashboardPage from '../pages/DashboardPage';
 import PathwaysPage from '../pages/PathwaysPage';
 import MyCareerRoadmapPage from '../pages/MyCareerRoadmapPage';
 import AssessmentPage from '../pages/AssessmentPage';
+import CareerAdvisorPage from '../pages/CareerAdvisorPage';
 import DesignSystemShowcasePage from '../pages/DesignSystemShowcasePage';
 import AdminOverviewPage from '../pages/admin/AdminOverviewPage';
 import AdminRequestsPage from '../pages/admin/AdminRequestsPage';
@@ -90,6 +91,7 @@ const AppRoutes = () => {
         }
       />
       {/* Admin Operations Routes */}
+      <Route path="/student/ai-career" element={<ProtectedRoute><CareerAdvisorPage /></ProtectedRoute>} />
       <Route path="/admin/login" element={<AdminLoginPage />} />
       <Route
         path="/admin"

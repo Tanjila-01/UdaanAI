@@ -81,7 +81,7 @@ answer refer to those numbered sources. No artificial confidence percentage is r
 ## Operation and limits
 
 - English only for now; requesting Kannada is rejected rather than pretending translation works.
-- Stateless: no chat history, answer persistence, audio or frontend page is added here.
+- Stateless: no conversation memory, answer persistence or audio. The student page keeps temporary messages only until navigation or reload.
 - One answer request at a time per service process; excess requests receive 429 with Retry-After.
   This matches the current single-worker Docker service, not a distributed rate limiter.
 - Gateway timeout is 400 seconds for answers only, covering sequential CPU embedding
@@ -89,7 +89,7 @@ answer refer to those numbered sources. No artificial confidence percentage is r
 - Model prompts contain the question and public source sentences, not names, email,
   access tokens or raw student profiles. Private context is processed by backend templates.
 - API-level input errors use 422; missing/invalid login uses 401/403. Domain fallback
-  statuses are returned with HTTP 200 so a future chat UI can display the explanation.
+  statuses are returned with HTTP 200 so the student advisor can display the explanation.
 
 ## Validation, 12 September 2026
 
@@ -106,5 +106,20 @@ docker compose exec -T ai-career-service python -m pytest tests -q
 docker compose exec -T api-gateway python -m pytest tests -q
 ```
 
-Next: broaden verified India/Karnataka content and evaluation, then add the student chat
-UI, conversation history and free/local speech input/output. See [knowledge audit](knowledge-audit.md).
+Next: broaden verified India/Karnataka content and evaluation, then add conversation history and free/local speech input/output. See [knowledge audit](knowledge-audit.md).
+
+## Student advisor page, 13 September 2026
+
+Open `/student/ai-career`, or choose **AI Career Advisor** in the student sidebar.
+A student login is required; a complete profile is not required for general exploration.
+
+- Submit a standalone English question, or use the career-duty starter questions.
+- **Explain my recommendations** requests the saved recommendation summary without generating or changing rankings. Missing/outdated context links to profile, assessment and dashboard.
+- Answers show numbered sources, publisher links, scope and review date. Only HTTPS source links are rendered.
+- Loading disables additional submissions. Busy/network failures and unavailable answers offer an explicit retry; missing evidence is shown as a normal explanation.
+- Questions stay in page memory only. Leaving the page or changing student identity clears them and aborts the browser request. Aborting the browser does not guarantee that inference already running on the server stops.
+- The answer request alone has a 410-second browser timeout to accommodate the gateway's 400-second timeout. Other API timeouts are unchanged.
+
+Validation: 116 frontend tests passed (including 8 advisor tests), and the production build passed. The build retains a large-bundle size warning. Tests cover source safety, standalone payloads, busy retries, duplicate submission prevention, request cancellation, student identity changes, unavailable/missing evidence, invalid responses and recommendation display.
+
+Live browser validation also passed against the Docker services: student sign-in, advisor access with no completed profile, a real source-cited software-development answer, missing-recommendation setup links and a KCET missing-evidence response. The layout was inspected at desktop and 390-pixel mobile widths. The disposable test student was removed after validation.
