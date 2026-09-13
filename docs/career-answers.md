@@ -81,7 +81,7 @@ answer refer to those numbered sources. No artificial confidence percentage is r
 ## Operation and limits
 
 - English only for now; requesting Kannada is rejected rather than pretending translation works.
-- Stateless: no conversation memory or answer persistence. The student page keeps temporary messages only until navigation or reload. Local voice input/output is documented in [local voice](local-voice.md).
+- Questions remain independent: saved history is not passed to the model as conversation memory. Completed answers now persist in student-owned history. Local voice input/output is documented in [local voice](local-voice.md).
 - One answer request at a time per service process; excess requests receive 429 with Retry-After.
   This matches the current single-worker Docker service, not a distributed rate limiter.
 - Gateway timeout is 400 seconds for answers only, covering sequential CPU embedding
@@ -106,7 +106,7 @@ docker compose exec -T ai-career-service python -m pytest tests -q
 docker compose exec -T api-gateway python -m pytest tests -q
 ```
 
-Next: broaden verified India/Karnataka content and evaluation, then add conversation history. Free/local speech input/output is now available; see [local voice](local-voice.md). See [knowledge audit](knowledge-audit.md).
+Next: broaden verified India/Karnataka content and evaluation, continue evaluating career coverage. Saved question history is now available, while multi-turn conversation memory remains future work. Free/local speech input/output is now available; see [local voice](local-voice.md). See [knowledge audit](knowledge-audit.md).
 
 ## Student advisor page, 13 September 2026
 
@@ -117,9 +117,27 @@ A student login is required; a complete profile is not required for general expl
 - **Explain my recommendations** requests the saved recommendation summary without generating or changing rankings. Missing/outdated context links to profile, assessment and dashboard.
 - Answers show numbered sources, publisher links, scope and review date. Only HTTPS source links are rendered.
 - Loading disables additional submissions. Busy/network failures and unavailable answers offer an explicit retry; missing evidence is shown as a normal explanation.
-- Questions stay in page memory only. Leaving the page or changing student identity clears them and aborts the browser request. Aborting the browser does not guarantee that inference already running on the server stops.
+- The open conversation view clears on navigation or identity change. Completed answers can be reopened from Previous questions. Aborting the browser does not guarantee that inference already running on the server stops.
 - The answer request alone has a 410-second browser timeout to accommodate the gateway's 400-second timeout. Other API timeouts are unchanged.
 
 Validation: 116 frontend tests passed (including 8 advisor tests), and the production build passed. The build retains a large-bundle size warning. Tests cover source safety, standalone payloads, busy retries, duplicate submission prevention, request cancellation, student identity changes, unavailable/missing evidence, invalid responses and recommendation display.
 
 Live browser validation also passed against the Docker services: student sign-in, advisor access with no completed profile, a real source-cited software-development answer, missing-recommendation setup links and a KCET missing-evidence response. The layout was inspected at desktop and 390-pixel mobile widths. The disposable test student was removed after validation.
+
+## Connected assessment journey
+
+The student sidebar labels the existing assessment **Discover My Interests**. Assessment results with saved recommendations and the dashboard's saved-match section include **Understand my matches with Udaan**. This opens `/student/ai-career?intent=explain_recommendations` and requests the authenticated student's saved explanation once, then removes that navigation intent. Ordinary advisor visits do not send a request automatically. Existing backend freshness checks still require updated inputs when recommendations are stale. Successful explanations link onward to pathways and the roadmap; no scoring or rankings were changed.
+
+## Saved question history
+
+Completed `answered` and `recommendations_explained` responses are saved automatically to `career_ai.advisor_history` with the authenticated owner, question, request fields, answer, sources and timestamp. Fallback/error responses are not saved. No audio is stored. New successful answers return `history_id`; if saving fails, the answer is still returned with a null ID and the UI explains that it was not saved.
+
+- `GET /api/v1/career-intelligence/history?offset=0`: newest 20 summaries plus `has_more`.
+- `GET /api/v1/career-intelligence/history/{id}`: the owner's saved question and answer snapshot.
+- `DELETE /api/v1/career-intelligence/history/{id}`: delete that owner's saved item.
+
+Every route uses the authenticated subject. Other owners receive 404 for reads and deletes and never appear in the list. No user ID is accepted from the client. The UI labels old answers as snapshots that may be outdated. Reopening does not run the model or reuse historical answers as current evidence. Start fresh clears the view only; Previous questions provides explicit deletion.
+
+Migration: `docker compose run --rm --no-deps ai-career-service alembic upgrade head` adds table/index revision 003. Build the updated service first, apply the migration, then recreate the service. Existing recommendation tables and scoring are unchanged.
+
+Validation: 54 AI-service tests, 21 focused history/advisor/voice frontend tests and the production build passed. Tests cover persistence, owner isolation, deletion, pagination, authentication, failed storage, UI reopening and request cancellation. The production build retains its existing large-bundle warning.

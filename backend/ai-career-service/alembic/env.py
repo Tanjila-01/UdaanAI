@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.core.config import settings
 from app.db.session import Base
+from app.models.advisor_history import AdvisorHistory  # noqa
 from app.models.recommendation import (  # noqa
     CareerRecommendationResult,
     CareerRecommendationItem,

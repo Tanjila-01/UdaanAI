@@ -259,13 +259,13 @@ const StudentJourneyNavigator = ({
       case 'assessment':
         if (isCurrentAssessmentComplete) {
           return {
-            title: 'Career Discovery Assessment · Complete',
+            title: 'Discover My Interests · Complete',
             badge: 'Complete',
             badgeStyle: 'bg-teal-50 text-teal-800 border-teal-200',
-            description: 'Your Career Discovery Assessment is complete and is being used to identify suitable education and career directions.',
+            description: 'Your interest assessment is complete and is being used to identify suitable education and career directions.',
             contextChip: assessmentResult?.primary_stream_recommendation 
               ? `Recommended Stream: ${assessmentResult.primary_stream_recommendation}`
-              : 'Interests & Aptitudes Analyzed',
+              : 'Interests explored',
             primaryCta: {
               label: 'View Assessment Results',
               icon: ArrowRight,
@@ -274,7 +274,7 @@ const StudentJourneyNavigator = ({
           };
         } else if (isAssessmentPending) {
           return {
-            title: 'Career Discovery Assessment · Ready',
+            title: 'Discover My Interests · Ready',
             badge: 'Ready',
             badgeStyle: 'bg-orange-50 text-[#F97316] border-orange-200 font-bold',
             description: `Your ${profile?.current_level || 'current level'} assessment is ready. Complete it to refresh your career directions. Your previous assessment results remain saved.`,
@@ -287,10 +287,10 @@ const StudentJourneyNavigator = ({
           };
         } else {
           return {
-            title: 'Career Discovery Assessment · Ready',
+            title: 'Discover My Interests · Ready',
             badge: 'Ready',
             badgeStyle: 'bg-orange-50 text-[#F97316] border-orange-200 font-bold',
-            description: 'Take our Career Discovery Assessment to discover subjects and career areas aligned with your interests and academic background.',
+            description: 'Complete Discover My Interests to discover subjects and career areas aligned with your interests and academic background.',
             contextChip: '15 quick discovery questions',
             primaryCta: {
               label: 'Take Assessment',
@@ -306,7 +306,7 @@ const StudentJourneyNavigator = ({
             title: 'Career Direction · Locked',
             badge: 'Locked',
             badgeStyle: 'bg-slate-100 text-slate-500 border-slate-200',
-            description: 'Complete your Career Discovery Assessment first to unlock personalized career and education directions.',
+            description: 'Complete Discover My Interests first to unlock personalized career and education directions.',
             contextChip: null,
             primaryCta: {
               label: 'Take Assessment',
@@ -354,7 +354,7 @@ const StudentJourneyNavigator = ({
             title: 'Goal · Locked',
             badge: 'Locked',
             badgeStyle: 'bg-slate-100 text-slate-500 border-slate-200',
-            description: 'Unlock goal selection by completing your Career Discovery Assessment first.',
+            description: 'Unlock goal selection by completing Discover My Interests first.',
             contextChip: null,
             primaryCta: {
               label: 'Take Assessment',

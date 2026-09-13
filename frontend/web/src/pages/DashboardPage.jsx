@@ -205,7 +205,7 @@ const DashboardPage = () => {
                       Discover your strengths and interests
                     </h2>
                     <p className="text-xs sm:text-sm text-teal-100/90 font-medium leading-relaxed font-sans">
-                      Complete your Career Discovery Assessment to understand which education and career directions may suit you.
+                      Complete Discover My Interests to understand which education and career directions may suit you.
                     </p>
                   </>
                 ) : !isGoalSelected ? (
@@ -351,7 +351,7 @@ const DashboardPage = () => {
                 <div className="space-y-1 text-center sm:text-left">
                   <h4 className="font-extrabold text-sm text-amber-900 font-sans">Discover what fits you</h4>
                   <p className="text-xs text-amber-800/90 max-w-xl font-sans">
-                    Take our Career Discovery Assessment to discover subjects and career areas aligned with your interests and academic background.
+                    Complete Discover My Interests to discover subjects and career areas aligned with your interests and academic background.
                   </p>
                 </div>
                 <button
@@ -393,7 +393,7 @@ const DashboardPage = () => {
                 <div className="space-y-1 text-center sm:text-left">
                   <h4 className="font-extrabold text-sm text-amber-900">Discover directions that fit your interests</h4>
                   <p className="text-xs text-amber-800/90 max-w-xl">
-                    Take the career discovery assessment to view personalized career and education pathway recommendations.
+                    Complete Discover My Interests to view personalized career and education pathway recommendations.
                   </p>
                 </div>
                 <button
@@ -401,7 +401,7 @@ const DashboardPage = () => {
                   onClick={() => navigate('/assessment?mode=take')}
                   className="bg-[#005F60] hover:bg-teal-800 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-xs shrink-0 cursor-pointer"
                 >
-                  Take Career Assessment
+                  Discover My Interests
                 </button>
               </div>
             )}

@@ -340,3 +340,15 @@ export const transcribeCareerAudioApi = async (audio, { signal } = {}) => {
   });
   return response.data;
 };
+
+export const listCareerHistoryApi = async (offset = 0, { signal } = {}) => {
+  const response = await apiClient.get('/api/v1/career-intelligence/history', { params: { offset }, signal });
+  return response.data;
+};
+export const getCareerHistoryApi = async (id, { signal } = {}) => {
+  const response = await apiClient.get(`/api/v1/career-intelligence/history/${encodeURIComponent(id)}`, { signal });
+  return response.data;
+};
+export const deleteCareerHistoryApi = async (id, { signal } = {}) => {
+  await apiClient.delete(`/api/v1/career-intelligence/history/${encodeURIComponent(id)}`, { signal });
+};

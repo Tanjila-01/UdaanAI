@@ -496,7 +496,7 @@ const PathwaysPage = () => {
                     Personalized Guidance Suggestion
                   </span>
                   <p className="text-amber-800 text-[11px] leading-relaxed font-semibold">
-                    Take the career assessment to highlight personalized recommendations in your choice explorer.
+                    Complete Discover My Interests to find your pathway matches, then discuss them with Udaan.
                   </p>
                 </div>
               </div>

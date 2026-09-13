@@ -347,7 +347,7 @@ export const AssessmentPage = () => {
           {loading && (
             <div className="flex flex-col items-center justify-center py-24 gap-3 text-slate-600">
               <Loader2 className="w-8 h-8 animate-spin text-[#005F60]" />
-              <span className="text-sm font-bold text-[#0F172A]">Loading Career Discovery Assessment...</span>
+              <span className="text-sm font-bold text-[#0F172A]">Loading Discover My Interests...</span>
             </div>
           )}
 
@@ -406,10 +406,11 @@ export const AssessmentPage = () => {
                     </span>
                   </div>
                   <CardTitle className="text-2xl sm:text-3xl text-white font-black tracking-tight">
-                    {assessment.title || 'Career Discovery Assessment'}
+                    Discover My Interests
                   </CardTitle>
                   <CardDescription className="text-teal-100/90 text-xs sm:text-sm mt-2 leading-relaxed font-medium">
-                    {assessment.description || 'Discover subjects, educational routes, and career directions aligned with your interests and academic background.'}
+                                        Answer questions about what you enjoy. Your results help find pathway matches, and Udaan can explain those matches afterwards.
+                    {assessment.title && <span className="block mt-2">{assessment.title}</span>}
                   </CardDescription>
                 </CardHeader>
 
@@ -927,7 +928,7 @@ export const AssessmentPage = () => {
 
         {/* Dashboard Footer */}
         <footer className="border-t border-slate-200/80 bg-white py-4 px-8 text-center text-xs text-slate-500 mt-8">
-          Udaan AI — Student Career Discovery Assessment
+          Udaan AI — Student Discover My Interests
         </footer>
       </div>
 

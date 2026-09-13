@@ -9,6 +9,7 @@ import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import EditProfileDrawer from '../components/EditProfileDrawer';
 import '../styles/career-advisor.css';
+import AdvisorHistory from '../components/AdvisorHistory';
 
 const examples = [
   { title: 'Build with technology', label: 'Software development', question: 'What does a software developer do?', icon: Code2, color: 'mint' },
@@ -66,6 +67,7 @@ function AdvisorSession() {
   const [question, setQuestion] = useState('');
   const [exchanges, setExchanges] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [historyBusy, setHistoryBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const pending = useRef(null);
   const nextId = useRef(0);
@@ -82,13 +84,13 @@ function AdvisorSession() {
     }
   });
   const voiceBusy = voice.phase !== 'idle';
-  const locked = busy || voiceBusy;
+  const locked = busy || voiceBusy || historyBusy;
   useEffect(() => () => { pending.current?.abort(); pending.current = null; }, []);
   useEffect(() => { if (exchanges.length) bottom.current?.scrollIntoView?.({ block: 'nearest', behavior: 'auto' }); }, [exchanges]);
   useEffect(() => { if (voice.phase === 'idle' && notice.startsWith('Voice added.')) input.current?.focus(); }, [voice.phase, notice]);
 
   async function ask(payload, retryId) {
-    if (pending.current || voiceBusy) return;
+    if (pending.current || voiceBusy || historyBusy) return;
     readAloud.stop(); setNotice('');
     const controller = new AbortController();
     pending.current = controller;
@@ -127,6 +129,11 @@ function AdvisorSession() {
     }, 0);
     return () => clearTimeout(timer);
   }, [explainRequested, navigate]);
+  const openSaved = saved => {
+    if (!saved?.request?.question || !statuses.has(saved.response?.status) || typeof saved.response.answer !== 'string' || !Array.isArray(saved.response.sources) || !Array.isArray(saved.response.recommendations)) throw new Error('Invalid saved answer');
+    readAloud.stop();
+    setExchanges(old => [...old.filter(item => item.id !== `saved-${saved.id}`), { id: `saved-${saved.id}`, historyId: saved.id, payload: saved.request, result: saved.response, savedAt: saved.created_at }]);
+  };
   const clear = () => { readAloud.stop(); setExchanges([]); setQuestion(''); setNotice('A fresh start. What would you like to explore?'); input.current?.focus(); };
 
   return <div className="advisor-page min-h-screen flex">
@@ -153,6 +160,9 @@ function AdvisorSession() {
                 {exchanges.map(entry => <article key={entry.id} className="advisor-exchange">
                   <div className="advisor-question"><span className="advisor-caption">You</span><p>{entry.payload.question}</p></div>
                   <div className="advisor-reply"><span className="advisor-avatar"><Sparkles size={17} /></span><div className="advisor-reply-body"><div className="advisor-reply-label"><strong>Udaan</strong>{entry.result?.sources.length > 0 && <span><ShieldCheck size={13} /> With sources</span>}</div>
+                    {entry.savedAt && <p className="advisor-snapshot">Saved {new Date(entry.savedAt).toLocaleDateString()}. Matches and sources may have changed. Ask again for current guidance.</p>}
+                    {!entry.savedAt && entry.result?.history_id && <p className="advisor-caption">Saved to Previous questions</p>}
+                    {!entry.savedAt && entry.result && ['answered', 'recommendations_explained'].includes(entry.result.status) && entry.result.history_id === null && <p className="advisor-caption">This answer could not be saved. It is available on this page only.</p>}
                     {entry.loading && <p role="status" className="advisor-loading"><Loader2 size={17} className="advisor-spin" /> Preparing your answer… Local AI may take a minute or more.</p>}
                     {entry.result && <><Answer result={entry.result} /><button className="advisor-listen" disabled={voiceBusy || !readAloud.available} title={readAloud.available ? 'Read this answer aloud using an on-device voice' : 'No on-device English voice is available in this browser'} onClick={() => readAloud.speak(entry.id, [entry.result.answer, ...entry.result.recommendations.map(item => `${item.title}. ${item.explanation}`)].join(' '))}>{readAloud.speakingId === entry.id ? <Square size={14} /> : <Volume2 size={15} />}{readAloud.speakingId === entry.id ? 'Stop listening' : 'Listen'}</button></>}
                     {entry.error && <p role="alert" className="advisor-error">{entry.error}</p>}
@@ -167,7 +177,7 @@ function AdvisorSession() {
               <label htmlFor="career-question">Ask a career question</label>
               <div className="advisor-input-box"><textarea ref={input} id="career-question" rows={2} maxLength={1000} disabled={voiceBusy} value={question} onChange={event => setQuestion(event.target.value)} placeholder="What are you curious about?" aria-describedby="question-limit voice-description" />
                 <div className="advisor-composer-actions"><div className="advisor-voice-actions">
-                  {voice.phase === 'idle' ? <button type="button" className="advisor-voice-button" disabled={busy || !voice.supported} onClick={() => { readAloud.stop(); setNotice(''); voice.start(); }}><Mic size={17} /> Speak</button>
+                  {voice.phase === 'idle' ? <button type="button" className="advisor-voice-button" disabled={busy || historyBusy || !voice.supported} onClick={() => { readAloud.stop(); setNotice(''); voice.start(); }}><Mic size={17} /> Speak</button>
                     : <><span className="advisor-recording" role="status">{voice.phase === 'recording' ? <><span />{voice.seconds}s / 30s</> : <><Loader2 size={15} className="advisor-spin" />{voice.phase === 'starting' ? 'Allow microphone…' : 'Turning speech into text…'}</>}</span>{voice.phase === 'recording' && <button type="button" className="advisor-voice-button" onClick={voice.finish}><Square size={14} /> Done</button>}<button type="button" className="advisor-icon-button" aria-label="Cancel voice input" onClick={voice.cancel}><X size={16} /></button></>}
                 </div><button type="submit" disabled={locked || !question.trim()} className="advisor-send" aria-label="Ask Udaan" title="Ask Udaan"><ArrowUp size={20} /></button></div>
               </div>
@@ -177,9 +187,10 @@ function AdvisorSession() {
             </form>
           </section>
           <aside className="advisor-guide" aria-label="Career exploration guide">
+            <AdvisorHistory disabled={busy || voiceBusy} onBusy={setHistoryBusy} onOpen={openSaved} onDelete={id => setExchanges(old => old.filter(item => item.historyId !== id && item.result?.history_id !== id))} />
             <section className="advisor-guide-personal"><span className="advisor-guide-icon"><Sparkles size={22} /></span><h2>Make it about you</h2><p>Discover why your saved pathways match your interests.</p><button className="advisor-secondary" disabled={locked} onClick={explain} aria-label="Understand my saved pathways">Explore my matches <ArrowUpRight size={16} /></button></section>
             <section className="advisor-guide-note"><Lightbulb size={20} /><h2>A good place to start</h2><p>Ask what someone does at work. Name the career in each question so Udaan has the context it needs.</p><div className="advisor-divider" /><h3><BookOpen size={16} /> What you can explore</h3><p>Software development, graphic design and electrician duties. Admission guidance is still being verified.</p></section>
-            <div className="advisor-privacy"><ShieldCheck size={16} /><p>Questions are independent. Messages clear when you leave this page.</p></div>
+            <div className="advisor-privacy"><ShieldCheck size={16} /><p>Questions are independent. Completed answers are saved to your account in Previous questions, where you can reopen or delete them. Start fresh clears this view only.</p></div>
             <div className="advisor-privacy"><AudioLines size={16} /><p>Voice typing runs on your local server. Recordings aren't saved. Listen uses an on-device English voice{readAloud.available ? '.' : ', which is not available in this browser.'}</p></div>
           </aside>
         </div>

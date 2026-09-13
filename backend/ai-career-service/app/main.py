@@ -19,3 +19,6 @@ app.include_router(knowledge_router)
 app.include_router(answers_router)
 
 app.include_router(speech_router)
+
+from app.api.routes.advisor_history import router as advisor_history_router
+app.include_router(advisor_history_router)

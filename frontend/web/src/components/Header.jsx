@@ -70,10 +70,10 @@ const QUICK_SEARCH_ITEMS = [
   },
   {
     id: 'career-assessment',
-    title: 'Career Discovery Assessment',
+    title: 'Discover My Interests',
     category: 'Self Discovery',
     level: 'All Students',
-    description: 'Take guided interest test mapping your natural aptitude across streams & subjects.',
+    description: 'Explore your interests, see your pathway matches, then discuss them with Udaan.',
     path: '/assessment'
   },
   {

@@ -1,7 +1,8 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import DiscussMatchesLink from '../../components/DiscussMatchesLink';
 import CareerAdvisorPage from '../CareerAdvisorPage';
 import { getCareerAnswerApi } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
@@ -84,4 +85,25 @@ describe('Career advisor', () => {
     expect(await screen.findByText('1. Software development')).toBeTruthy();
     expect(screen.getByText(/not a guarantee of success/)).toBeTruthy();
   });
+});
+
+it('connects saved matches to one automatic explanation, including StrictMode', async () => {
+  getCareerAnswerApi.mockResolvedValue({ ...response, status: 'recommendations_explained' });
+  render(<React.StrictMode><MemoryRouter initialEntries={['/results']}><Routes>
+    <Route path="/results" element={<DiscussMatchesLink />} />
+    <Route path="/student/ai-career" element={<CareerAdvisorPage />} />
+  </Routes></MemoryRouter></React.StrictMode>);
+  fireEvent.click(screen.getByRole('link', { name: 'Understand my matches with Udaan' }));
+  expect(await screen.findByText(response.answer)).toBeTruthy();
+  expect(getCareerAnswerApi).toHaveBeenCalledTimes(1);
+  expect(getCareerAnswerApi.mock.calls[0][0]).toEqual({ question: 'Explain my saved career recommendations.', intent: 'explain_recommendations', language: 'en' });
+  expect(screen.getByRole('link', { name: 'Explore my pathways' }).getAttribute('href')).toBe('/pathways');
+  fireEvent.click(screen.getByRole('button', { name: 'Start fresh' }));
+  expect(screen.getByText('Where could your curiosity take you?')).toBeTruthy();
+  expect(getCareerAnswerApi).toHaveBeenCalledTimes(1);
+});
+
+it('does not automatically request explanations on an ordinary advisor visit', () => {
+  mount();
+  expect(getCareerAnswerApi).not.toHaveBeenCalled();
 });

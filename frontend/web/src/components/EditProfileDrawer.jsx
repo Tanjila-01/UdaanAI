@@ -398,7 +398,7 @@ const EditProfileDrawer = ({ isOpen, onClose }) => {
                 <Sparkles className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                 <div className="text-[11px] leading-relaxed">
                   <span className="font-bold block">Academic Safety Policy</span>
-                  Updating your education stage assigns the appropriate career discovery assessment for your level. 
+                  Updating your education stage assigns the appropriate Discover My Interests questions for your level.
                   Your historical assessments, recommendations, and active goals will remain safe in your profile.
                 </div>
               </div>

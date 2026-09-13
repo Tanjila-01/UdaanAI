@@ -28,10 +28,6 @@ body { background-color: var(--theme-subtle); color: var(--theme-text); }
 }
 .theme-toggle:hover { background: var(--theme-subtle); }
 
-:root[data-theme="dark"] .bg-white,
-:root[data-theme="dark"] .focus\:bg-white:focus,
-:root[data-theme="dark"] .hover\:bg-white:hover { background-color: var(--theme-surface); }
-
 :root[data-theme="dark"] .border-amber-200,
 :root[data-theme="dark"] .border-amber-300,
 :root[data-theme="dark"] .border-blue-200,
@@ -55,6 +51,44 @@ body { background-color: var(--theme-subtle); color: var(--theme-text); }
 :root[data-theme="dark"] .hover\:border-teal-200:hover,
 :root[data-theme="dark"] .hover\:border-teal-300:hover { border-color: var(--theme-border); }
 
+:root[data-theme="dark"] .bg-amber-100,
+:root[data-theme="dark"] .bg-amber-50,
+:root[data-theme="dark"] .bg-blue-50,
+:root[data-theme="dark"] .bg-emerald-100,
+:root[data-theme="dark"] .bg-emerald-50,
+:root[data-theme="dark"] .bg-orange-100,
+:root[data-theme="dark"] .bg-orange-50,
+:root[data-theme="dark"] .bg-rose-50,
+:root[data-theme="dark"] .bg-sky-100,
+:root[data-theme="dark"] .bg-teal-100,
+:root[data-theme="dark"] .bg-teal-50,
+:root[data-theme="dark"] .hover\:bg-amber-100:hover,
+:root[data-theme="dark"] .hover\:bg-orange-100:hover,
+:root[data-theme="dark"] .hover\:bg-rose-50:hover,
+:root[data-theme="dark"] .hover\:bg-teal-100:hover,
+:root[data-theme="dark"] .hover\:bg-teal-50:hover { background-color: var(--theme-tint); }
+
+:root[data-theme="dark"] .group:hover .group-hover\:text-slate-500,
+:root[data-theme="dark"] .group:hover .group-hover\:text-slate-600,
+:root[data-theme="dark"] .hover\:text-slate-600:hover,
+:root[data-theme="dark"] .text-slate-500,
+:root[data-theme="dark"] .text-slate-600 { color: var(--theme-muted); }
+
+:root[data-theme="dark"] .group:hover .group-hover\:text-\[\#005F60\],
+:root[data-theme="dark"] .hover\:text-\[\#004D4E\]:hover,
+:root[data-theme="dark"] .hover\:text-\[\#005F60\]:hover,
+:root[data-theme="dark"] .hover\:text-teal-900:hover,
+:root[data-theme="dark"] .text-\[\#004D4E\],
+:root[data-theme="dark"] .text-\[\#005F60\],
+:root[data-theme="dark"] .text-teal-700,
+:root[data-theme="dark"] .text-teal-800,
+:root[data-theme="dark"] .text-teal-900,
+:root[data-theme="dark"] .text-teal-950 { color: #5eead4; }
+
+:root[data-theme="dark"] .bg-white,
+:root[data-theme="dark"] .focus\:bg-white:focus,
+:root[data-theme="dark"] .hover\:bg-white:hover { background-color: var(--theme-surface); }
+
 :root[data-theme="dark"] .bg-\[\#F8FAF8\],
 :root[data-theme="dark"] .bg-\[\#F8FAF9\],
 :root[data-theme="dark"] .bg-slate-100,
@@ -76,32 +110,9 @@ body { background-color: var(--theme-subtle); color: var(--theme-text); }
 :root[data-theme="dark"] .text-slate-900,
 :root[data-theme="dark"] .text-slate-950 { color: var(--theme-text); }
 
-:root[data-theme="dark"] .group:hover .group-hover\:text-slate-500,
-:root[data-theme="dark"] .group:hover .group-hover\:text-slate-600,
-:root[data-theme="dark"] .hover\:text-slate-600:hover,
-:root[data-theme="dark"] .text-slate-500,
-:root[data-theme="dark"] .text-slate-600 { color: var(--theme-muted); }
-
 :root[data-theme="dark"] .bg-slate-200\/60,
 :root[data-theme="dark"] .bg-slate-50\/60,
 :root[data-theme="dark"] .hover\:bg-slate-200\/60:hover { background-color: color-mix(in srgb, var(--theme-subtle) 60%, transparent); }
-
-:root[data-theme="dark"] .bg-amber-100,
-:root[data-theme="dark"] .bg-amber-50,
-:root[data-theme="dark"] .bg-blue-50,
-:root[data-theme="dark"] .bg-emerald-100,
-:root[data-theme="dark"] .bg-emerald-50,
-:root[data-theme="dark"] .bg-orange-100,
-:root[data-theme="dark"] .bg-orange-50,
-:root[data-theme="dark"] .bg-rose-50,
-:root[data-theme="dark"] .bg-sky-100,
-:root[data-theme="dark"] .bg-teal-100,
-:root[data-theme="dark"] .bg-teal-50,
-:root[data-theme="dark"] .hover\:bg-amber-100:hover,
-:root[data-theme="dark"] .hover\:bg-orange-100:hover,
-:root[data-theme="dark"] .hover\:bg-rose-50:hover,
-:root[data-theme="dark"] .hover\:bg-teal-100:hover,
-:root[data-theme="dark"] .hover\:bg-teal-50:hover { background-color: var(--theme-tint); }
 
 :root[data-theme="dark"] .hover\:text-rose-600:hover,
 :root[data-theme="dark"] .hover\:text-rose-700:hover,
@@ -153,17 +164,6 @@ body { background-color: var(--theme-subtle); color: var(--theme-text); }
 :root[data-theme="dark"] .bg-teal-100\/70,
 :root[data-theme="dark"] .bg-teal-50\/70,
 :root[data-theme="dark"] .hover\:bg-teal-50\/70:hover { background-color: color-mix(in srgb, var(--theme-tint) 70%, transparent); }
-
-:root[data-theme="dark"] .group:hover .group-hover\:text-\[\#005F60\],
-:root[data-theme="dark"] .hover\:text-\[\#004D4E\]:hover,
-:root[data-theme="dark"] .hover\:text-\[\#005F60\]:hover,
-:root[data-theme="dark"] .hover\:text-teal-900:hover,
-:root[data-theme="dark"] .text-\[\#004D4E\],
-:root[data-theme="dark"] .text-\[\#005F60\],
-:root[data-theme="dark"] .text-teal-700,
-:root[data-theme="dark"] .text-teal-800,
-:root[data-theme="dark"] .text-teal-900,
-:root[data-theme="dark"] .text-teal-950 { color: #5eead4; }
 
 :root[data-theme="dark"] .border-rose-200\/60,
 :root[data-theme="dark"] .border-slate-200\/60,

@@ -10,6 +10,7 @@ from app.core.security import get_current_user_claims, security
 from app.db.session import get_db
 from app.services.career_answers import answer_question
 from app.services.knowledge import PATHWAYS
+from app.services.advisor_history import save_answer
 
 router = APIRouter(prefix="/career-intelligence", tags=["Career answers"])
 capacity = BoundedSemaphore(1)
@@ -59,6 +60,7 @@ class SavedPathwayExplanation(BaseModel):
 
 
 class AnswerResponse(BaseModel):
+    history_id: str | None = None
     status: Literal["answered", "recommendations_explained", "insufficient_evidence", "needs_update", "out_of_scope", "unavailable"]
     answer: str
     sources: list[AnswerSource]
@@ -72,8 +74,11 @@ def career_answer(request: AnswerRequest, claims=Depends(get_current_user_claims
     if not capacity.acquire(blocking=False):
         raise HTTPException(429, "Local AI is busy. Please retry shortly.", headers={"Retry-After": "10"})
     try:
-        return answer_question(db, claims["sub"], credentials.credentials, request.question,
+        result = answer_question(db, claims["sub"], credentials.credentials, request.question,
                                request.intent, request.pathway_id)
+        result = AnswerResponse.model_validate(result).model_dump(exclude={'history_id'})
+        result['history_id'] = save_answer(db, claims['sub'], request.model_dump(), result.copy())
+        return result
     except ValueError:
         raise HTTPException(422, "The requested pathway is not one of your saved suggestions. Use explore mode for alternatives.")
     finally:

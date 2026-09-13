@@ -38,7 +38,7 @@ The download step needs internet access once. Normal student speech processing d
 
 - Both gateway and service stream-limit uploads to 4 MB, including requests without a Content-Length header. Upload reading times out after 20 seconds.
 - Decoded audio is limited to 30 seconds and kept in memory. Audio is not written to files, the database or application logs.
-- No transcript or conversation persistence was added. Messages clear on navigation or student identity change.
+- Audio is never persisted. If a reviewed transcript is sent as a career question and receives a completed answer, its text and answer are saved in student-owned Previous questions. The open view clears on navigation or identity change; saved items can be deleted from history.
 - Voice and career-answer inference share the same one-request capacity gate. Excess requests receive HTTP 429 and Retry-After: 10.
 - Invalid/empty/silent audio returns 422; unsupported media type returns 415; oversized audio returns 413; a missing model/service failure returns 503. Internal errors are not exposed.
 - The gateway allows 120 seconds for transcription; the browser allows 130 seconds. Other route timeouts remain unchanged.
