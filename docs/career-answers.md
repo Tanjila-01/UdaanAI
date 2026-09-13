@@ -141,3 +141,5 @@ Every route uses the authenticated subject. Other owners receive 404 for reads a
 Migration: `docker compose run --rm --no-deps ai-career-service alembic upgrade head` adds table/index revision 003. Build the updated service first, apply the migration, then recreate the service. Existing recommendation tables and scoring are unchanged.
 
 Validation: 54 AI-service tests, 21 focused history/advisor/voice frontend tests and the production build passed. Tests cover persistence, owner isolation, deletion, pagination, authentication, failed storage, UI reopening and request cancellation. The production build retains its existing large-bundle warning.
+
+Reopened snapshots include **Get updated answer**. This submits the original question and intent to the existing backend again, which rechecks current student context and verified knowledge. It appends a new response and preserves the old snapshot, including when the new response requires updated recommendations. No old answer text or source content is sent as current evidence. Validation: 14 focused advisor/history tests passed.

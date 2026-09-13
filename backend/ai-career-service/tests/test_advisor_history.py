@@ -7,6 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.exc import SQLAlchemyError
 from app.main import app
+from app.api.routes import answers as answer_route
 from app.db.session import get_db
 from app.core.security import get_current_user_claims
 from app.models.advisor_history import AdvisorHistory
@@ -79,3 +80,44 @@ def test_saving_failure_does_not_discard_answer_and_fallbacks_not_saved():
     db.reset_mock()
     assert save_answer(db, OWNER, REQUEST, {**ANSWER, 'status': 'unavailable'}) is None
     db.add.assert_not_called()
+
+
+def test_followup_uses_owned_topic_and_never_passes_the_old_answer_as_evidence(history_db, monkeypatch):
+    route = answer_route
+    old = {**ANSWER, 'answer': 'OUTDATED PRIVATE ANSWER', 'sources': [{'title': 'Software development: work overview'}]}
+    key = save_answer(history_db, OWNER, REQUEST, old)
+    generate = Mock(return_value=ANSWER.copy())
+    monkeypatch.setattr(route, 'answer_question', generate)
+    with TestClient(app) as client:
+        response = client.post('/career-intelligence/answers', headers={'Authorization': 'Bearer unused-test-token'}, json={'question': 'What do they do each day?', 'follow_up_to': key})
+        assert response.status_code == 200
+        assert response.json()['conversation_topic'] == 'Software development: work overview'
+        assert response.json()['history_id']
+        assert generate.call_args.args[3] == 'What do they do each day?'
+        assert generate.call_args.kwargs == {'conversation_topic': 'Software development: work overview'}
+        assert 'OUTDATED PRIVATE ANSWER' not in str(generate.call_args)
+
+
+def test_followup_denies_other_owner_deleted_and_spoofed_context(history_db, monkeypatch):
+    route = answer_route
+    generate = Mock()
+    monkeypatch.setattr(route, 'answer_question', generate)
+    key = save_answer(history_db, OTHER, REQUEST, {**ANSWER, 'sources': [{'title': 'Software work'}]})
+    with TestClient(app) as client:
+        for target in [key, str(uuid4())]:
+            response = client.post('/career-intelligence/answers', headers={'Authorization': 'Bearer unused'}, json={'question': 'What about this?', 'follow_up_to': target})
+            assert response.status_code == 404
+        assert client.post('/career-intelligence/answers', headers={'Authorization': 'Bearer unused'}, json={'question': 'What about this?', 'conversation_topic': 'Client invented context'}).status_code == 422
+    generate.assert_not_called()
+
+
+def test_ambiguous_followup_asks_for_a_named_career(history_db, monkeypatch):
+    route = answer_route
+    generate = Mock()
+    monkeypatch.setattr(route, 'answer_question', generate)
+    key = save_answer(history_db, OWNER, REQUEST, {**ANSWER, 'sources': [{'title': 'Software work'}, {'title': 'Design work'}]})
+    with TestClient(app) as client:
+        response = client.post('/career-intelligence/answers', headers={'Authorization': 'Bearer unused'}, json={'question': 'What about this?', 'follow_up_to': key})
+        assert response.json()['status'] == 'needs_clarification'
+        assert client.post('/career-intelligence/answers', headers={'Authorization': 'Bearer unused'}, json={'question': 'Explain this', 'follow_up_to': key, 'intent': 'explain_recommendations'}).status_code == 422
+    generate.assert_not_called()

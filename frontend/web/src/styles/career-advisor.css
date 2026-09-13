@@ -112,3 +112,5 @@
 .advisor-history-confirm span { width: 100%; }
 .advisor-history-confirm button { text-decoration: underline; }
 .advisor-snapshot { background: var(--advisor-warm); padding: 10px 12px; border-radius: 10px; margin-bottom: 12px; font-size: 13px; line-height: 1.6; color: var(--theme-muted); }
+.advisor-followup-button { display: inline-flex; margin: 10px 0 0 14px; color: var(--advisor-accent); font-size: 13px; font-weight: 600; text-decoration: underline; }
+.advisor-context-chip { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 10px; margin-bottom: 12px; background: var(--advisor-tint); color: var(--advisor-accent); font-size: 13px; overflow-wrap: anywhere; }

@@ -4,10 +4,10 @@ import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/re
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import DiscussMatchesLink from '../../components/DiscussMatchesLink';
 import CareerAdvisorPage from '../CareerAdvisorPage';
-import { getCareerAnswerApi } from '../../api/client';
+import { getCareerAnswerApi, listCareerHistoryApi, getCareerHistoryApi } from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 
-vi.mock('../../api/client', () => ({ getCareerAnswerApi: vi.fn() }));
+vi.mock('../../api/client', () => ({ getCareerAnswerApi: vi.fn(), listCareerHistoryApi: vi.fn(), getCareerHistoryApi: vi.fn() }));
 vi.mock('../../context/AuthContext', () => ({ useAuth: vi.fn() }));
 vi.mock('../../context/SidebarContext', () => ({ useSidebar: () => ({ isCollapsed: false }) }));
 vi.mock('../../components/Sidebar', () => ({ default: () => null }));
@@ -106,4 +106,50 @@ it('connects saved matches to one automatic explanation, including StrictMode', 
 it('does not automatically request explanations on an ordinary advisor visit', () => {
   mount();
   expect(getCareerAnswerApi).not.toHaveBeenCalled();
+});
+
+it('refreshes a saved explanation using current context while preserving the old snapshot', async () => {
+  const request = { question: 'Explain my saved career recommendations.', intent: 'explain_recommendations', pathway_id: null, language: 'en' };
+  listCareerHistoryApi.mockResolvedValue({ items: [{ id: 'old', question: request.question, created_at: '2026-09-01T10:00:00Z' }], has_more: false });
+  getCareerHistoryApi.mockResolvedValue({ id: 'old', request, created_at: '2026-09-01T10:00:00Z', response: { ...response, answer: 'Your previous saved explanation.', status: 'recommendations_explained' } });
+  getCareerAnswerApi.mockResolvedValue({ ...response, status: 'needs_update', answer: 'Please refresh your recommendations.' });
+  mount();
+  fireEvent.click(screen.getByRole('button', { name: 'Previous questions' }));
+  fireEvent.click(await screen.findByRole('button', { name: /^Explain my saved career recommendations\./ }));
+  const update = await screen.findByRole('button', { name: 'Get updated answer' });
+  await waitFor(() => expect(update.disabled).toBe(false));
+  expect(getCareerAnswerApi).not.toHaveBeenCalled();
+  fireEvent.click(update);
+  expect(await screen.findByText('Please refresh your recommendations.')).toBeTruthy();
+  expect(screen.getByText('Your previous saved explanation.')).toBeTruthy();
+  expect(getCareerAnswerApi).toHaveBeenCalledTimes(1);
+  expect(getCareerAnswerApi.mock.calls[0][0]).toEqual(request);
+});
+
+it('links an explicit follow-up to the saved answer and clears context after sending', async () => {
+  getCareerAnswerApi.mockResolvedValueOnce({ ...response, history_id: 'saved-topic', sources: [{ reference: 1, chunk_id: 'chunk', title: 'Software development', references: [] }] }).mockResolvedValueOnce({ ...response, answer: 'A newly checked answer.', conversation_topic: 'Software development' });
+  mount(); send('What does a developer do?');
+  fireEvent.click(await screen.findByRole('button', { name: 'Ask a follow-up' }));
+  expect(screen.getByText('Software development')).toBeTruthy();
+  send('What do they do each day?');
+  expect(await screen.findByText('A newly checked answer.')).toBeTruthy();
+  expect(getCareerAnswerApi.mock.calls[1][0]).toEqual({ question: 'What do they do each day?', intent: 'explore', language: 'en', follow_up_to: 'saved-topic' });
+  expect(screen.queryByRole('button', { name: 'Clear follow-up context' })).toBeNull();
+});
+
+it('lets a student clear the selected topic before asking a new question', async () => {
+  getCareerAnswerApi.mockResolvedValue({ ...response, history_id: 'saved-topic' });
+  mount(); send('What does a developer do?');
+  fireEvent.click(await screen.findByRole('button', { name: 'Ask a follow-up' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Clear follow-up context' }));
+  send('What does an electrician do?');
+  await waitFor(() => expect(getCareerAnswerApi).toHaveBeenCalledTimes(2));
+  expect(getCareerAnswerApi.mock.calls[1][0].follow_up_to).toBeUndefined();
+});
+
+it('shows a course-selection clarification as a normal answer rather than a rejection', async () => {
+  getCareerAnswerApi.mockResolvedValue({ ...response, status: 'needs_clarification', answer: 'Please name the course or qualification and the college you mean.' });
+  mount(); send('how much year course is and will i get selected ?');
+  expect(await screen.findByText('Please name the course or qualification and the college you mean.')).toBeTruthy();
+  expect(screen.queryByRole('alert')).toBeNull();
 });

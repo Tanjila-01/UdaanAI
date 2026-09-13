@@ -115,3 +115,32 @@ def test_missing_context_and_another_students_assessment(monkeypatch):
     user_id, assessment, saved, db = current_context(monkeypatch)
     assessment["user_id"] = str(uuid4())
     assert answers.answer_question(db, user_id, "token", "Explain", "explain_recommendations")["status"] == "unavailable"
+
+
+def test_followup_topic_is_retrieved_again_and_not_treated_as_evidence(monkeypatch):
+    retrieve = MagicMock(return_value=[evidence()])
+    monkeypatch.setattr(answers, 'retrieve', retrieve)
+    ai = FakeAI()
+    response = answers.answer_question(None, str(uuid4()), 'token', 'What do they do each day?', ai=ai, conversation_topic='Software development')
+    assert response['status'] == 'answered'
+    assert retrieve.call_args.args[1] == 'Software development: What do they do each day?'
+    prompt = json.loads(ai.messages[1]['content'])
+    assert prompt['career_topic'] == 'Software development'
+    assert prompt['question'] == 'What do they do each day?'
+    assert all('Developers' in item['sentence'] or 'testers' in item['sentence'] for item in prompt['evidence'])
+
+
+def test_followup_cannot_bypass_missing_admissions_knowledge(monkeypatch):
+    monkeypatch.setattr(answers, 'retrieve', lambda *a, **kw: pytest.fail('Unsupported admission facts must not use occupational evidence'))
+    response = answers.answer_question(None, str(uuid4()), 'token', 'What are the admission requirements?', conversation_topic='Software development')
+    assert response['status'] == 'insufficient_evidence'
+
+
+@pytest.mark.parametrize('question', ['how much year course is and will i get selected ?', 'How many years is the course?', 'Will I get selected?', 'How long is it?'])
+def test_duration_and_selection_questions_get_helpful_clarification(monkeypatch, question):
+    monkeypatch.setattr(answers, 'retrieve', lambda *a, **kw: pytest.fail('Do not answer course/admission questions from job-duty evidence'))
+    response = answers.answer_question(None, str(uuid4()), 'token', question, conversation_topic='Software development')
+    assert response['status'] == 'needs_clarification'
+    assert 'course or qualification' in response['answer']
+    assert "can't predict or guarantee" in response['answer']
+    assert response['sources'] == []
