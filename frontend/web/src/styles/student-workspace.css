@@ -1,0 +1,33 @@
+/* Shared student workspace rhythm; isolated from public/admin pages and dialogs. */
+.student-workspace { background: var(--theme-subtle); color: var(--theme-text); }
+.student-workspace-main { max-width: 1360px; padding: 32px clamp(16px, 3vw, 42px) 56px; }
+.student-workspace-main > * + * { margin-top: 24px; }
+.student-workspace-main h1 { font-size: clamp(27px, 3vw, 36px); line-height: 1.2; letter-spacing: -.035em; font-weight: 750; }
+.student-workspace-main h2 { letter-spacing: -.02em; line-height: 1.35; }
+.student-workspace-main .font-black { font-weight: 700; }
+.student-workspace-main .text-xs { font-size: 13px; line-height: 1.7; }
+.student-workspace-main .text-\[10px\], .student-workspace-main .text-\[11px\] { font-size: 11px; line-height: 1.6; }
+.student-workspace-main > .bg-white, .student-workspace-main > section.bg-white { border-radius: 22px; box-shadow: 0 4px 20px #0f172a04; }
+.student-workspace-main :is(a, button, input, select):focus-visible { outline: 3px solid #f59e0b; outline-offset: 3px; }
+.student-workspace-main :is(input, select) { min-height: 44px; }
+.student-page-guide { display: flex; gap: 24px; flex-wrap: wrap; padding: 16px 0; border-bottom: 1px solid var(--theme-border); }
+.student-page-guide li { display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--theme-muted); }
+.student-page-guide li span { display: grid; place-items: center; border: 1px solid var(--theme-border); border-radius: 50%; height: 27px; width: 27px; font-size: 12px; font-weight: 650; background: var(--theme-subtle); color: var(--theme-text); }
+.PathwaysPage .student-workspace-main > div:first-child, .MyCareerRoadmapPage .student-workspace-main > div:first-child { padding: 28px; }
+.AssessmentPage .student-workspace-main { max-width: 1180px; }
+.AssessmentPage .student-workspace-main .rounded-3xl { border-radius: 22px; }
+.AssessmentPage .student-workspace-main button { min-height: 44px; }
+.AssessmentPage .student-workspace-main .bg-gradient-to-r { padding: 32px; }
+.MyCareerRoadmapPage .student-workspace-main > section { border-radius: 22px; }
+.MyCareerRoadmapPage .student-workspace-main button { min-height: 44px; }
+.OnboardingPage .student-workspace-main { max-width: 960px; }
+.OnboardingPage .student-workspace-main h1 { max-width: 720px; margin-inline: auto; }
+.OnboardingPage .student-workspace-main .rounded-3xl { border-radius: 22px; }
+.OnboardingPage .student-workspace-main button { min-height: 44px; }
+@media (max-width: 600px) {
+ .student-workspace-main { padding: 22px 16px 36px; }
+ .PathwaysPage .student-workspace-main > div:first-child, .MyCareerRoadmapPage .student-workspace-main > div:first-child { padding: 20px; }
+ .student-page-guide { gap: 10px; flex-direction: column; }
+ .AssessmentPage .student-workspace-main .bg-gradient-to-r { padding: 24px; }
+}
+@media (prefers-reduced-motion: reduce) { .student-workspace-main * { scroll-behavior: auto; transition-duration: 0s; } }

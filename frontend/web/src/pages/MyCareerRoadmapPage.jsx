@@ -1,3 +1,4 @@
+import '../styles/student-workspace.css';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -67,7 +68,7 @@ const MyCareerRoadmapPage = () => {
       const [resAssessment, resPathways, resGoal] = await Promise.all([
         getMyLatestAssessmentResultApi().catch(() => null),
         getPathwaysApi({
-          education_level: profile?.current_level || 'Class 10',
+          education_level: profile?.current_level || 'Education level not added',
           stream: profile?.stream || '',
         }).catch(() => ({ pathways: [] })),
         getMyStudentGoalApi(),
@@ -104,7 +105,7 @@ const MyCareerRoadmapPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAF8] text-[#0F172A] flex font-sans selection:bg-[#005F60] selection:text-white">
+    <div className="student-workspace MyCareerRoadmapPage min-h-screen bg-[#F8FAF8] text-[#0F172A] flex font-sans selection:bg-[#005F60] selection:text-white">
       {/* Sidebar */}
       <Sidebar 
         isOpen={isSidebarOpen} 
@@ -120,7 +121,7 @@ const MyCareerRoadmapPage = () => {
           onEditProfileClick={() => setIsEditDrawerOpen(true)}
         />
 
-        <main className="p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-6 flex-1">
+        <main className="student-workspace-main p-4 sm:p-8 max-w-7xl w-full mx-auto space-y-6 flex-1">
           
           {/* Header Banner */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xs space-y-4">
@@ -131,10 +132,10 @@ const MyCareerRoadmapPage = () => {
                   <span>YOUR CAREER PLAN</span>
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-black text-[#0F172A] tracking-tight">
-                  My Career Roadmap & Milestones
+                  My Career Roadmap
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                  Track progress towards your target career goal and complete milestone action steps.
+                  One goal. Manageable steps. Pick up where you left off and track your progress.
                 </p>
               </div>
 
@@ -167,7 +168,7 @@ const MyCareerRoadmapPage = () => {
                   <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-1">
                     <span className="flex items-center space-x-1 font-bold text-[#005F60]">
                       <GraduationCap className="w-3.5 h-3.5 text-[#005F60]" />
-                      <span>{profile?.current_level || 'Class 10'} ({profile?.class_or_year || '10th Standard'})</span>
+                      <span>{profile?.current_level || 'Education level not added'} {profile?.class_or_year ? ` (${profile.class_or_year})` : ''}</span>
                     </span>
                     {profile?.stream && (
                       <span className="font-extrabold text-[#F97316] bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-md">

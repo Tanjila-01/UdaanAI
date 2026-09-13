@@ -144,3 +144,24 @@ def test_duration_and_selection_questions_get_helpful_clarification(monkeypatch,
     assert 'course or qualification' in response['answer']
     assert "can't predict or guarantee" in response['answer']
     assert response['sources'] == []
+
+@pytest.mark.parametrize('question', ['What is graphic designing?', 'What do graphic designers do?'])
+def test_student_design_wording_reaches_verified_evidence(monkeypatch, question):
+    row = evidence()
+    row['content'] = 'Graphic designers create visual concepts to communicate ideas.'
+    retrieve = MagicMock(return_value=[row])
+    monkeypatch.setattr(answers, 'retrieve', retrieve)
+    response = answers.answer_question(None, str(uuid4()), 'token', question, ai=FakeAI())
+    assert response['status'] == 'answered'
+    assert 'Graphic designers create visual concepts' in response['answer']
+    assert 'designing' not in retrieve.call_args.args[1].lower()
+    assert response['sources']
+
+@pytest.mark.parametrize('question', ['what can you help', 'career exploration', 'Help me choose a career'])
+def test_general_exploration_offers_a_concrete_start_without_inference(monkeypatch, question):
+    monkeypatch.setattr(answers, 'retrieve', lambda *a, **kw: pytest.fail('Broad guidance does not need inference'))
+    response = answers.answer_question(None, str(uuid4()), 'token', question)
+    assert response['status'] == 'needs_clarification'
+    assert 'Discover My Interests' in response['answer']
+    assert 'graphic designer' in response['answer']
+    assert not response['sources']

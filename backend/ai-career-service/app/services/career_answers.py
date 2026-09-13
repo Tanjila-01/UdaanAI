@@ -121,6 +121,15 @@ def evidence_sentences(matches):
 
 def answer_question(db, user_id, token, question, intent="explore", pathway_id=None, ai=None, conversation_topic=None):
     question = question.strip()
+    # Normalize common student phrasing before scope checks and semantic retrieval.
+    question = re.sub(r"\bgraphic\s+designing\b", "graphic design", question, flags=re.I)
+    broad = re.sub(r"[^a-z0-9 ]", "", question.lower()).strip()
+    if intent == "explore" and not conversation_topic and broad in {
+        "hi", "hello", "help", "what can you help", "what can you help with",
+        "what can you do", "career exploration", "career guidance", "help me choose a career",
+        "explore careers", "i dont know what to do", "what career should i choose",
+    }:
+        return result("needs_clarification", "Let's start with what you enjoy. Open Discover My Interests to find your interest areas, or Explore my matches if you already have results. To learn about a job, try: What does a graphic designer do? You can also ask about software development or electrician work. Which would you like to explore?")
     retrieval_query = f'{conversation_topic}: {question}' if conversation_topic else question
     # Course length and selection need a named qualification/institution, not job-duty evidence.
     asks_selection = re.search(r"\b(will|can|would|could)\s+i\b.{0,45}\b(selected|accepted|admitted|get in)\b|\b(chances? of|guaranteed?)\b.{0,30}\b(selection|admission|placement)\b", question, re.I)
@@ -146,7 +155,7 @@ def answer_question(db, user_id, token, question, intent="explore", pathway_id=N
         if pathway_id not in {r["pathway_id"] for r in recommendations}:
             raise ValueError("To explain an alternative pathway, use explore mode")
     else:
-        if not re.search(r"\b(career|job|work|software|developer|programming|coding|design|designer|logos?|electrician|electrical|wiring|study|course|college|admission|school|stream|degree|mbbs|nurs\w*|engineer\w*|commerce|arts|science|puc|iti|diploma|lawyer|teacher|accountant|salary|scholarship|kcet|neet|eligibility|eligible|entrance|exam|university|fees?|licen\w*)\b", retrieval_query, re.I):
+        if not re.search(r"\b(career|job|work|software|developer|programming|coding|design(?:ing|ers?)?|logos?|electrician|electrical|wiring|study|course|college|admission|school|stream|degree|mbbs|nurs\w*|engineer\w*|commerce|arts|science|puc|iti|diploma|lawyer|teacher|accountant|salary|scholarship|kcet|neet|eligibility|eligible|entrance|exam|university|fees?|licen\w*)\b", retrieval_query, re.I):
             return result("out_of_scope", "I can help with education, career exploration and pathway questions. What would you like to explore?")
     # Current verified sources concern occupational duties only. Do not turn US source material into local admission advice.
     if re.search(r"\b(eligible|eligibility|admission|entrance|exam|neet|kcet|fees?|salary|salaries|earn|pay|cutoff|cut-off|deadline|scholarship|licen\w*|qualification|which stream|subjects? required|college|university)\b", question, re.I):

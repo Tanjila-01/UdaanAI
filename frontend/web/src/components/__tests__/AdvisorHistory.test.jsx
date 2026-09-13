@@ -38,3 +38,23 @@ it('offers retry after history fails and aborts requests when leaving', async ()
   const signal = listCareerHistoryApi.mock.calls[1][1].signal;
   view.unmount(); expect(signal.aborted).toBe(true);
 });
+
+it('explains a single page and hides unnecessary page controls', async () => {
+  mount(); fireEvent.click(screen.getByRole('button', { name: 'Previous questions' }));
+  expect(await screen.findByText('All 1 saved answer shown.')).toBeTruthy();
+  expect(screen.queryByRole('button', { name: 'Earlier answers' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'More recent answers' })).toBeNull();
+});
+
+it('moves between earlier and more recent pages using the correct offsets', async () => {
+  listCareerHistoryApi.mockResolvedValueOnce({ items: Array.from({ length: 20 }, (_, i) => ({ ...item, id: `id-${i}` })), has_more: true })
+    .mockResolvedValueOnce({ items: [{ ...item, id: 'older' }], has_more: false })
+    .mockResolvedValueOnce({ items: [item], has_more: true });
+  mount(); fireEvent.click(screen.getByRole('button', { name: 'Previous questions' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Earlier answers' }));
+  expect(await screen.findByText(/Showing 21 to 21/)).toBeTruthy();
+  expect(listCareerHistoryApi.mock.calls[1][0]).toBe(20);
+  fireEvent.click(screen.getByRole('button', { name: 'More recent answers' }));
+  await waitFor(() => expect(listCareerHistoryApi.mock.calls[2][0]).toBe(0));
+  expect(await screen.findByRole('button', { name: 'Earlier answers' })).toBeTruthy();
+});

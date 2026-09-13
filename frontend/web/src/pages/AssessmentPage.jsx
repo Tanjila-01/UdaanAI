@@ -1,3 +1,4 @@
+import '../styles/student-workspace.css';
 import DiscussMatchesLink from '../components/DiscussMatchesLink';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
@@ -324,7 +325,7 @@ export const AssessmentPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAF8] text-[#0F172A] flex font-sans selection:bg-[#005F60] selection:text-white">
+    <div className="student-workspace AssessmentPage min-h-screen bg-[#F8FAF8] text-[#0F172A] flex font-sans selection:bg-[#005F60] selection:text-white">
       {/* Dashboard Sidebar Navigation */}
       <Sidebar 
         isOpen={isSidebarOpen} 
@@ -341,7 +342,7 @@ export const AssessmentPage = () => {
         />
 
         {/* Dashboard Assessment Container */}
-        <main className="p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6 flex-1">
+        <main className="student-workspace-main p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto space-y-6 flex-1">
 
           {/* Loading Indicator */}
           {loading && (
@@ -399,10 +400,10 @@ export const AssessmentPage = () => {
                 <CardHeader className="bg-gradient-to-r from-teal-900 via-[#005F60] to-teal-950 text-white p-6 sm:p-8">
                   <div className="flex items-center gap-2 mb-3">
                     <span className="text-xs font-extrabold text-teal-300 bg-teal-950/80 px-3 py-1 rounded-full border border-teal-700/80">
-                      Karnataka Student Guidance
+                      GET TO KNOW YOURSELF
                     </span>
                     <span className="text-xs font-bold text-teal-200 flex items-center gap-1">
-                      <Sparkles className="w-3.5 h-3.5 text-[#F97316]" /> Career Discovery
+                      <Sparkles className="w-3.5 h-3.5 text-[#F97316]" /> Your interests matter
                     </span>
                   </div>
                   <CardTitle className="text-2xl sm:text-3xl text-white font-black tracking-tight">
@@ -433,7 +434,7 @@ export const AssessmentPage = () => {
                   <div className="p-5 rounded-2xl bg-teal-50/70 border border-teal-200/80 text-xs text-teal-950 font-medium space-y-2">
                     <div className="flex items-center gap-2 font-black text-[#005F60] text-sm">
                       <Compass className="w-4 h-4 text-[#005F60]" />
-                      What this assessment helps you discover:
+                      No right or wrong answers. Choose what feels like you.
                     </div>
                     <ul className="list-disc list-inside space-y-1 text-slate-700 pl-1 leading-relaxed">
                       <li>Subject and activity preferences (Science, Mathematics, Arts, Business)</li>

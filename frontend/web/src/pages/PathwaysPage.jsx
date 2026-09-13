@@ -1,3 +1,4 @@
+import '../styles/student-workspace.css';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -380,7 +381,7 @@ const PathwaysPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAF8] text-[#0F172A] flex font-sans selection:bg-[#005F60] selection:text-white">
+    <div className="student-workspace PathwaysPage min-h-screen bg-[#F8FAF8] text-[#0F172A] flex font-sans selection:bg-[#005F60] selection:text-white">
       {/* Sidebar */}
       <Sidebar 
         isOpen={isSidebarOpen} 
@@ -396,7 +397,7 @@ const PathwaysPage = () => {
           onEditProfileClick={() => setIsEditDrawerOpen(true)}
         />
 
-        <main className="p-4 sm:p-6 max-w-7xl w-full mx-auto space-y-5 flex-1">
+        <main className="student-workspace-main p-4 sm:p-6 max-w-7xl w-full mx-auto space-y-5 flex-1">
           
           {/* Top Page Banner & Search Area */}
           <div className="bg-white border border-slate-200/80 rounded-3xl p-5 sm:p-6 shadow-xs space-y-4">
@@ -404,13 +405,13 @@ const PathwaysPage = () => {
               <div>
                 <div className="inline-flex items-center space-x-2 text-[11px] font-bold text-[#005F60] bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200 mb-1.5">
                   <Compass className="w-3.5 h-3.5" />
-                  <span>Karnataka Student Hybrid Pathway Explorer</span>
+                  <span>EXPLORE YOUR POSSIBILITIES</span>
                 </div>
                 <h1 className="text-xl sm:text-2xl font-black text-[#0F172A] tracking-tight">
                   Career & Education Pathways
                 </h1>
                 <p className="text-xs text-slate-500 mt-0.5 font-medium">
-                  Structured SSLC, PUC, Polytechnic Diploma, and ITI trade routes under Karnataka Education Board.
+                  Choose an education route, explore its options and find a career direction to work towards.
                 </p>
               </div>
 
@@ -424,6 +425,7 @@ const PathwaysPage = () => {
               </button>
             </div>
 
+            <ol className="student-page-guide" aria-label="How to explore pathways"><li><span>1</span> Choose a route</li><li><span>2</span> Explore your options</li><li><span>3</span> Set a career goal</li></ol>
             {/* Global Index Search Bar */}
             <PathwaySearch 
               apiPathways={pathways}

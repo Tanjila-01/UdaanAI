@@ -114,3 +114,12 @@
 .advisor-snapshot { background: var(--advisor-warm); padding: 10px 12px; border-radius: 10px; margin-bottom: 12px; font-size: 13px; line-height: 1.6; color: var(--theme-muted); }
 .advisor-followup-button { display: inline-flex; margin: 10px 0 0 14px; color: var(--advisor-accent); font-size: 13px; font-weight: 600; text-decoration: underline; }
 .advisor-context-chip { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 10px; margin-bottom: 12px; background: var(--advisor-tint); color: var(--advisor-accent); font-size: 13px; overflow-wrap: anywhere; }
+
+/* Keep saved history compact and the conversation easier to scan. */
+.advisor-history-content > ul { max-height: 350px; overflow-y: auto; scrollbar-width: thin; }
+.advisor-history-pagination { flex-wrap: wrap; gap: 12px; }
+.advisor-history-pagination button { min-height: 40px; }
+.advisor-exchange + .advisor-exchange { border-top: 1px solid var(--theme-border); }
+.advisor-exchange { padding-top: 20px; padding-bottom: 20px; }
+.advisor-reply { margin-top: 18px; }
+.advisor-history-question time { font-variant-numeric: tabular-nums; }

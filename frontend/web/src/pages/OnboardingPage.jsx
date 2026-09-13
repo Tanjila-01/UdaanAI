@@ -1,3 +1,4 @@
+import '../styles/student-workspace.css';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -225,10 +226,10 @@ const OnboardingPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAF8] text-[#0F172A] flex flex-col justify-between selection:bg-[#005F60] selection:text-white font-sans">
+    <div className="student-workspace OnboardingPage min-h-screen bg-[#F8FAF8] text-[#0F172A] flex flex-col justify-between selection:bg-[#005F60] selection:text-white font-sans">
       <AuthHeader />
 
-      <main className="max-w-4xl w-full mx-auto px-4 py-8 flex-1">
+      <main className="student-workspace-main max-w-4xl w-full mx-auto px-4 py-8 flex-1">
         {/* Title Section */}
         <div className="text-center space-y-2 mb-8">
           <div className="inline-flex items-center space-x-2 text-xs font-extrabold px-3 py-1 rounded-full bg-teal-50 text-[#005F60] border border-teal-200">
@@ -239,7 +240,7 @@ const OnboardingPage = () => {
             Welcome to Udaan AI, <span className="text-[#005F60]">{user?.full_name || 'Student'}</span>!
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 max-w-xl mx-auto">
-            Setup your education stage and institution context to personalize your post-Class 10 and PUC pathway map.
+            Tell us where you are in your education. We’ll use these details to help you explore relevant pathways.
           </p>
         </div>
 

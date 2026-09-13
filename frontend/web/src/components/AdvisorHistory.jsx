@@ -44,7 +44,7 @@ export default function AdvisorHistory({ disabled, onOpen, onDelete, onBusy }) {
   return <section className="advisor-history">
     <button type="button" className="advisor-history-toggle" disabled={disabled || busy} aria-expanded={open} onClick={toggle}><History size={17} /> Previous questions</button>
     {open && <div className="advisor-history-content">
-      <p className="advisor-caption">Saved answers belong to your account. They are snapshots, not updated advice.</p>
+      <p className="advisor-caption">Newest answers first. Select a question to reopen its saved answer; use Get updated answer in the chat for fresh guidance.</p>
       {busy && <p role="status" className="advisor-caption">Loading history…</p>}
       {error && <p role="alert" className="advisor-error">{error}</p>}
       {!busy && !error && items.length === 0 && <p className="advisor-caption">No saved answers yet. Completed career answers will appear here.</p>}
@@ -53,7 +53,8 @@ export default function AdvisorHistory({ disabled, onOpen, onDelete, onBusy }) {
         {confirm === item.id ? <div className="advisor-history-confirm"><span>Delete this saved answer?</span><button type="button" disabled={disabled || busy} onClick={() => remove(item.id)}>Delete</button><button type="button" disabled={busy} onClick={() => setConfirm(null)}>Keep</button></div>
           : <button type="button" className="advisor-icon-button" disabled={disabled || busy} aria-label={`Delete saved question: ${item.question}`} onClick={() => setConfirm(item.id)}><Trash2 size={14} /></button>}
       </li>)}</ul>
-      <div className="advisor-history-pagination"><button type="button" disabled={disabled || busy || offset === 0} onClick={() => run(signal => load(Math.max(0, offset - 20), signal))}>Newer</button><button type="button" disabled={disabled || busy} onClick={() => run(signal => load(offset, signal))}>Refresh</button><button type="button" disabled={disabled || busy || !more} onClick={() => run(signal => load(offset + 20, signal))}>Older</button></div>
+      {!busy && !error && items.length > 0 && <p className="advisor-caption">{offset === 0 && !more ? `All ${items.length} saved ${items.length === 1 ? 'answer' : 'answers'} shown.` : `Showing ${offset + 1} to ${offset + items.length}. Each page holds up to 20 answers.`}</p>}
+      <div className="advisor-history-pagination">{offset > 0 && <button type="button" disabled={disabled || busy || offset === 0} onClick={() => run(signal => load(Math.max(0, offset - 20), signal))}>More recent answers</button>}<button type="button" disabled={disabled || busy} onClick={() => run(signal => load(offset, signal))}>Refresh</button>{more && <button type="button" disabled={disabled || busy || !more} onClick={() => run(signal => load(offset + 20, signal))}>Earlier answers</button>}</div>
     </div>}
   </section>;
 }
