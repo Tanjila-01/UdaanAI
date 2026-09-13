@@ -26,6 +26,7 @@ describe('Career advisor', () => {
     getCareerAnswerApi.mockResolvedValue({ ...response, sources: [{ reference: 1, chunk_id: 'chunk', title: 'Career duties', scope: 'General duties', reviewed_on: '2026-09-12', references: [{ url: 'https://www.bls.gov/', publisher: 'BLS' }, { url: 'javascript:alert(1)', publisher: 'Unsafe' }] }] });
     mount(); send();
     expect(await screen.findByText(response.answer)).toBeTruthy();
+    fireEvent.click(screen.getByText('View sources'));
     expect(screen.getByRole('link', { name: /BLS/ }).getAttribute('href')).toBe('https://www.bls.gov/');
     expect(screen.queryByRole('link', { name: /Unsafe/ })).toBeNull();
     send('What does a designer do?');

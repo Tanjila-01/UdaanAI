@@ -333,3 +333,10 @@ export const getCareerAnswerApi = async (data, { signal } = {}) => {
   const response = await apiClient.post('/api/v1/career-intelligence/answers', data, { timeout: 410000, signal });
   return response.data;
 };
+
+export const transcribeCareerAudioApi = async (audio, { signal } = {}) => {
+  const response = await apiClient.post('/api/v1/career-intelligence/speech/transcribe', audio, {
+    timeout: 130000, signal, headers: { 'Content-Type': audio.type || 'audio/webm' },
+  });
+  return response.data;
+};

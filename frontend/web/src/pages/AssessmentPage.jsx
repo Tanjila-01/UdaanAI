@@ -1,3 +1,4 @@
+import DiscussMatchesLink from '../components/DiscussMatchesLink';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
@@ -860,6 +861,9 @@ export const AssessmentPage = () => {
                         </div>
                       )}
 
+                      {!isGeneratingRecs && result.is_current !== false && recommendations?.recommendations?.length > 0 && (
+                        <DiscussMatchesLink />
+                      )}
                       {/* Recommendations Success State */}
                       {!isGeneratingRecs && recommendations && recommendations.recommendations && recommendations.recommendations.length > 0 && (
                         <button

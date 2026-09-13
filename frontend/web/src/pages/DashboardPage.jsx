@@ -1,3 +1,4 @@
+import DiscussMatchesLink from '../components/DiscussMatchesLink';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -449,6 +450,7 @@ const DashboardPage = () => {
             {/* Recommendations exist */}
             {!recsLoading && assessmentResult && recommendations && recommendations.recommendations && recommendations.recommendations.length > 0 && (
               <div className="space-y-4 font-sans">
+                <DiscussMatchesLink />
                 {/* Outdated Recommendations Banner */}
                 {(recommendations.freshness_status === 'outdated' || recommendations.is_outdated) ? (
                   <div className="bg-amber-50/90 border border-amber-300 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-950">

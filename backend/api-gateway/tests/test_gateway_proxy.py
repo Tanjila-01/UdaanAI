@@ -277,3 +277,22 @@ def test_proxy_preserves_downstream_403_forbidden(mock_request):
     call_kwargs = mock_request.call_args.kwargs
     assert call_kwargs["headers"].get("authorization") == "Bearer student-token"
 
+
+@patch('httpx.AsyncClient.request')
+def test_speech_proxy_preserves_binary_audio_and_auth(mock_request):
+    mock_request.return_value = httpx.Response(200, json={'text': 'What do designers do?', 'language': 'en'})
+    with patch('app.api.routes.proxy.httpx.AsyncClient', wraps=httpx.AsyncClient) as mock_client:
+        response = client.post('/api/v1/career-intelligence/speech/transcribe', content=b'webm-audio',
+                               headers={'Content-Type': 'audio/webm;codecs=opus', 'Authorization': 'Bearer test-token'})
+    assert response.status_code == 200
+    assert mock_request.call_args.kwargs['content'] == b'webm-audio'
+    assert mock_request.call_args.kwargs['headers']['authorization'] == 'Bearer test-token'
+    assert mock_client.call_args.kwargs['timeout'] == 120.0
+
+
+@patch('httpx.AsyncClient.request')
+def test_speech_proxy_rejects_large_upload_without_forwarding(mock_request):
+    response = client.post('/api/v1/career-intelligence/speech/transcribe', content=b'x' * (4 * 1024 * 1024 + 1),
+                           headers={'Content-Type': 'audio/webm'})
+    assert response.status_code == 413
+    mock_request.assert_not_called()

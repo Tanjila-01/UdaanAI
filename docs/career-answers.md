@@ -81,7 +81,7 @@ answer refer to those numbered sources. No artificial confidence percentage is r
 ## Operation and limits
 
 - English only for now; requesting Kannada is rejected rather than pretending translation works.
-- Stateless: no conversation memory, answer persistence or audio. The student page keeps temporary messages only until navigation or reload.
+- Stateless: no conversation memory or answer persistence. The student page keeps temporary messages only until navigation or reload. Local voice input/output is documented in [local voice](local-voice.md).
 - One answer request at a time per service process; excess requests receive 429 with Retry-After.
   This matches the current single-worker Docker service, not a distributed rate limiter.
 - Gateway timeout is 400 seconds for answers only, covering sequential CPU embedding
@@ -106,7 +106,7 @@ docker compose exec -T ai-career-service python -m pytest tests -q
 docker compose exec -T api-gateway python -m pytest tests -q
 ```
 
-Next: broaden verified India/Karnataka content and evaluation, then add conversation history and free/local speech input/output. See [knowledge audit](knowledge-audit.md).
+Next: broaden verified India/Karnataka content and evaluation, then add conversation history. Free/local speech input/output is now available; see [local voice](local-voice.md). See [knowledge audit](knowledge-audit.md).
 
 ## Student advisor page, 13 September 2026
 

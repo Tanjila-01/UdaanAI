@@ -9,7 +9,21 @@ security = HTTPBearer(auto_error=False)
 
 
 async def forward_request(target_url: str, request: Request, error_detail: Optional[str] = None, timeout: float = 10.0) -> Response:
-    body = await request.body()
+    if request.url.path.rstrip('/') == '/api/v1/career-intelligence/speech/transcribe':
+        import asyncio
+        async def read_audio():
+            data = bytearray()
+            async for chunk in request.stream():
+                if len(data) + len(chunk) > 4 * 1024 * 1024:
+                    raise HTTPException(413, 'Recording exceeds the 4 MB limit.')
+                data.extend(chunk)
+            return bytes(data)
+        try:
+            body = await asyncio.wait_for(read_audio(), timeout=20)
+        except asyncio.TimeoutError:
+            raise HTTPException(408, 'Recording upload timed out.')
+    else:
+        body = await request.body()
     headers = dict(request.headers)
     # Strip host header to prevent target service header conflicts
     headers.pop("host", None)
@@ -198,6 +212,8 @@ async def proxy_assessments_options(path: str, request: Request, credentials: Op
 async def _proxy_career(path: str, request: Request) -> Response:
     clean_path = f"/{path.lstrip('/')}" if path else ""
     target_url = f"{settings.AI_CAREER_SERVICE_URL.rstrip('/')}/career-intelligence{clean_path}"
+    if clean_path.rstrip('/') == '/speech/transcribe' and request.method == 'POST':
+        return await forward_request(target_url, request, error_detail='Local voice typing is temporarily unavailable.', timeout=120.0)
     if clean_path.rstrip('/') == "/answers" and request.method == "POST":
         return await forward_request(target_url, request, error_detail="Local career answers are temporarily unavailable.", timeout=400.0)
     if clean_path.rstrip('/') == "/knowledge/search" and request.method == "POST":
@@ -277,6 +293,3 @@ async def proxy_workshops_patch(path: str, request: Request, credentials: Option
 @router.options("/workshops/{path:path}", operation_id="proxy_workshops_options", tags=["Workshops"])
 async def proxy_workshops_options(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
     return await _proxy_workshops(path, request)
-
-
-
