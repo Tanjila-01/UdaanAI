@@ -48,7 +48,7 @@ describe('Career advisor', () => {
     const view = mount(); send(); send();
     expect(getCareerAnswerApi).toHaveBeenCalledTimes(1);
     const signal = getCareerAnswerApi.mock.calls[0][1].signal;
-    expect(screen.getByRole('status').textContent).toContain('Preparing');
+    expect(screen.getByRole('status').textContent).toContain('Researching');
     view.unmount(); expect(signal.aborted).toBe(true);
   });
   it('clears the previous student session and ignores its late answer', async () => {
@@ -116,14 +116,14 @@ it('refreshes a saved explanation using current context while preserving the old
   mount();
   fireEvent.click(screen.getByRole('button', { name: 'Previous questions' }));
   fireEvent.click(await screen.findByRole('button', { name: /^Explain my saved career recommendations\./ }));
-  const update = await screen.findByRole('button', { name: 'Get updated answer' });
+  const update = await screen.findByRole('button', { name: 'Refresh answer' });
   await waitFor(() => expect(update.disabled).toBe(false));
   expect(getCareerAnswerApi).not.toHaveBeenCalled();
   fireEvent.click(update);
   expect(await screen.findByText('Please refresh your recommendations.')).toBeTruthy();
   expect(screen.getByText('Your previous saved explanation.')).toBeTruthy();
   expect(getCareerAnswerApi).toHaveBeenCalledTimes(1);
-  expect(getCareerAnswerApi.mock.calls[0][0]).toEqual(request);
+  expect(getCareerAnswerApi.mock.calls[0][0]).toEqual({ ...request, answer_mode: 'auto', refresh: true });
 });
 
 it('links an explicit follow-up to the saved answer and clears context after sending', async () => {
@@ -152,4 +152,15 @@ it('shows a course-selection clarification as a normal answer rather than a reje
   mount(); send('how much year course is and will i get selected ?');
   expect(await screen.findByText('Please name the course or qualification and the college you mean.')).toBeTruthy();
   expect(screen.queryByRole('alert')).toBeNull();
+});
+
+it('keeps research internal without asking students to select an answer source', async () => {
+  getCareerAnswerApi.mockResolvedValue({ ...response, answer_origin: 'web', checked_at: '2026-09-13T12:00:00Z' });
+  mount();
+  expect(screen.queryByRole('combobox', { name: 'Answer source' })).toBeNull();
+  send('What is artificial intelligence?');
+  expect(await screen.findByText(response.answer)).toBeTruthy();
+  expect(getCareerAnswerApi.mock.calls[0][0].answer_mode).toBeUndefined();
+  expect(screen.queryByRole('button', { name: 'Search web for this question' })).toBeNull();
+  expect(screen.getByText(/Sources checked online.*Checked/)).toBeTruthy();
 });

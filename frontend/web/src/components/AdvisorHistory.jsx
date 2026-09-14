@@ -44,7 +44,7 @@ export default function AdvisorHistory({ disabled, onOpen, onDelete, onBusy }) {
   return <section className="advisor-history">
     <button type="button" className="advisor-history-toggle" disabled={disabled || busy} aria-expanded={open} onClick={toggle}><History size={17} /> Previous questions</button>
     {open && <div className="advisor-history-content">
-      <p className="advisor-caption">Newest answers first. Select a question to reopen its saved answer; choose Check saved knowledge again or Search web for this question in the chat.</p>
+      <p className="advisor-caption">Newest answers first. Select a question to reopen its saved answer; choose Refresh answer in the chat to check current information.</p>
       {busy && <p role="status" className="advisor-caption">Loading history…</p>}
       {error && <p role="alert" className="advisor-error">{error}</p>}
       {!busy && !error && items.length === 0 && <p className="advisor-caption">No saved answers yet. Completed career answers will appear here.</p>}

@@ -1,4 +1,12 @@
 services:
+  searxng:
+    image: docker.io/searxng/searxng@sha256:d0a4ca04e68c6d57fe45509ad5a6b10c890350724762ade3abea5363571aa29a
+    restart: unless-stopped
+    volumes:
+      - ./infrastructure/searxng/settings.yml:/etc/searxng/settings.yml:ro
+    # Internal service only; student requests go through the authenticated advisor.
+    expose:
+      - "8080"
   ollama:
     # Ollama 0.34.0, pinned to the verified multi-platform image.
     image: ollama/ollama@sha256:684d8674b4315fa18f4f0e973a118ec2652ed96f67563277839985175858e0ba
@@ -144,6 +152,8 @@ services:
       OLLAMA_TEXT_MODEL: "${OLLAMA_TEXT_MODEL:-qwen3:1.7b}"
       OLLAMA_EMBEDDING_MODEL: "${OLLAMA_EMBEDDING_MODEL:-qwen3-embedding:0.6b}"
       KNOWLEDGE_ROOT: "/knowledge"
+      WEB_SEARCH_ENABLED: "true"
+      SEARXNG_BASE_URL: "http://searxng:8080"
       SPEECH_MODEL_PATH: "/models/whisper-tiny-en"
       HF_HUB_OFFLINE: "1"
       HF_HUB_DISABLE_TELEMETRY: "1"

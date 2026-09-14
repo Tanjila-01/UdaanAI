@@ -155,3 +155,7 @@ Screenshot fix activated on 13 September 2026: the exact question “how much ye
 Frontend validation after the dashboard refresh: 29 focused dashboard/advisor/history/voice tests and 10 existing student-journey integration tests passed. The production build passed with the existing large-bundle warning. Actual microphone/read-aloud and visual device checks are delegated to the student developer; see [manual review](student-dashboard-review.md).
 
 Remaining product work: broaden verified India/Karnataka course/admission knowledge; evaluate answer coverage and accuracy; check actual microphone and read-aloud on student devices; add Kannada only after suitable local speech/language support is verified; consider fuller conversation memory after topic follow-ups are evaluated. Production deployment, load/security hardening and retention policy review remain separate release work. No paid provider or billing integration is configured.
+
+## Web-search update, 14 September 2026
+
+The advisor now researches general education and career questions online first, using local inference and an internal SearXNG service. The source-mode dropdown and separate web-search button are removed. Saved assessment explanations stay local; seeded evidence is a fallback. The earlier usage-limit block is resolved. See [local web search](local-web-search.md) for current verification, privacy and limitations.

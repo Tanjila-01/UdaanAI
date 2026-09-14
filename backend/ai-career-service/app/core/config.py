@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_TEXT_MODEL: str = "qwen3:1.7b"
     OLLAMA_EMBEDDING_MODEL: str = "qwen3-embedding:0.6b"
+    WEB_SEARCH_ENABLED: bool = False
+    SEARXNG_BASE_URL: str = "http://searxng:8080"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

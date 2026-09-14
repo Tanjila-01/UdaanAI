@@ -25,6 +25,7 @@ function sourceUrl(value) {
 
 function Answer({ result }) {
   return <div className="advisor-answer">
+    {result.answer_origin === 'web' && <p className="advisor-caption">Sources checked online{result.checked_at ? ` · Checked ${new Date(result.checked_at).toLocaleString()}` : ''}. Check each source for its publication date.</p>}
     <p className="advisor-answer-text">{result.answer}</p>
     {result.recommendations.length > 0 && <div className="advisor-recommendations">
       <p className="advisor-caption">Match scores describe your saved assessment fit, not a guarantee of success.</p>
@@ -124,7 +125,7 @@ function AdvisorSession() {
     setFollowUp({ id: entry.result.history_id || entry.historyId, label: entry.result.conversation_topic || entry.result.sources[0]?.title || entry.payload.question });
     input.current?.focus();
   };
-  const refreshSaved = entry => ask({ ...entry.payload, ...(entry.payload.follow_up_to ? { follow_up_to: entry.historyId } : {}) });
+  const refreshSaved = entry => ask({ ...entry.payload, answer_mode: 'auto', refresh: true, ...(entry.payload.follow_up_to ? { follow_up_to: entry.historyId } : {}) });
   const explain = () => ask({ question: 'Explain my saved career recommendations.', intent: 'explain_recommendations', language: 'en' });
   // Defer until mounted so StrictMode's first cleanup cannot abort a duplicate request.
   // Consume the navigation intent so Start fresh does not trigger another explanation.
@@ -169,10 +170,10 @@ function AdvisorSession() {
                 {exchanges.map(entry => <article key={entry.id} className="advisor-exchange">
                   <div className="advisor-question"><span className="advisor-caption">You</span><p>{entry.payload.question}</p></div>
                   <div className="advisor-reply"><span className="advisor-avatar"><Sparkles size={17} /></span><div className="advisor-reply-body"><div className="advisor-reply-label"><strong>Udaan</strong>{entry.result?.sources.length > 0 && <span><ShieldCheck size={13} /> With sources</span>}</div>
-                    {entry.savedAt && <div className="advisor-snapshot"><p>Saved {new Date(entry.savedAt).toLocaleDateString()}. Matches and sources may have changed.</p><button type="button" className="advisor-secondary" disabled={locked} onClick={() => refreshSaved(entry)}>Get updated answer</button></div>}
+                    {entry.savedAt && <div className="advisor-snapshot"><p>Saved {new Date(entry.savedAt).toLocaleDateString()}. This is a saved answer. Refresh to check the latest information.</p><button type="button" className="advisor-secondary" disabled={locked} onClick={() => refreshSaved(entry)}>Refresh answer</button></div>}
                     {!entry.savedAt && entry.result?.history_id && <p className="advisor-caption">Saved to Previous questions</p>}
                     {!entry.savedAt && entry.result && ['answered', 'recommendations_explained'].includes(entry.result.status) && entry.result.history_id === null && <p className="advisor-caption">This answer could not be saved. It is available on this page only.</p>}
-                    {entry.loading && <p role="status" className="advisor-loading"><Loader2 size={17} className="advisor-spin" /> Preparing your answer… Local AI may take a minute or more.</p>}
+                    {entry.loading && <p role="status" className="advisor-loading"><Loader2 size={17} className="advisor-spin" /> Researching your question… Local AI may take a minute or more.</p>}
                     {entry.result && <><Answer result={entry.result} /><button className="advisor-listen" disabled={voiceBusy || !readAloud.available} title={readAloud.available ? 'Read this answer aloud using an on-device voice' : 'No on-device English voice is available in this browser'} onClick={() => readAloud.speak(entry.id, [entry.result.answer, ...entry.result.recommendations.map(item => `${item.title}. ${item.explanation}`)].join(' '))}>{readAloud.speakingId === entry.id ? <Square size={14} /> : <Volume2 size={15} />}{readAloud.speakingId === entry.id ? 'Stop listening' : 'Listen'}</button></>}
                     {entry.result?.status === 'answered' && entry.payload.intent === 'explore' && (entry.result.history_id || entry.historyId) && <button type="button" className="advisor-followup-button" disabled={locked} onClick={() => chooseFollowUp(entry)}>Ask a follow-up</button>}
                     {entry.result?.conversation_topic && <p className="advisor-caption">About: {entry.result.conversation_topic}</p>}
@@ -187,12 +188,13 @@ function AdvisorSession() {
             <form className="advisor-composer" onSubmit={event => { event.preventDefault(); if (question.trim() && question.trim().length <= 1000) submitQuestion(question); }}>
               {followUp && <div className="advisor-context-chip"><span>Following up on: <strong>{followUp.label}</strong></span><button type="button" className="advisor-icon-button" disabled={locked} aria-label="Clear follow-up context" onClick={() => setFollowUp(null)}><X size={15} /></button></div>}
               <label htmlFor="career-question">Ask a career question</label>
-              <div className="advisor-input-box"><textarea ref={input} id="career-question" rows={2} maxLength={1000} disabled={voiceBusy} value={question} onChange={event => setQuestion(event.target.value)} placeholder="What are you curious about?" aria-describedby="question-limit voice-description" />
+              <div className="advisor-input-box"><textarea ref={input} id="career-question" rows={2} maxLength={1000} disabled={voiceBusy} value={question} onChange={event => setQuestion(event.target.value)} placeholder="What are you curious about?" aria-describedby="question-limit voice-description search-description" />
                 <div className="advisor-composer-actions"><div className="advisor-voice-actions">
                   {voice.phase === 'idle' ? <button type="button" className="advisor-voice-button" disabled={busy || historyBusy || !voice.supported} onClick={() => { readAloud.stop(); setNotice(''); voice.start(); }}><Mic size={17} /> Speak</button>
                     : <><span className="advisor-recording" role="status">{voice.phase === 'recording' ? <><span />{voice.seconds}s / 30s</> : <><Loader2 size={15} className="advisor-spin" />{voice.phase === 'starting' ? 'Allow microphone…' : 'Turning speech into text…'}</>}</span>{voice.phase === 'recording' && <button type="button" className="advisor-voice-button" onClick={voice.finish}><Square size={14} /> Done</button>}<button type="button" className="advisor-icon-button" aria-label="Cancel voice input" onClick={voice.cancel}><X size={16} /></button></>}
                 </div><button type="submit" disabled={locked || !question.trim()} className="advisor-send" aria-label="Ask Udaan" title="Ask Udaan"><ArrowUp size={20} /></button></div>
               </div>
+              <p id="search-description" className="advisor-caption">Udaan researches online and explains the findings. Your profile and assessment scores stay private.</p>
               <div className="advisor-composer-meta"><span id="voice-description">{voice.supported ? 'Speak in English. Review before sending.' : 'Voice typing is not supported here. You can type instead.'}</span><span id="question-limit">{question.length}/1000</span></div>
               {(voice.error || readAloud.error) && <p role="alert" className="advisor-error">{voice.error || readAloud.error}</p>}
               {notice && <p role="status" className="advisor-notice"><Check size={15} />{notice}</p>}
@@ -201,7 +203,7 @@ function AdvisorSession() {
           <aside className="advisor-guide" aria-label="Career exploration guide">
             <AdvisorHistory disabled={busy || voiceBusy} onBusy={setHistoryBusy} onOpen={openSaved} onDelete={id => { setExchanges(old => old.filter(item => item.historyId !== id && item.result?.history_id !== id)); setFollowUp(current => current?.id === id ? null : current); }} />
             <section className="advisor-guide-personal"><span className="advisor-guide-icon"><Sparkles size={22} /></span><h2>Make it about you</h2><p>Discover why your saved pathways match your interests.</p><button className="advisor-secondary" disabled={locked} onClick={explain} aria-label="Understand my saved pathways">Explore my matches <ArrowUpRight size={16} /></button></section>
-            <section className="advisor-guide-note"><Lightbulb size={20} /><h2>A good place to start</h2><p>Ask what someone does at work. Name a career, or choose Ask a follow-up on a sourced answer to keep exploring that topic.</p><div className="advisor-divider" /><h3><BookOpen size={16} /> What you can explore</h3><p>Software development, graphic design and electrician duties. Admission guidance is still being verified.</p></section>
+            <section className="advisor-guide-note"><Lightbulb size={20} /><h2>A good place to start</h2><p>Ask what someone does at work. Name a career, or choose Ask a follow-up on a sourced answer to keep exploring that topic.</p><div className="advisor-divider" /><h3><BookOpen size={16} /> What you can explore</h3><p>Ask about subjects, courses, skills, careers or your next education step. For admissions, name the course, institution and year; official information may still be unavailable.</p></section>
             <div className="advisor-privacy"><ShieldCheck size={16} /><p>New questions start fresh. Ask a follow-up carries the selected career topic. Completed answers are saved to your account in Previous questions, where you can reopen or delete them. Start fresh clears this view only.</p></div>
             <div className="advisor-privacy"><AudioLines size={16} /><p>Voice typing runs on your local server. Recordings aren't saved. Listen uses an on-device English voice{readAloud.available ? '.' : ', which is not available in this browser.'}</p></div>
           </aside>
