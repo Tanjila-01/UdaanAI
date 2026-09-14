@@ -116,6 +116,15 @@ export const Footer = ({ onRequestWorkshop }) => {
               </li>
               <li>
                 <Link
+                  to="/#udaan-ai"
+                  onClick={(e) => handleAnchorClick(e, '#udaan-ai')}
+                  className={linkClasses}
+                >
+                  Udaan AI
+                </Link>
+              </li>
+              <li>
+                <Link
                   to="/#workshops"
                   onClick={(e) => handleAnchorClick(e, '#workshops')}
                   className={linkClasses}

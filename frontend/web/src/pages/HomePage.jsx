@@ -38,6 +38,8 @@ import {
   Map as MapIcon,
   TrendingUp,
   AlertCircle,
+  Bot,
+  MessageSquare,
 } from 'lucide-react';
 
 const HomePage = () => {
@@ -189,6 +191,28 @@ const HomePage = () => {
   const handleOpenWorkshopModal = (topicId = 'career_guidance') => {
     setSelectedWorkshopTopic(topicId);
     setWorkshopModalOpen(true);
+  };
+
+  const handleTalkToAdvisor = () => {
+    if (!user) {
+      navigate('/login', { state: { from: '/student/ai-career' } });
+      return;
+    }
+
+    if (user.role === 'admin') {
+      // Do not redirect admin to any kind of page; let it be as it is
+      return;
+    }
+
+    navigate('/student/ai-career');
+  };
+
+  const handleScrollToPathways = (e) => {
+    if (e) e.preventDefault();
+    const element = document.getElementById('pathways');
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   // Merged 5-Step Experience Data ("From Self-Discovery to Career Direction")
@@ -807,6 +831,181 @@ const HomePage = () => {
               </div>
             )}
 
+          </Container>
+        </section>
+
+
+        {/* ========================================================= */}
+        {/* SECTION: ABOUT UDAAN AI CAREER ADVISOR */}
+        {/* ========================================================= */}
+        <section id="udaan-ai" className="py-12 sm:py-16 lg:py-20 bg-gradient-to-b from-white via-teal-50/20 to-white border-b border-slate-100 scroll-mt-28 relative overflow-hidden">
+          <Container size="xl">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+
+              {/* Left Column: Core Narrative, Value Props & CTAs */}
+              <div className="lg:col-span-7 flex flex-col gap-6">
+                <div>
+                  <Badge variant="primary" size="md" dot className="mb-3">
+                    Your Career Companion
+                  </Badge>
+                  <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-950 tracking-tight leading-tight">
+                    Udaan AI — Your Career Companion
+                  </h2>
+                  <p className="text-sm sm:text-base text-slate-600 mt-3 leading-relaxed font-medium">
+                    Not sure which path to choose? Udaan AI helps you explore your interests, understand different career options, compare pathways, and make more informed decisions about your future.
+                  </p>
+                  <p className="text-xs sm:text-sm font-bold text-[#005F60] mt-2">
+                    Use Udaan AI for more clarity, confidence, and direction.
+                  </p>
+                </div>
+
+                {/* 3 Pillars of Udaan AI */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-1">
+                  <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-1.5 flex flex-col justify-between">
+                    <div className="w-8 h-8 rounded-xl bg-teal-50 text-[#005F60] flex items-center justify-center font-bold">
+                      <Compass className="w-4 h-4 text-[#005F60]" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-slate-900">Explore Careers</h3>
+                      <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                        Discover job profiles and emerging roles matched to what you enjoy.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-1.5 flex flex-col justify-between">
+                    <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center font-bold">
+                      <Layers className="w-4 h-4 text-sky-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-slate-900">Compare Pathways</h3>
+                      <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                        Contrast PUC streams, Polytechnic diplomas, and ITI trades side-by-side.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-white border border-slate-200/80 shadow-2xs space-y-1.5 flex flex-col justify-between">
+                    <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold">
+                      <Sparkles className="w-4 h-4 text-[#F97316]" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs font-bold text-slate-900">Clear Direction</h3>
+                      <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                        Get answers grounded in Karnataka curriculum and verified education routes.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* CTAs */}
+                <div className="flex flex-wrap items-center gap-3 pt-2">
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    onClick={handleTalkToAdvisor}
+                    className="h-11 bg-[#E06D14] hover:bg-[#C2580E] text-white shadow-2xs font-semibold px-5 cursor-pointer"
+                    rightIcon={<ArrowRight className="w-4 h-4" />}
+                  >
+                    Talk to Udaan AI
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="md"
+                    onClick={handleScrollToPathways}
+                    className="h-11 border-slate-200 hover:border-[#005F60] text-slate-700 hover:text-[#005F60] font-semibold px-5 cursor-pointer"
+                  >
+                    Explore Pathways First
+                  </Button>
+                </div>
+              </div>
+
+              {/* Right Column: Visual Interactive Advisor Preview Card */}
+              <div className="lg:col-span-5">
+                <div className="bg-slate-900 text-white border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-36 h-36 bg-[#005F60]/20 rounded-full blur-2xl pointer-events-none" />
+
+                  {/* Header bar */}
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-800/90 mb-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#005F60] to-teal-800 flex items-center justify-center shadow-xs">
+                        <Bot className="w-4 h-4 text-teal-200" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold text-white">Udaan AI Companion</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        </div>
+                        <span className="text-[10px] text-teal-300 font-medium">Ready to guide you</span>
+                      </div>
+                    </div>
+                    <Badge variant="primary" size="sm" className="bg-teal-950 text-teal-300 border-teal-800 text-[10px]">
+                      Live Advisor
+                    </Badge>
+                  </div>
+
+                  {/* Chat Mockup */}
+                  <div className="space-y-3">
+                    {/* User Question */}
+                    <div className="flex justify-end">
+                      <div className="bg-[#005F60] text-white text-xs font-medium p-3 rounded-2xl rounded-tr-xs max-w-[88%] leading-relaxed shadow-xs">
+                        Should I choose Polytechnic Diploma or PUC Science if I want to get into tech?
+                      </div>
+                    </div>
+
+                    {/* AI Response */}
+                    <div className="flex justify-start">
+                      <div className="bg-slate-800/90 border border-slate-700/60 text-slate-200 text-xs p-3.5 rounded-2xl rounded-tl-xs max-w-[95%] leading-relaxed space-y-2 shadow-xs">
+                        <p>
+                          Both lead to tech careers, but through different routes:
+                        </p>
+                        <ul className="space-y-1 text-[11px] text-slate-300 pl-3 list-disc">
+                          <li><strong>Polytechnic Diploma:</strong> 3-year practical hands-on engineering, followed by DCET lateral entry directly into 2nd year B.E.</li>
+                          <li><strong>PUC Science (PCMC):</strong> 2-year academic foundation preparing for KCET entrance into 1st year B.E. / B.Tech.</li>
+                        </ul>
+                        <div className="pt-1 flex items-center gap-1.5 text-[10px] text-teal-400 font-mono">
+                          <CheckCircle2 className="w-3 h-3 text-teal-400 shrink-0" />
+                          <span>Grounded in Karnataka DTE & KEA routes</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quick suggested prompt chips */}
+                  <div className="mt-4 pt-3 border-t border-slate-800/80">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-2">
+                      Popular Questions to Ask
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        type="button"
+                        onClick={handleTalkToAdvisor}
+                        className="text-[11px] bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white px-2.5 py-1 rounded-lg border border-slate-700/60 transition-colors cursor-pointer"
+                      >
+                        Which stream for CA?
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleTalkToAdvisor}
+                        className="text-[11px] bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white px-2.5 py-1 rounded-lg border border-slate-700/60 transition-colors cursor-pointer"
+                      >
+                        ITI trades with quick jobs
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleTalkToAdvisor}
+                        className="text-[11px] bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white px-2.5 py-1 rounded-lg border border-slate-700/60 transition-colors cursor-pointer"
+                      >
+                        KCET vs NEET differences
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+            </div>
           </Container>
         </section>
 

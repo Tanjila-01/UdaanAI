@@ -324,4 +324,120 @@ describe('HomePage Journeys: Workshops and Account Actions', () => {
       expect(screen.queryByText('Go to Dashboard')).toBeNull();
     });
   });
+
+  describe('Part 4: Udaan AI Career Advisor Presentation & Navigation', () => {
+    it('renders dedicated "Udaan AI Career Advisor" section with key messaging and CTAs', () => {
+      authContext.useAuth.mockReturnValue({
+        user: null,
+        profile: null,
+        loading: false,
+        logout: vi.fn(),
+      });
+
+      const { container } = render(
+        <MemoryRouter initialEntries={['/']}>
+          <HomePage />
+        </MemoryRouter>
+      );
+
+      // Section exists with id="udaan-ai"
+      const advisorSection = container.querySelector('#udaan-ai');
+      expect(advisorSection).toBeTruthy();
+
+      // Heading & messaging
+      expect(screen.getByRole('heading', { name: 'Udaan AI — Your Career Companion', level: 2 })).toBeTruthy();
+      expect(
+        screen.getByText(
+          /Not sure which path to choose\? Udaan AI helps you explore your interests, understand different career options, compare pathways, and make more informed decisions about your future\./i
+        )
+      ).toBeTruthy();
+      expect(screen.getByText(/Use Udaan AI for more clarity, confidence, and direction\./i)).toBeTruthy();
+
+      // CTA buttons in the section
+      const talkButton = screen.getByRole('button', { name: /Talk to Udaan AI/i });
+      expect(talkButton).toBeTruthy();
+
+      const explorePathwaysFirstBtn = screen.getByRole('button', { name: /Explore Pathways First/i });
+      expect(explorePathwaysFirstBtn).toBeTruthy();
+    });
+
+    it('navigates navbar and footer "Udaan AI" to #udaan-ai to remain on HomePage', () => {
+      authContext.useAuth.mockReturnValue({
+        user: null,
+        profile: null,
+        loading: false,
+        logout: vi.fn(),
+      });
+
+      render(
+        <MemoryRouter initialEntries={['/']}>
+          <HomePage />
+        </MemoryRouter>
+      );
+
+      // Header and mobile navigation links point to #udaan-ai anchor
+      const udaanAiNavLinks = screen.getAllByRole('link', { name: 'Udaan AI' });
+      expect(udaanAiNavLinks.length).toBeGreaterThanOrEqual(2);
+      udaanAiNavLinks.forEach((link) => {
+        const href = link.getAttribute('href');
+        expect(href === '#udaan-ai' || href === '/#udaan-ai').toBe(true);
+      });
+    });
+
+    it('Talk to Udaan AI CTA directs logged-out visitor towards login and authenticated student to advisor', () => {
+      // 1. Guest
+      authContext.useAuth.mockReturnValue({
+        user: null,
+        profile: null,
+        loading: false,
+        logout: vi.fn(),
+      });
+
+      const { unmount } = render(
+        <MemoryRouter initialEntries={['/']}>
+          <HomePage />
+        </MemoryRouter>
+      );
+
+      const guestTalkBtn = screen.getByRole('button', { name: /Talk to Udaan AI/i });
+      fireEvent.click(guestTalkBtn);
+      unmount();
+
+      // 2. Student
+      authContext.useAuth.mockReturnValue({
+        user: { id: 's1', role: 'student' },
+        profile: { is_complete: true },
+        loading: false,
+        logout: vi.fn(),
+      });
+
+      const { unmount: unmountStudent } = render(
+        <MemoryRouter initialEntries={['/']}>
+          <HomePage />
+        </MemoryRouter>
+      );
+
+      const studentTalkBtn = screen.getByRole('button', { name: /Talk to Udaan AI/i });
+      fireEvent.click(studentTalkBtn);
+      unmountStudent();
+
+      // 3. Admin user
+      authContext.useAuth.mockReturnValue({
+        user: { id: 'a1', role: 'admin' },
+        profile: null,
+        loading: false,
+        logout: vi.fn(),
+      });
+
+      const { unmount: unmountAdmin } = render(
+        <MemoryRouter initialEntries={['/']}>
+          <HomePage />
+        </MemoryRouter>
+      );
+
+      const adminTalkBtn = screen.getByRole('button', { name: /Talk to Udaan AI/i });
+      fireEvent.click(adminTalkBtn);
+      unmountAdmin();
+    });
+  });
 });

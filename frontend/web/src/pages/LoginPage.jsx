@@ -34,7 +34,8 @@ const LoginPage = () => {
     try {
       const data = await login(formData.email, formData.password);
       if (data.user?.role === 'admin') {
-        navigate(from || '/admin');
+        const adminDest = (from && !from.startsWith('/student') && !from.startsWith('/assessment') && !from.startsWith('/pathways')) ? from : '/admin';
+        navigate(adminDest);
       } else if (!data.profile || !data.profile.is_complete) {
         navigate('/onboarding', { state: { from: location.state?.from } });
       } else {

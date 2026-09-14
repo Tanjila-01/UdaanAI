@@ -139,10 +139,11 @@ export const Navbar = () => {
     return role.charAt(0).toUpperCase() + role.slice(1);
   };
 
-  // Curated public navigation anchors mapped directly to homepage sections
+  // Curated public navigation links
   const navLinks = [
     { label: 'How It Works', href: '#how-it-works' },
     { label: 'Pathways', href: '#pathways' },
+    { label: 'Udaan AI', href: '#udaan-ai' },
     { label: 'Workshops', href: '#workshops' },
     { label: 'For Schools', href: '#school-invitation' },
   ];
@@ -169,6 +170,10 @@ export const Navbar = () => {
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' });
       }
+    } else {
+      e.preventDefault();
+      setNavMenuOpen(false);
+      navigate(href);
     }
   };
 

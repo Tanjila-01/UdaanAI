@@ -116,6 +116,9 @@ describe('Footer Component', () => {
       const workshopsLink = screen.getByRole('link', { name: 'Workshop Topics' });
       expect(workshopsLink.getAttribute('href')).toBe('/#workshops');
 
+      const udaanAiLink = screen.getByRole('link', { name: 'Udaan AI' });
+      expect(udaanAiLink.getAttribute('href')).toBe('/#udaan-ai');
+
       // Institutions links/buttons
       const schoolLink = screen.getByRole('link', { name: 'For Schools & Colleges' });
       expect(schoolLink.getAttribute('href')).toBe('/#school-invitation');
