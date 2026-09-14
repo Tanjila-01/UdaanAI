@@ -296,6 +296,25 @@ export const AssessmentPage = () => {
     }
   };
 
+  const getTopRecommendedPathwayId = () => {
+    const recList = Array.isArray(recommendations)
+      ? recommendations
+      : recommendations?.recommendations;
+    if (recList && recList.length > 0 && recList[0]?.pathway_id) {
+      return recList[0].pathway_id;
+    }
+    if (result?.primary_stream_recommendation) {
+      const stream = result.primary_stream_recommendation.toLowerCase();
+      if (stream.includes('iti')) return 'c10-iti';
+      if (stream.includes('diploma') || stream.includes('polytechnic')) return 'c10-diploma';
+      if (stream.includes('science')) return 'puc-science';
+      if (stream.includes('commerce')) return 'puc-commerce';
+      if (stream.includes('arts') || stream.includes('humanities')) return 'puc-arts';
+      if (stream.includes('puc')) return 'c10-puc';
+    }
+    return null;
+  };
+
   const handleRetakeAssessment = async () => {
     setLoading(true);
     setError(null);
@@ -656,7 +675,10 @@ export const AssessmentPage = () => {
                       <span className="text-xs text-teal-200">Ready to see available options?</span>
                       <button
                         type="button"
-                        onClick={() => navigate('/pathways')}
+                        onClick={() => {
+                          const topPathwayId = getTopRecommendedPathwayId();
+                          navigate(topPathwayId ? `/pathways?pathway_id=${encodeURIComponent(topPathwayId)}` : '/pathways');
+                        }}
                         className="bg-[#F97316] hover:bg-orange-500 text-white font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-xs inline-flex items-center space-x-1.5 cursor-pointer"
                       >
                         <span>Explore pathways</span>
@@ -870,7 +892,10 @@ export const AssessmentPage = () => {
                       {!isGeneratingRecs && recommendations && recommendations.recommendations && recommendations.recommendations.length > 0 && (
                         <button
                           type="button"
-                          onClick={() => navigate('/pathways')}
+                          onClick={() => {
+                            const topPathwayId = getTopRecommendedPathwayId();
+                            navigate(topPathwayId ? `/pathways?pathway_id=${encodeURIComponent(topPathwayId)}` : '/pathways');
+                          }}
                           className="w-full bg-[#F97316] hover:bg-orange-500 text-white font-extrabold text-xs py-3 px-4 rounded-xl transition-all shadow-md flex items-center justify-between cursor-pointer font-sans"
                         >
                           <span className="flex items-center gap-1.5">

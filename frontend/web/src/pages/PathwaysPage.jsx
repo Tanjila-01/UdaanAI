@@ -13,7 +13,7 @@ import {
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import EditProfileDrawer from '../components/EditProfileDrawer';
-import EducationPathwayMap, { PATHWAY_ID_TO_NODE_MAP, getVisualNodeId } from '../components/product/EducationPathwayMap';
+import EducationPathwayMap, { PATHWAY_ID_TO_NODE_MAP, getVisualNodeId, STRUCTURAL_NODES } from '../components/product/EducationPathwayMap';
 import PathwayChoiceExplorer from '../components/product/PathwayChoiceExplorer';
 import PathwayDetailPanel from '../components/product/PathwayDetailPanel';
 import PathwayBreadcrumb from '../components/product/PathwayBreadcrumb';
@@ -125,9 +125,9 @@ const PathwaysPage = () => {
       return;
     }
 
-    // Check if it's a structural stream node (e.g. puc-science, dip-family-comp)
-    if (pathwayId === 'puc-science' || pathwayId === 'puc-commerce' || pathwayId === 'puc-arts' || pathwayId.startsWith('dip-') || pathwayId.startsWith('iti-') || pathwayId === 'c10-puc' || pathwayId === 'c10-diploma' || pathwayId === 'c10-iti') {
-      const visualNode = getVisualNodeId(pathwayId);
+    // Check if it's a structural node (e.g. puc, diploma, iti, puc-science, dip-family-comp)
+    const visualNode = getVisualNodeId(pathwayId);
+    if (visualNode && STRUCTURAL_NODES[visualNode]) {
       setSelectedStructuralNodeId(visualNode);
       setSelectedCombinationId(null);
       setSelectedCareerDirectionId(null);

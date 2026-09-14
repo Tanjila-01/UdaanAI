@@ -165,7 +165,7 @@ function AdvisorSession() {
       <Header onMenuClick={() => setSidebarOpen(true)} onEditProfileClick={() => setDrawerOpen(true)} />
       <main className="advisor-main">
         <header className="advisor-page-heading">
-          <div><p className="advisor-eyebrow"><Compass size={15} /> YOUR NEXT CHAPTER</p><h1>AI Career Advisor<span className="advisor-preview">Preview</span></h1><p>A little curiosity. A clearer direction.</p></div>
+          <div><p className="advisor-eyebrow"><Compass size={15} /> YOUR NEXT CHAPTER</p><h1>AI Career Advisor</h1><p>A little curiosity. A clearer direction.</p></div>
           <span className="advisor-language">English</span>
         </header>
         <div className="advisor-layout">
