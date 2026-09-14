@@ -7,6 +7,16 @@ import pytest
 from app.services import web_answers as web
 
 
+@pytest.fixture(autouse=True)
+def reset_web_caches():
+    web._cache.clear()
+    web._search_cache.clear()
+    yield
+    web._cache.clear()
+    web._search_cache.clear()
+
+
+
 @pytest.mark.parametrize('url', ['http://en.wikipedia.org/wiki/Test', 'https://127.0.0.1/', 'https://localhost/', 'https://169.254.169.254/', 'https://en.wikipedia.org.evil.test/', 'https://en.wikipedia.org@evil.test/', 'https://en.wikipedia.org:8443/', 'file:///etc/passwd'])
 def test_unapproved_destinations_are_rejected(url):
     assert not web.approved_url(url)
@@ -90,7 +100,8 @@ def test_varied_questions_reach_semantic_planning_without_keyword_rejection(monk
     ai = model()
     result = web.web_answer(question, ai=ai)
     assert result['status'] == 'answered'
-    assert question in ai.chat.call_args_list[0].args[0][1]['content']
+    content = ai.chat.call_args_list[0].args[0][1]['content']
+    assert (question in content) or (web.normalize_question(question) in content)
     assert search.call_args.args[0] == 'computer science overview'
 
 
@@ -233,3 +244,30 @@ def test_echoed_evidence_ids_are_not_mistaken_for_salary_numbers(monkeypatch):
     result = web.web_answer('Explain computer science', ai=ai)
     assert result['status'] == 'answered'
     assert result['answer'] == 'Computer science studies computation. [1]'
+
+
+def test_html_parser_does_not_hide_root_html_or_body_with_toc_classes():
+    parser = web.PageText()
+    parser.feed('<html class="client-nojs vector-feature-toc-pinned-clientpref-1"><body class="skin-vector-toc-available"><p>Photosynthesis is the process by which plants convert sunlight into energy.</p></body></html>')
+    parser.flush()
+    assert parser.parts == ['Photosynthesis is the process by which plants convert sunlight into energy.']
+
+
+def test_educational_grades_and_question_numbers_not_rejected(monkeypatch):
+    monkeypatch.setattr(web.settings, 'WEB_SEARCH_ENABLED', True)
+    monkeypatch.setattr(web, 'search_pages', lambda *args, **kw: [page()])
+    ai = model({'paragraphs': [{'text': 'Students can start after 12th standard with history or science.', 'evidence_ids': ['W1']}], 'follow_up': ''})
+    result = web.web_answer('How can I become an archaeologist after Class 10?', ai=ai)
+    assert result['status'] == 'answered'
+    assert '12th standard' in result['answer']
+
+
+def test_incomplete_missing_info_trimmed_to_sentence(monkeypatch):
+    monkeypatch.setattr(web.settings, 'WEB_SEARCH_ENABLED', True)
+    monkeypatch.setattr(web, 'search_pages', lambda *args, **kw: [page()])
+    ai = model({'paragraphs': [{'text': 'Computer science studies computation.', 'evidence_ids': ['W1']}], 'follow_up': '', 'missing_info': 'Official fees were not found. The details may vary by'})
+    result = web.web_answer('What is computer science?', ai=ai)
+    assert result['status'] == 'answered'
+    assert 'Official fees were not found.' in result['answer']
+    assert 'vary by' not in result['answer']
+

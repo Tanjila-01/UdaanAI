@@ -15,7 +15,17 @@ from app.services.advisor_history import save_answer
 
 OWNER = str(uuid4())
 OTHER = str(uuid4())
-ANSWER = {'status': 'answered', 'answer': 'A saved answer. [1]', 'sources': [], 'recommendations': [], 'context_status': 'not_requested'}
+SAMPLE_SOURCE = [{
+    'reference': 1,
+    'chunk_id': 'web-1234567890abcdef123456',
+    'document_id': 'web-1234567890abcdef123456',
+    'title': 'Software engineering overview',
+    'heading': 'Web source',
+    'references': [{'url': 'https://en.wikipedia.org/wiki/Software_engineering', 'publisher': 'en.wikipedia.org'}],
+    'scope': 'Public web evidence; see the source for publication date and regional context.',
+    'reviewed_on': ''
+}]
+ANSWER = {'status': 'answered', 'answer': 'A saved answer. [1]', 'sources': SAMPLE_SOURCE, 'recommendations': [], 'context_status': 'not_requested', 'answer_origin': 'web'}
 REQUEST = {'question': 'What does a designer do?', 'intent': 'explore', 'language': 'en', 'pathway_id': None}
 
 @pytest.fixture
@@ -84,26 +94,27 @@ def test_saving_failure_does_not_discard_answer_and_fallbacks_not_saved():
 
 
 def test_followup_uses_owned_topic_and_never_passes_the_old_answer_as_evidence(history_db, monkeypatch):
+    monkeypatch.setattr(answer_route.settings, 'WEB_SEARCH_ENABLED', True)
     route = answer_route
-    old = {**ANSWER, 'answer': 'OUTDATED PRIVATE ANSWER', 'sources': [{'title': 'Software development: work overview'}]}
+    old = {**ANSWER, 'answer': 'OUTDATED PRIVATE ANSWER', 'sources': [{'reference': 1, 'chunk_id': 'web-1', 'document_id': 'web-1', 'title': 'Software development: work overview', 'heading': 'Web source', 'references': [{'url': 'https://example.com', 'publisher': 'example.com'}], 'scope': 'Public web evidence', 'reviewed_on': ''}]}
     key = save_answer(history_db, OWNER, REQUEST, old)
-    generate = Mock(return_value=ANSWER.copy())
-    monkeypatch.setattr(route, 'answer_question', generate)
+    online = Mock(return_value={**ANSWER, 'conversation_topic': 'Software development: work overview'})
+    monkeypatch.setattr(route, 'web_answer', online)
     with TestClient(app) as client:
         response = client.post('/career-intelligence/answers', headers={'Authorization': 'Bearer unused-test-token'}, json={'question': 'What do they do each day?', 'follow_up_to': key})
         assert response.status_code == 200
         assert response.json()['conversation_topic'] == 'Software development: work overview'
         assert response.json()['history_id']
-        assert generate.call_args.args[3] == 'What do they do each day?'
-        assert generate.call_args.kwargs == {'conversation_topic': 'Software development: work overview'}
-        assert 'OUTDATED PRIVATE ANSWER' not in str(generate.call_args)
+        assert online.call_args.args[0] == 'What do they do each day?'
+        assert online.call_args.args[1] == 'Software development: work overview'
+        assert 'OUTDATED PRIVATE ANSWER' not in str(online.call_args)
 
 
 def test_followup_denies_other_owner_deleted_and_spoofed_context(history_db, monkeypatch):
     route = answer_route
     generate = Mock()
-    monkeypatch.setattr(route, 'answer_question', generate)
-    key = save_answer(history_db, OTHER, REQUEST, {**ANSWER, 'sources': [{'title': 'Software work'}]})
+    monkeypatch.setattr(route, 'web_answer', generate)
+    key = save_answer(history_db, OTHER, REQUEST, {**ANSWER, 'sources': SAMPLE_SOURCE})
     with TestClient(app) as client:
         for target in [key, str(uuid4())]:
             response = client.post('/career-intelligence/answers', headers={'Authorization': 'Bearer unused'}, json={'question': 'What about this?', 'follow_up_to': target})
@@ -115,7 +126,7 @@ def test_followup_denies_other_owner_deleted_and_spoofed_context(history_db, mon
 def test_ambiguous_followup_asks_for_a_named_career(history_db, monkeypatch):
     route = answer_route
     generate = Mock()
-    monkeypatch.setattr(route, 'answer_question', generate)
+    monkeypatch.setattr(route, 'web_answer', generate)
     key = save_answer(history_db, OWNER, REQUEST, {**ANSWER, 'sources': [{'title': 'Software work'}, {'title': 'Design work'}]})
     with TestClient(app) as client:
         response = client.post('/career-intelligence/answers', headers={'Authorization': 'Bearer unused'}, json={'question': 'What about this?', 'follow_up_to': key})
@@ -123,53 +134,115 @@ def test_ambiguous_followup_asks_for_a_named_career(history_db, monkeypatch):
         assert client.post('/career-intelligence/answers', headers={'Authorization': 'Bearer unused'}, json={'question': 'Explain this', 'follow_up_to': key, 'intent': 'explain_recommendations'}).status_code == 422
     generate.assert_not_called()
 
-@pytest.mark.parametrize('mode,expected_web', [('auto', True), ('local', False), ('web', True)])
-def test_search_modes_use_local_first_or_explicit_web(history_db, monkeypatch, mode, expected_web):
+
+@pytest.mark.parametrize('question', [
+    'What does an AI engineer do?',              # Normal career question
+    'What is BTech in computer science?',        # Normal course question
+    'Which stream should I choose after 10th?',   # Stream question
+    'Explain photosynthesis in biology',         # Academic subject question
+])
+def test_normal_questions_invoke_web_research(history_db, monkeypatch, question):
     monkeypatch.setattr(answer_route.settings, 'WEB_SEARCH_ENABLED', True)
-    local = Mock(return_value={**ANSWER, 'status': 'insufficient_evidence'})
     online = Mock(return_value={**ANSWER, 'answer_origin': 'web'})
+    local = Mock()
+    monkeypatch.setattr(answer_route, 'web_answer', online)
     monkeypatch.setattr(answer_route, 'answer_question', local)
+    with TestClient(app) as client:
+        response = client.post('/career-intelligence/answers', headers={'Authorization': 'Bearer test'}, json={'question': question})
+    assert response.status_code == 200
+    assert online.called
+    local.assert_not_called()
+    assert response.json()['answer_origin'] == 'web'
+
+
+@pytest.mark.parametrize('web_status', ['insufficient_evidence', 'unavailable'])
+def test_web_failure_does_not_invoke_seeded_answer_service(history_db, monkeypatch, web_status):
+    monkeypatch.setattr(answer_route.settings, 'WEB_SEARCH_ENABLED', True)
+    online = Mock(return_value={**ANSWER, 'status': web_status, 'sources': [], 'answer_origin': 'web'})
+    local = Mock()
+    monkeypatch.setattr(answer_route, 'web_answer', online)
+    monkeypatch.setattr(answer_route, 'answer_question', local)
+    with TestClient(app) as client:
+        response = client.post('/career-intelligence/answers', headers={'Authorization': 'Bearer test'}, json={'question': 'What does a graphic designer do?'})
+    assert response.status_code == 200
+    assert online.called
+    local.assert_not_called()
+    assert response.json()['status'] == web_status
+
+
+def test_web_grounded_answered_response_contains_internet_sources(history_db, monkeypatch):
+    monkeypatch.setattr(answer_route.settings, 'WEB_SEARCH_ENABLED', True)
+    online = Mock(return_value={**ANSWER, 'status': 'answered', 'sources': SAMPLE_SOURCE, 'answer_origin': 'web'})
     monkeypatch.setattr(answer_route, 'web_answer', online)
     with TestClient(app) as client:
-        response = client.post('/career-intelligence/answers', headers={'Authorization':'Bearer test'}, json={'question':'What is computer science engineering?', 'answer_mode':mode})
+        response = client.post('/career-intelligence/answers', headers={'Authorization': 'Bearer test'}, json={'question': 'What is computer science?'})
     assert response.status_code == 200
-    assert online.called == expected_web
-    assert local.called == (mode == 'local')
+    data = response.json()
+    assert data['status'] == 'answered'
+    assert data['answer_origin'] == 'web'
+    assert len(data['sources']) >= 1
+    assert data['sources'][0]['references'][0]['url'].startswith('https://')
+
+
+def test_no_source_responses_cannot_have_status_answered(history_db, monkeypatch):
+    monkeypatch.setattr(answer_route.settings, 'WEB_SEARCH_ENABLED', True)
+    online = Mock(return_value={**ANSWER, 'status': 'answered', 'sources': [], 'answer_origin': 'web'})
+    monkeypatch.setattr(answer_route, 'web_answer', online)
+    with TestClient(app) as client:
+        response = client.post('/career-intelligence/answers', headers={'Authorization': 'Bearer test'}, json={'question': 'What is quantum computing?'})
+    assert response.status_code == 200
+    data = response.json()
+    assert data['status'] != 'answered'
+    assert data['status'] == 'insufficient_evidence'
+
+
+def test_personalized_saved_recommendation_explanation_remains_local(history_db, monkeypatch):
+    monkeypatch.setattr(answer_route.settings, 'WEB_SEARCH_ENABLED', True)
+    online = Mock()
+    local = Mock(return_value={
+        'status': 'recommendations_explained',
+        'answer': 'Here is an explanation of your saved recommendations.',
+        'sources': [],
+        'recommendations': [{'pathway_id': 'software-engineering', 'title': 'Software Engineering', 'rank': 1, 'match_score': 85, 'match_label': 'High match', 'interest_areas': ['Technology'], 'explanation': 'Matches your profile.'}],
+        'context_status': 'current',
+        'answer_origin': 'local'
+    })
+    monkeypatch.setattr(answer_route, 'web_answer', online)
+    monkeypatch.setattr(answer_route, 'answer_question', local)
+    with TestClient(app) as client:
+        response = client.post('/career-intelligence/answers', headers={'Authorization': 'Bearer test'}, json={'question': 'Explain my recommendations', 'intent': 'explain_recommendations'})
+    assert response.status_code == 200
+    online.assert_not_called()
+    assert local.called
+    data = response.json()
+    assert data['status'] == 'recommendations_explained'
+    assert data['answer_origin'] == 'local'
+    assert len(data['recommendations']) >= 1
 
 
 def test_new_career_replaces_the_selected_topic(history_db, monkeypatch):
-    key = save_answer(history_db, OWNER, REQUEST, {**ANSWER, 'sources':[{'title':'Graphic design'}]})
-    generate = Mock(return_value=ANSWER.copy())
-    monkeypatch.setattr(answer_route, 'answer_question', generate)
-    with TestClient(app) as client:
-        response = client.post('/career-intelligence/answers', headers={'Authorization':'Bearer test'}, json={'question':'hi what is Computer science engineering?', 'follow_up_to':key, 'answer_mode':'local'})
-    assert response.status_code == 200
-    assert generate.call_args.kwargs['conversation_topic'] == 'Computer science engineering'
-    assert response.json()['conversation_topic'] == 'Computer science engineering'
-
-@pytest.mark.parametrize('mode', ['auto', 'web'])
-def test_exact_cse_salary_request_is_accepted(history_db, monkeypatch, mode):
     monkeypatch.setattr(answer_route.settings, 'WEB_SEARCH_ENABLED', True)
-    monkeypatch.setattr(answer_route, 'answer_question', Mock(return_value={**ANSWER, 'status':'insufficient_evidence'}))
-    online = Mock(return_value={**ANSWER, 'answer_origin':'web'})
+    key = save_answer(history_db, OWNER, REQUEST, {**ANSWER, 'sources': SAMPLE_SOURCE})
+    online = Mock(return_value={**ANSWER, 'conversation_topic': 'Computer science engineering'})
     monkeypatch.setattr(answer_route, 'web_answer', online)
     with TestClient(app) as client:
-        response = client.post('/career-intelligence/answers', headers={'Authorization':'Bearer test'}, json={'question':'what is cse ? what salary they get paid', 'answer_mode':mode})
+        response = client.post('/career-intelligence/answers', headers={'Authorization': 'Bearer test'}, json={'question': 'hi what is Computer science engineering?', 'follow_up_to': key})
     assert response.status_code == 200
-    assert 'computer science engineering' in online.call_args.args[0]
+    assert online.call_args.args[1] == 'Computer science engineering'
+    assert response.json()['conversation_topic'] == 'Computer science engineering'
 
 
-def test_auto_uses_seeded_answer_only_when_web_evidence_is_unavailable(history_db, monkeypatch):
+def test_exact_cse_salary_request_is_accepted(history_db, monkeypatch):
     monkeypatch.setattr(answer_route.settings, 'WEB_SEARCH_ENABLED', True)
-    online = Mock(return_value={**ANSWER, 'status': 'insufficient_evidence', 'answer_origin': 'web'})
-    local = Mock(return_value=ANSWER.copy())
+    online = Mock(return_value={**ANSWER, 'answer_origin': 'web'})
+    local = Mock()
     monkeypatch.setattr(answer_route, 'web_answer', online)
     monkeypatch.setattr(answer_route, 'answer_question', local)
     with TestClient(app) as client:
-        response = client.post('/career-intelligence/answers', headers={'Authorization':'Bearer test'}, json={'question':'Explain graphic design'})
+        response = client.post('/career-intelligence/answers', headers={'Authorization': 'Bearer test'}, json={'question': 'what is cse ? what salary they get paid'})
     assert response.status_code == 200
-    assert online.called and local.called
-    assert response.json()['status'] == 'answered'
+    assert 'computer science engineering' in online.call_args.args[0]
+    local.assert_not_called()
 
 
 def test_auto_does_not_apply_lexical_scope_gate(history_db, monkeypatch):
@@ -180,8 +253,9 @@ def test_auto_does_not_apply_lexical_scope_gate(history_db, monkeypatch):
     monkeypatch.setattr(answer_route, 'answer_question', local)
     with TestClient(app) as client:
         for question in ['What is AI', 'What is Artificial intelligence?', 'Explain photosynthesis', 'How can I study better?']:
-            response = client.post('/career-intelligence/answers', headers={'Authorization':'Bearer test'}, json={'question':question})
+            response = client.post('/career-intelligence/answers', headers={'Authorization': 'Bearer test'}, json={'question': question})
             assert response.status_code == 200
             assert response.json()['status'] == 'answered'
     assert online.call_count == 4
     local.assert_not_called()
+

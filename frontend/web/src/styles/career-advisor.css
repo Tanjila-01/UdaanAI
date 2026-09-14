@@ -41,6 +41,9 @@
 .advisor-answer-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 16px; line-height: 1.85; }
 .advisor-loading { display: flex; align-items: start; gap: 8px; font-size: 14px; color: var(--theme-muted); line-height: 1.6; }
 .advisor-loading svg { flex-shrink: 0; margin-top: 3px; }
+.advisor-loading-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.advisor-cancel-inline { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--theme-border); background: var(--theme-card); color: var(--theme-muted); cursor: pointer; transition: all 0.15s ease; }
+.advisor-cancel-inline:hover { color: var(--theme-text); border-color: var(--advisor-accent); }
 .advisor-sources { margin-top: 18px; font-size: 14px; border-top: 1px solid var(--theme-border); padding-top: 12px; }
 .advisor-sources summary { display: flex; cursor: pointer; align-items: center; gap: 7px; color: var(--advisor-accent); width: fit-content; font-weight: 600; }
 .advisor-sources summary::after { content: '+'; margin-left: 4px; }

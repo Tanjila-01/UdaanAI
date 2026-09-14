@@ -16,6 +16,7 @@ class LocalAI:
                 or url.path not in {"", "/"}):
             raise ValueError("Only the local Ollama service is allowed")
         self.transport = transport
+        self.last_metrics = {}
 
     def _post(self, endpoint, payload):
         if "cloud" in payload["model"].lower() or "/" in payload["model"]:
@@ -25,15 +26,24 @@ class LocalAI:
             response.raise_for_status()
             return response.json()
 
-    def chat(self, messages, *, output_schema=None):
+    def chat(self, messages, *, output_schema=None, num_predict=180):
         payload = {
             "model": settings.OLLAMA_TEXT_MODEL,
             "messages": messages, "stream": False, "think": False,
-            "options": {"temperature": 0.2, "num_ctx": 4096, "num_predict": 400},
+            "keep_alive": "30m",
+            "options": {"temperature": 0.2, "num_ctx": 2048, "num_predict": num_predict},
         }
         if output_schema is not None:
             payload["format"] = output_schema
         data = self._post("/api/chat", payload)
+        self.last_metrics = {
+            "model_loading": round(data.get("load_duration", 0) / 1e9, 3),
+            "prompt_eval": round(data.get("prompt_eval_duration", 0) / 1e9, 3),
+            "generation": round(data.get("eval_duration", 0) / 1e9, 3),
+            "prompt_tokens": data.get("prompt_eval_count", 0),
+            "generated_tokens": data.get("eval_count", 0),
+            "total_ollama": round(data.get("total_duration", 0) / 1e9, 3),
+        }
         answer = data["message"]["content"]
         if not isinstance(answer, str) or not answer.strip():
             raise ValueError("Local model returned an empty answer")

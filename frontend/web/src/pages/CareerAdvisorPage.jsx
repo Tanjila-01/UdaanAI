@@ -25,7 +25,7 @@ function sourceUrl(value) {
 
 function Answer({ result }) {
   return <div className="advisor-answer">
-    {result.answer_origin === 'web' && <p className="advisor-caption">Sources checked online{result.checked_at ? ` · Checked ${new Date(result.checked_at).toLocaleString()}` : ''}. Check each source for its publication date.</p>}
+    {result.answer_origin === 'web' && <p className="advisor-caption">Sources checked online{result.checked_at ? ` · Checked ${new Date(result.checked_at).toLocaleString()}` : ''}.</p>}
     <p className="advisor-answer-text">{result.answer}</p>
     {result.recommendations.length > 0 && <div className="advisor-recommendations">
       <p className="advisor-caption">Match scores describe your saved assessment fit, not a guarantee of success.</p>
@@ -91,6 +91,15 @@ function AdvisorSession() {
   useEffect(() => { if (exchanges.length) bottom.current?.scrollIntoView?.({ block: 'nearest', behavior: 'auto' }); }, [exchanges]);
   useEffect(() => { if (voice.phase === 'idle' && notice.startsWith('Voice added.')) input.current?.focus(); }, [voice.phase, notice]);
 
+  const cancelQuestion = id => {
+    if (pending.current) {
+      pending.current.abort();
+      pending.current = null;
+    }
+    setBusy(false);
+    setExchanges(old => old.filter(item => item.id !== id));
+  };
+
   async function ask(payload, retryId) {
     if (pending.current || voiceBusy || historyBusy) return;
     readAloud.stop(); setNotice('');
@@ -98,9 +107,12 @@ function AdvisorSession() {
     pending.current = controller;
     const id = retryId ?? ++nextId.current;
     setBusy(true);
-    const entry = { id, payload, loading: true };
+    const entry = { id, payload, loading: true, loadingStage: 'checking' };
     setExchanges(old => retryId ? old.map(item => item.id === id ? entry : item) : [...old, entry]);
     if (!retryId) { setQuestion(''); setFollowUp(null); }
+    const stageTimer = setTimeout(() => {
+      setExchanges(old => old.map(item => item.id === id && item.loading ? { ...item, loadingStage: 'preparing' } : item));
+    }, 2800);
     try {
       const result = await getCareerAnswerApi(payload, { signal: controller.signal });
       if (!statuses.has(result?.status) || typeof result.answer !== 'string' || !Array.isArray(result.sources) || !Array.isArray(result.recommendations)) throw new Error('Invalid answer');
@@ -115,6 +127,7 @@ function AdvisorSession() {
         : 'The advisor could not respond. Check that your local services are running, then retry.';
       setExchanges(old => old.map(item => item.id === id ? { ...entry, loading: false, error: message, retryable: ![401, 403, 404, 422].includes(status), signIn: [401, 403].includes(status) } : item));
     } finally {
+      clearTimeout(stageTimer);
       if (pending.current === controller) { pending.current = null; setBusy(false); }
     }
   }
@@ -173,7 +186,17 @@ function AdvisorSession() {
                     {entry.savedAt && <div className="advisor-snapshot"><p>Saved {new Date(entry.savedAt).toLocaleDateString()}. This is a saved answer. Refresh to check the latest information.</p><button type="button" className="advisor-secondary" disabled={locked} onClick={() => refreshSaved(entry)}>Refresh answer</button></div>}
                     {!entry.savedAt && entry.result?.history_id && <p className="advisor-caption">Saved to Previous questions</p>}
                     {!entry.savedAt && entry.result && ['answered', 'recommendations_explained'].includes(entry.result.status) && entry.result.history_id === null && <p className="advisor-caption">This answer could not be saved. It is available on this page only.</p>}
-                    {entry.loading && <p role="status" className="advisor-loading"><Loader2 size={17} className="advisor-spin" /> Researching your question… Local AI may take a minute or more.</p>}
+                    {entry.loading && <div className="advisor-loading-row">
+                      <p role="status" className="advisor-loading">
+                        <Loader2 size={17} className="advisor-spin" />
+                        {entry.loadingStage === 'preparing'
+                          ? 'Researching your question… Preparing your answer…'
+                          : 'Researching your question… Checking reliable sources…'}
+                      </p>
+                      <button type="button" className="advisor-cancel-inline" onClick={() => cancelQuestion(entry.id)} aria-label="Cancel question" title="Cancel question">
+                        <X size={13} /> Cancel
+                      </button>
+                    </div>}
                     {entry.result && <><Answer result={entry.result} /><button className="advisor-listen" disabled={voiceBusy || !readAloud.available} title={readAloud.available ? 'Read this answer aloud using an on-device voice' : 'No on-device English voice is available in this browser'} onClick={() => readAloud.speak(entry.id, [entry.result.answer, ...entry.result.recommendations.map(item => `${item.title}. ${item.explanation}`)].join(' '))}>{readAloud.speakingId === entry.id ? <Square size={14} /> : <Volume2 size={15} />}{readAloud.speakingId === entry.id ? 'Stop listening' : 'Listen'}</button></>}
                     {entry.result?.status === 'answered' && entry.payload.intent === 'explore' && (entry.result.history_id || entry.historyId) && <button type="button" className="advisor-followup-button" disabled={locked} onClick={() => chooseFollowUp(entry)}>Ask a follow-up</button>}
                     {entry.result?.conversation_topic && <p className="advisor-caption">About: {entry.result.conversation_topic}</p>}
