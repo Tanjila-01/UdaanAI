@@ -155,7 +155,12 @@ it('shows a course-selection clarification as a normal answer rather than a reje
 });
 
 it('keeps research internal without asking students to select an answer source', async () => {
-  getCareerAnswerApi.mockResolvedValue({ ...response, answer_origin: 'web', checked_at: '2026-09-13T12:00:00Z' });
+  getCareerAnswerApi.mockResolvedValue({
+    ...response,
+    answer_origin: 'web',
+    checked_at: '2026-09-13T12:00:00Z',
+    sources: [{ reference: 1, chunk_id: 'web-1', title: 'AI Overview', scope: 'Web evidence', references: [{ url: 'https://en.wikipedia.org/wiki/Artificial_intelligence' }] }]
+  });
   mount();
   expect(screen.queryByRole('combobox', { name: 'Answer source' })).toBeNull();
   send('What is artificial intelligence?');
@@ -163,4 +168,34 @@ it('keeps research internal without asking students to select an answer source',
   expect(getCareerAnswerApi.mock.calls[0][0].answer_mode).toBeUndefined();
   expect(screen.queryByRole('button', { name: 'Search web for this question' })).toBeNull();
   expect(screen.getByText(/Sources checked online.*Checked/)).toBeTruthy();
+});
+
+it('does not falsely claim sources checked online when sources list is empty (greetings/failures)', async () => {
+  getCareerAnswerApi.mockResolvedValue({
+    ...response,
+    answer_origin: 'web',
+    status: 'needs_clarification',
+    answer: 'Hi! Ask me about a subject, a course, career options or your next education step.',
+    sources: [],
+    checked_at: '2026-09-13T12:00:00Z'
+  });
+  mount();
+  send('Hi');
+  expect(await screen.findByText('Hi! Ask me about a subject, a course, career options or your next education step.')).toBeTruthy();
+  expect(screen.queryByText(/Sources checked online/)).toBeNull();
+});
+
+it('does not falsely claim sources checked online when web research fails or times out', async () => {
+  getCareerAnswerApi.mockResolvedValue({
+    ...response,
+    answer_origin: 'web',
+    status: 'unavailable',
+    answer: 'I could not finish researching that in time. Please try again shortly.',
+    sources: [],
+    checked_at: '2026-09-13T12:00:00Z'
+  });
+  mount();
+  send('Complex question that timed out');
+  expect(await screen.findByText('I could not finish researching that in time. Please try again shortly.')).toBeTruthy();
+  expect(screen.queryByText(/Sources checked online/)).toBeNull();
 });

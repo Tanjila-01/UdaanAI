@@ -17,8 +17,11 @@ from app.services.followups import followup_context
 from app.services.web_answers import web_answer, named_topic, normalize_question
 from app.core.config import settings
 
+from datetime import datetime, timezone
+
 router = APIRouter(prefix="/career-intelligence", tags=["Career answers"])
 capacity = BoundedSemaphore(1)
+SHARED_BACKEND_DEADLINE = 24.0
 
 
 class AnswerRequest(BaseModel):
@@ -84,6 +87,7 @@ class AnswerResponse(BaseModel):
 def career_answer(request: AnswerRequest, claims=Depends(get_current_user_claims),
                   credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
     t_req_start = time.perf_counter()
+    req_deadline = time.monotonic() + SHARED_BACKEND_DEADLINE
     if not capacity.acquire(blocking=False):
         raise HTTPException(429, "Local AI is busy. Please retry shortly.", headers={"Retry-After": "10"})
     wait_capacity = round(time.perf_counter() - t_req_start, 3)
@@ -114,7 +118,7 @@ def career_answer(request: AnswerRequest, claims=Depends(get_current_user_claims
                     answer_origin='web',
                 )
             else:
-                result = web_answer(question, topic, **({'refresh': True} if request.refresh else {}))
+                result = web_answer(question, topic, deadline=req_deadline, **({'refresh': True} if request.refresh else {}))
         else:
             # request.intent == 'explain_recommendations' - local saved scoring explanation
             result = answer_question(db, claims['sub'], credentials.credentials, question,

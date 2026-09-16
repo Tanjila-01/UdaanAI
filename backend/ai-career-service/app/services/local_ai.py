@@ -18,15 +18,15 @@ class LocalAI:
         self.transport = transport
         self.last_metrics = {}
 
-    def _post(self, endpoint, payload):
+    def _post(self, endpoint, payload, timeout: float = 180.0):
         if "cloud" in payload["model"].lower() or "/" in payload["model"]:
             raise ValueError("Cloud models are disabled")
-        with httpx.Client(timeout=180, trust_env=False, transport=self.transport) as client:
+        with httpx.Client(timeout=timeout, trust_env=False, transport=self.transport) as client:
             response = client.post(self.base_url + endpoint, json=payload)
             response.raise_for_status()
             return response.json()
 
-    def chat(self, messages, *, output_schema=None, num_predict=180):
+    def chat(self, messages, *, output_schema=None, num_predict=180, timeout: float = 180.0):
         payload = {
             "model": settings.OLLAMA_TEXT_MODEL,
             "messages": messages, "stream": False, "think": False,
@@ -35,7 +35,7 @@ class LocalAI:
         }
         if output_schema is not None:
             payload["format"] = output_schema
-        data = self._post("/api/chat", payload)
+        data = self._post("/api/chat", payload, timeout=timeout)
         self.last_metrics = {
             "model_loading": round(data.get("load_duration", 0) / 1e9, 3),
             "prompt_eval": round(data.get("prompt_eval_duration", 0) / 1e9, 3),

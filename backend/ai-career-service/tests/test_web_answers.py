@@ -271,3 +271,73 @@ def test_incomplete_missing_info_trimmed_to_sentence(monkeypatch):
     assert 'Official fees were not found.' in result['answer']
     assert 'vary by' not in result['answer']
 
+
+def test_exact_screenshot_question_routes_to_pathway_search(monkeypatch):
+    """The screenshot query 'Hi, okay, so right now I am studying in 10th, so what should I choose next?'
+    must never be short-circuited as a greeting."""
+    monkeypatch.setattr(web.settings, 'WEB_SEARCH_ENABLED', True)
+    search = Mock(return_value=[page()])
+    monkeypatch.setattr(web, 'search_pages', search)
+    question = "Hi, okay, so right now I am studying in 10th, so what should I choose next?"
+    plan = web.fast_plan(question)
+    assert plan is not None
+    assert plan.kind == 'pathway'
+    assert plan.needs_clarification is False
+    assert '10th' in plan.query or 'options' in plan.query
+
+    ai = model({'paragraphs': [{'text': 'After 10th standard, students in India can choose Science, Commerce, Arts, or diploma courses.', 'evidence_ids': ['W1']}], 'follow_up': ''})
+    result = web.web_answer(question, ai=ai)
+    assert result['status'] == 'answered'
+    assert len(result['sources']) > 0
+    assert result['answer_origin'] == 'web'
+    assert search.called
+
+
+def test_pure_greetings_do_not_search_and_return_empty_sources(monkeypatch):
+    """Greeting-only messages should be recognized, return needs_clarification, and have empty sources."""
+    monkeypatch.setattr(web.settings, 'WEB_SEARCH_ENABLED', True)
+    search = Mock()
+    monkeypatch.setattr(web, 'search_pages', search)
+    for greeting in ['hi', 'Hello!', 'Hey there', 'Namaste', 'good morning, how are you?']:
+        plan = web.fast_plan(greeting)
+        assert plan is not None
+        assert plan.kind == 'greeting'
+        assert plan.needs_clarification is True
+        result = web.web_answer(greeting, ai=model(kind='greeting', query=''))
+        assert result['status'] == 'needs_clarification'
+        assert result['sources'] == []
+        assert result['answer_origin'] == 'web'
+    search.assert_not_called()
+
+
+def test_greeting_prefixed_substantive_questions_proceed_to_routing(monkeypatch):
+    """Greetings preceding substantive questions must strip the greeting and continue to search."""
+    monkeypatch.setattr(web.settings, 'WEB_SEARCH_ENABLED', True)
+    search = Mock(return_value=[page()])
+    monkeypatch.setattr(web, 'search_pages', search)
+
+    questions = [
+        ("Hello! What is an AIML engineer?", "career"),
+        ("Hey, compare science and commerce", "pathway"),
+        ("Namaste, how can I become a doctor?", "career"),
+        ("Good morning, what courses can I take after 10th?", "education"),
+    ]
+    for q_text, expected_kind in questions:
+        plan = web.fast_plan(q_text)
+        assert plan is not None, f"Failed fast_plan for: {q_text}"
+        assert plan.kind == expected_kind, f"Expected {expected_kind}, got {plan.kind} for: {q_text}"
+        assert plan.needs_clarification is False
+
+
+def test_deadline_budget_expiration_returns_honest_unavailable_without_hanging(monkeypatch):
+    """When deadline budget is already exhausted, web_answer terminates immediately and honestly."""
+    monkeypatch.setattr(web.settings, 'WEB_SEARCH_ENABLED', True)
+    # Pass an already expired deadline
+    expired_deadline = time.monotonic() - 1.0
+    result = web.web_answer("What is artificial intelligence?", ai=model(), deadline=expired_deadline)
+    assert result['status'] == 'unavailable'
+    assert result['sources'] == []
+    assert result['answer_origin'] == 'web'
+    assert 'in time' in result['answer'] or 'shortly' in result['answer']
+
+

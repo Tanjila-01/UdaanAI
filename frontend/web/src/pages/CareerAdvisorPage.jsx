@@ -25,7 +25,7 @@ function sourceUrl(value) {
 
 function Answer({ result }) {
   return <div className="advisor-answer">
-    {result.answer_origin === 'web' && <p className="advisor-caption">Sources checked online{result.checked_at ? ` · Checked ${new Date(result.checked_at).toLocaleString()}` : ''}.</p>}
+    {result.answer_origin === 'web' && Array.isArray(result.sources) && result.sources.length > 0 && <p className="advisor-caption">Sources checked online{result.checked_at ? ` · Checked ${new Date(result.checked_at).toLocaleString()}` : ''}.</p>}
     <p className="advisor-answer-text">{result.answer}</p>
     {result.recommendations.length > 0 && <div className="advisor-recommendations">
       <p className="advisor-caption">Match scores describe your saved assessment fit, not a guarantee of success.</p>
