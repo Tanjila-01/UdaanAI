@@ -215,3 +215,25 @@ it('formats markdown asterisks into strong bold text elements', async () => {
   expect(strongs[1].textContent).toBe('excellent, direct fit');
   expect(answerEl.textContent).not.toContain('**');
 });
+
+it('sends question when Enter key is pressed in the textarea without Shift', async () => {
+  getCareerAnswerApi.mockResolvedValue(response);
+  mount();
+  const textarea = screen.getByLabelText('Ask a career question');
+  fireEvent.change(textarea, { target: { value: 'How can I become an architect?' } });
+  fireEvent.keyDown(textarea, { key: 'Enter', code: 'Enter', shiftKey: false });
+  await waitFor(() => expect(getCareerAnswerApi).toHaveBeenCalledTimes(1));
+  expect(getCareerAnswerApi).toHaveBeenCalledWith(
+    { question: 'How can I become an architect?', intent: 'explore', language: 'en' },
+    expect.any(Object)
+  );
+});
+
+it('does not send question when Shift+Enter is pressed in the textarea', async () => {
+  getCareerAnswerApi.mockResolvedValue(response);
+  mount();
+  const textarea = screen.getByLabelText('Ask a career question');
+  fireEvent.change(textarea, { target: { value: 'Line 1' } });
+  fireEvent.keyDown(textarea, { key: 'Enter', code: 'Enter', shiftKey: true });
+  expect(getCareerAnswerApi).not.toHaveBeenCalled();
+});

@@ -147,6 +147,15 @@ function AdvisorSession() {
   }
   const explore = text => ask({ question: text.trim(), intent: 'explore', language: 'en' });
   const submitQuestion = text => ask({ question: text.trim(), intent: 'explore', language: 'en', ...(followUp ? { follow_up_to: followUp.id } : {}) });
+  const handleKeyDown = event => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      if (event.isComposing || event.keyCode === 229) return;
+      event.preventDefault();
+      if (!locked && question.trim() && question.trim().length <= 1000) {
+        submitQuestion(question);
+      }
+    }
+  };
   const chooseFollowUp = entry => {
     readAloud.stop(); setNotice('');
     setFollowUp({ id: entry.result.history_id || entry.historyId, label: entry.result.conversation_topic || entry.result.sources[0]?.title || entry.payload.question });
@@ -225,7 +234,7 @@ function AdvisorSession() {
             <form className="advisor-composer" onSubmit={event => { event.preventDefault(); if (question.trim() && question.trim().length <= 1000) submitQuestion(question); }}>
               {followUp && <div className="advisor-context-chip"><span>Following up on: <strong>{followUp.label}</strong></span><button type="button" className="advisor-icon-button" disabled={locked} aria-label="Clear follow-up context" onClick={() => setFollowUp(null)}><X size={15} /></button></div>}
               <label htmlFor="career-question">Ask a career question</label>
-              <div className="advisor-input-box"><textarea ref={input} id="career-question" rows={2} maxLength={1000} disabled={voiceBusy} value={question} onChange={event => setQuestion(event.target.value)} placeholder="What are you curious about?" aria-describedby="question-limit voice-description search-description" />
+              <div className="advisor-input-box"><textarea ref={input} id="career-question" rows={2} maxLength={1000} disabled={voiceBusy} value={question} onChange={event => setQuestion(event.target.value)} onKeyDown={handleKeyDown} placeholder="What are you curious about?" aria-describedby="question-limit voice-description search-description" />
                 <div className="advisor-composer-actions"><div className="advisor-voice-actions">
                   {voice.phase === 'idle' ? <button type="button" className="advisor-voice-button" disabled={busy || historyBusy || !voice.supported} onClick={() => { readAloud.stop(); setNotice(''); voice.start(); }}><Mic size={17} /> Speak</button>
                     : <><span className="advisor-recording" role="status">{voice.phase === 'recording' ? <><span />{voice.seconds}s / 30s</> : <><Loader2 size={15} className="advisor-spin" />{voice.phase === 'starting' ? 'Allow microphone…' : 'Turning speech into text…'}</>}</span>{voice.phase === 'recording' && <button type="button" className="advisor-voice-button" onClick={voice.finish}><Square size={14} /> Done</button>}<button type="button" className="advisor-icon-button" aria-label="Cancel voice input" onClick={voice.cancel}><X size={16} /></button></>}
