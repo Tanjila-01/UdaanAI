@@ -146,9 +146,15 @@ export const Navbar = () => {
     { label: 'Udaan AI', href: '#udaan-ai' },
     { label: 'Workshops', href: '#workshops' },
     { label: 'For Schools', href: '#school-invitation' },
+    { label: 'About Us', href: '/about' },
+    { label: 'Contact Us', href: '/contact' },
   ];
 
   const handleNavClick = (e, href) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) {
+      return;
+    }
+
     if (href.startsWith('#')) {
       e.preventDefault();
       setNavMenuOpen(false);
@@ -176,6 +182,7 @@ export const Navbar = () => {
       navigate(href);
     }
   };
+
 
   return (
     <header

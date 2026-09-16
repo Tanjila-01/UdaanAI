@@ -3,15 +3,17 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getAccountAction } from '../../utils/accountActions';
 import WorkshopRequestModal from '../product/WorkshopRequestModal';
+import { Mail, Sparkles, ShieldCheck } from 'lucide-react';
 
 /**
  * Reusable Footer layout component adhering to Udaan AI Design Tokens.
  * Features:
- * - Compact brand identity with Karnataka focus
- * - 3 clean navigation groups (Explore, For Institutions, Account)
+ * - Clean brand identity with Karnataka focus & verified inquiry channel
+ * - 3 structured navigation groups (Explore, For Institutions, Account)
+ * - Standard legal bar with genuine Privacy Policy and Terms of Service routes
  * - Session-aware account destinations via getAccountAction
  * - Native link behavior preserving modifier keys (Ctrl/Cmd/Shift)
- * - Smooth anchor scrolling respecting prefers-reduced-motion
+ * - Touch-accessible links (min-h-[44px])
  * - Workshop modal integration with zero duplication on HomePage
  */
 export const Footer = ({ onRequestWorkshop }) => {
@@ -54,9 +56,6 @@ export const Footer = ({ onRequestWorkshop }) => {
       if (element) {
         element.scrollIntoView({ behavior });
       }
-    } else {
-      // Navigating from another page: Link to `/${hash}` will trigger navigation
-      // React Router handles route change; HomePage's hash listener will scroll on arrival
     }
   };
 
@@ -64,14 +63,17 @@ export const Footer = ({ onRequestWorkshop }) => {
     'inline-flex items-center min-h-[44px] py-1.5 text-xs text-slate-300 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 rounded-md';
 
   return (
-    <footer className="bg-slate-950 text-slate-300 pt-12 pb-10 border-t border-slate-800">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <footer className="relative bg-slate-950 text-slate-300 pt-12 pb-8 border-t border-slate-800/90 overflow-hidden">
+      {/* Top subtle ambient glow line */}
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#005F60]/60 to-transparent" />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         
         {/* Main Grid: Standard 5-column layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-10 pb-10 border-b border-slate-800">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-10 pb-10 border-b border-slate-800/80">
           
           {/* Col 1 & 2: Brand Information */}
-          <div className="col-span-1 md:col-span-2 lg:col-span-2 flex flex-col items-start gap-3.5">
+          <div className="col-span-1 md:col-span-2 lg:col-span-2 flex flex-col items-start gap-4">
             <Link
               to="/"
               aria-label="Udaan AI Home"
@@ -80,14 +82,28 @@ export const Footer = ({ onRequestWorkshop }) => {
               <div className="w-9 h-9 rounded-xl bg-white border border-slate-700/80 flex items-center justify-center p-1 shrink-0 group-hover:scale-105 transition-transform overflow-hidden shadow-xs">
                 <img src="/logo-mark.png" alt="Udaan AI" className="w-full h-full object-contain" />
               </div>
-              <span className="font-extrabold text-xl text-white tracking-tight">
-                Udaan AI
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-xl text-white tracking-tight">
+                  Udaan AI
+                </span>
+                <span className="px-2 py-0.5 text-[10px] font-bold bg-teal-950 text-teal-300 border border-teal-800/80 rounded-full">
+                  Karnataka
+                </span>
+              </div>
             </Link>
 
-            <p className="text-xs text-slate-300 leading-relaxed max-w-sm">
+            <p className="text-xs text-slate-300 leading-relaxed max-w-sm font-medium">
               Helping Karnataka students explore education options, understand their interests, and plan their next steps.
             </p>
+
+            {/* Inquiries email badge */}
+            <a
+              href="mailto:connect.udaanai@gmail.com"
+              className="inline-flex items-center gap-2 text-xs font-semibold text-slate-300 hover:text-white bg-slate-900/90 hover:bg-slate-800/90 px-3.5 py-2 rounded-xl border border-slate-800 transition-all group shadow-2xs"
+            >
+              <Mail className="w-3.5 h-3.5 text-teal-400 group-hover:scale-110 transition-transform" />
+              <span>connect.udaanai@gmail.com</span>
+            </a>
           </div>
 
           {/* Col 3: Explore */}
@@ -130,6 +146,22 @@ export const Footer = ({ onRequestWorkshop }) => {
                   className={linkClasses}
                 >
                   Workshop Topics
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/about"
+                  className={linkClasses}
+                >
+                  About Us
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/contact"
+                  className={linkClasses}
+                >
+                  Contact Us
                 </Link>
               </li>
             </ul>
@@ -209,9 +241,34 @@ export const Footer = ({ onRequestWorkshop }) => {
 
         </div>
 
-        {/* Minimal Bottom Bar: Copyright Only */}
+        {/* Standard Website Bottom Bar: Copyright & Legal */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
-          <p>© {new Date().getFullYear()} Udaan AI. All rights reserved.</p>
+          <div className="flex flex-wrap items-center gap-2 text-center sm:text-left">
+            <span>© {new Date().getFullYear()} Udaan AI. All rights reserved.</span>
+            <span className="hidden sm:inline text-slate-700">•</span>
+            <span className="text-slate-500">Karnataka Student Career Guidance</span>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-5 text-xs">
+            <Link
+              to="/privacy"
+              className="text-slate-400 hover:text-white transition-colors"
+            >
+              Privacy Policy
+            </Link>
+            <Link
+              to="/terms"
+              className="text-slate-400 hover:text-white transition-colors"
+            >
+              Terms of Service
+            </Link>
+            <Link
+              to="/contact"
+              className="text-slate-400 hover:text-white transition-colors"
+            >
+              Contact
+            </Link>
+          </div>
         </div>
 
       </div>

@@ -14,8 +14,13 @@ import AdminOverviewPage from '../pages/admin/AdminOverviewPage';
 import AdminRequestsPage from '../pages/admin/AdminRequestsPage';
 import AdminScheduledPage from '../pages/admin/AdminScheduledPage';
 import AdminCompletedPage from '../pages/admin/AdminCompletedPage';
+import AdminInquiriesPage from '../pages/admin/AdminInquiriesPage';
 import AdminLoginPage from '../pages/admin/AdminLoginPage';
 import WorkshopFeedbackPage from '../pages/WorkshopFeedbackPage';
+import AboutPage from '../pages/AboutPage';
+import ContactPage from '../pages/ContactPage';
+import PrivacyPolicyPage from '../pages/PrivacyPolicyPage';
+import TermsOfServicePage from '../pages/TermsOfServicePage';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { PublicOnlyRoute } from '../components/PublicOnlyRoute';
 import { AdminRoute } from '../components/AdminRoute';
@@ -32,8 +37,13 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/contact" element={<ContactPage />} />
+      <Route path="/privacy" element={<PrivacyPolicyPage />} />
+      <Route path="/terms" element={<TermsOfServicePage />} />
       <Route path="/design-system" element={<DesignSystemShowcasePage />} />
       <Route path="/workshops/feedback/:token" element={<WorkshopFeedbackPage />} />
+
       <Route
         path="/register"
         element={
@@ -98,6 +108,14 @@ const AppRoutes = () => {
         element={
           <AdminRoute>
             <AdminOverviewPage />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/inquiries"
+        element={
+          <AdminRoute>
+            <AdminInquiriesPage />
           </AdminRoute>
         }
       />

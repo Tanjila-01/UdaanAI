@@ -10,6 +10,7 @@ import {
   LogOut,
   ShieldCheck,
   ExternalLink,
+  Mail,
 } from 'lucide-react';
 
 export const AdminLayout = ({ children }) => {
@@ -19,6 +20,7 @@ export const AdminLayout = ({ children }) => {
 
   const navItems = [
     { label: 'Overview', path: '/admin', icon: LayoutDashboard },
+    { label: 'Inquiries', path: '/admin/inquiries', icon: Mail },
     { label: 'Workshop Requests', path: '/admin/requests', icon: ClipboardList },
     { label: 'Scheduled', path: '/admin/scheduled', icon: CalendarCheck },
     { label: 'Completed', path: '/admin/completed', icon: CheckCircle2 },

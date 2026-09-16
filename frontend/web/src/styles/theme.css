@@ -38,6 +38,7 @@ body { background-color: var(--theme-subtle); color: var(--theme-text); }
 :root[data-theme="dark"] .border-orange-300,
 :root[data-theme="dark"] .border-rose-200,
 :root[data-theme="dark"] .border-rose-300,
+:root[data-theme="dark"] .border-sky-300,
 :root[data-theme="dark"] .border-slate-100,
 :root[data-theme="dark"] .border-slate-200,
 :root[data-theme="dark"] .border-slate-300,
@@ -64,8 +65,11 @@ body { background-color: var(--theme-subtle); color: var(--theme-text); }
 :root[data-theme="dark"] .bg-teal-100,
 :root[data-theme="dark"] .bg-teal-50,
 :root[data-theme="dark"] .hover\:bg-amber-100:hover,
+:root[data-theme="dark"] .hover\:bg-emerald-50:hover,
 :root[data-theme="dark"] .hover\:bg-orange-100:hover,
+:root[data-theme="dark"] .hover\:bg-rose-100:hover,
 :root[data-theme="dark"] .hover\:bg-rose-50:hover,
+:root[data-theme="dark"] .hover\:bg-sky-50:hover,
 :root[data-theme="dark"] .hover\:bg-teal-100:hover,
 :root[data-theme="dark"] .hover\:bg-teal-50:hover { background-color: var(--theme-tint); }
 
@@ -123,9 +127,11 @@ body { background-color: var(--theme-subtle); color: var(--theme-text); }
 :root[data-theme="dark"] .text-rose-800,
 :root[data-theme="dark"] .text-rose-900 { color: #fda4af; }
 
+:root[data-theme="dark"] .hover\:text-emerald-900:hover,
 :root[data-theme="dark"] .text-emerald-600,
 :root[data-theme="dark"] .text-emerald-700,
-:root[data-theme="dark"] .text-emerald-800 { color: #6ee7b7; }
+:root[data-theme="dark"] .text-emerald-800,
+:root[data-theme="dark"] .text-emerald-900 { color: #6ee7b7; }
 
 :root[data-theme="dark"] .from-emerald-50\/60 { --tw-gradient-from: color-mix(in srgb, var(--theme-tint) 60%, transparent); }
 
@@ -148,6 +154,8 @@ body { background-color: var(--theme-subtle); color: var(--theme-text); }
 :root[data-theme="dark"] .border-amber-200\/80,
 :root[data-theme="dark"] .border-emerald-200\/80,
 :root[data-theme="dark"] .border-orange-200\/80,
+:root[data-theme="dark"] .border-rose-200\/80,
+:root[data-theme="dark"] .border-sky-200\/80,
 :root[data-theme="dark"] .border-slate-200\/80,
 :root[data-theme="dark"] .border-teal-200\/80 { border-color: color-mix(in srgb, var(--theme-border) 80%, transparent); }
 
@@ -161,7 +169,10 @@ body { background-color: var(--theme-subtle); color: var(--theme-text); }
 :root[data-theme="dark"] .border-teal-200\/90,
 :root[data-theme="dark"] .border-teal-300\/90 { border-color: color-mix(in srgb, var(--theme-border) 90%, transparent); }
 
+:root[data-theme="dark"] .bg-amber-50\/70,
+:root[data-theme="dark"] .bg-emerald-50\/70,
 :root[data-theme="dark"] .bg-orange-50\/70,
+:root[data-theme="dark"] .bg-sky-50\/70,
 :root[data-theme="dark"] .bg-teal-100\/70,
 :root[data-theme="dark"] .bg-teal-50\/70,
 :root[data-theme="dark"] .hover\:bg-teal-50\/70:hover { background-color: color-mix(in srgb, var(--theme-tint) 70%, transparent); }
@@ -179,6 +190,17 @@ body { background-color: var(--theme-subtle); color: var(--theme-text); }
 :root[data-theme="dark"] .hover\:bg-teal-50\/30:hover { background-color: color-mix(in srgb, var(--theme-tint) 30%, transparent); }
 
 :root[data-theme="dark"] .text-teal-800\/80 { color: color-mix(in srgb, #5eead4 80%, transparent); }
+
+:root[data-theme="dark"] .from-teal-50\/40 { --tw-gradient-from: color-mix(in srgb, var(--theme-tint) 40%, transparent); }
+
+:root[data-theme="dark"] .via-white { --tw-gradient-via: var(--theme-surface); }
+
+:root[data-theme="dark"] .to-white { --tw-gradient-to: var(--theme-surface); }
+
+:root[data-theme="dark"] .text-sky-600,
+:root[data-theme="dark"] .text-sky-700,
+:root[data-theme="dark"] .text-sky-800,
+:root[data-theme="dark"] .text-sky-900 { color: #7dd3fc; }
 
 :root[data-theme="dark"] .bg-slate-50\/50 { background-color: color-mix(in srgb, var(--theme-subtle) 50%, transparent); }
 
@@ -200,6 +222,7 @@ body { background-color: var(--theme-subtle); color: var(--theme-text); }
 
 :root[data-theme="dark"] .bg-slate-100\/80,
 :root[data-theme="dark"] .bg-slate-200\/80,
+:root[data-theme="dark"] .bg-slate-50\/80,
 :root[data-theme="dark"] .hover\:bg-slate-100\/80:hover,
 :root[data-theme="dark"] .hover\:bg-slate-50\/80:hover { background-color: color-mix(in srgb, var(--theme-subtle) 80%, transparent); }
 
@@ -214,12 +237,6 @@ body { background-color: var(--theme-subtle); color: var(--theme-text); }
 :root[data-theme="dark"] .hover\:bg-white\/60:hover { background-color: color-mix(in srgb, var(--theme-surface) 60%, transparent); }
 
 :root[data-theme="dark"] .via-teal-50\/20 { --tw-gradient-via: color-mix(in srgb, var(--theme-tint) 20%, transparent); }
-
-:root[data-theme="dark"] .to-white { --tw-gradient-to: var(--theme-surface); }
-
-:root[data-theme="dark"] .text-sky-600,
-:root[data-theme="dark"] .text-sky-700,
-:root[data-theme="dark"] .text-sky-800 { color: #7dd3fc; }
 
 :root[data-theme="dark"] .border-white\/10 { border-color: color-mix(in srgb, var(--theme-border) 10%, transparent); }
 

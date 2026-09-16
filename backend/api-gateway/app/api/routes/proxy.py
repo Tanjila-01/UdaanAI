@@ -293,3 +293,28 @@ async def proxy_workshops_patch(path: str, request: Request, credentials: Option
 @router.options("/workshops/{path:path}", operation_id="proxy_workshops_options", tags=["Workshops"])
 async def proxy_workshops_options(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
     return await _proxy_workshops(path, request)
+
+
+# --- Contact Inquiries Proxy Routes ---
+
+async def _proxy_contact(path: str, request: Request) -> Response:
+    clean_path = f"/{path.lstrip('/')}" if path else ""
+    target_url = f"{settings.INSTITUTION_SERVICE_URL.rstrip('/')}/contact{clean_path}"
+    return await forward_request(target_url, request, error_detail="Contact service is temporarily unavailable.")
+
+
+@router.post("/contact", operation_id="proxy_contact_post", tags=["Contact"])
+async def proxy_contact_post(request: Request):
+    return await _proxy_contact("", request)
+
+
+@router.get("/contact/admin", operation_id="proxy_contact_admin_get", tags=["Contact"])
+async def proxy_contact_admin_get(request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_contact("/admin", request)
+
+
+@router.patch("/contact/admin/{path:path}", operation_id="proxy_contact_admin_patch", tags=["Contact"])
+async def proxy_contact_admin_patch(path: str, request: Request, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    return await _proxy_contact(f"/admin/{path}", request)
+
+

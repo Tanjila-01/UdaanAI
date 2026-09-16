@@ -259,7 +259,27 @@ export const getLatestRecommendationsApi = async () => {
   return response.data;
 };
 
+// --- General Contact Inquiries API ---
+
+export const submitContactInquiryApi = async (data) => {
+  const response = await apiClient.post('/api/v1/contact', data);
+  return response.data;
+};
+
+export const getAdminInquiriesApi = async (status = null) => {
+  const params = status && status !== 'ALL' ? { status } : {};
+  const response = await apiClient.get('/api/v1/contact/admin', { params });
+  return response.data;
+};
+
+export const updateAdminInquiryStatusApi = async (id, newStatus) => {
+  const response = await apiClient.patch(`/api/v1/contact/admin/${id}`, { status: newStatus });
+  return response.data;
+};
+
+
 // --- Workshop Operations APIs ---
+
 
 export const submitWorkshopRequestApi = async (data) => {
   const response = await apiClient.post('/api/v1/workshops/requests', data);

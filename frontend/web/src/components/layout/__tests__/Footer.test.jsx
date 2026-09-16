@@ -119,18 +119,30 @@ describe('Footer Component', () => {
       const udaanAiLink = screen.getByRole('link', { name: 'Udaan AI' });
       expect(udaanAiLink.getAttribute('href')).toBe('/#udaan-ai');
 
+      const aboutLink = screen.getByRole('link', { name: 'About Us' });
+      expect(aboutLink.getAttribute('href')).toBe('/about');
+
+      const contactLink = screen.getByRole('link', { name: 'Contact Us' });
+      expect(contactLink.getAttribute('href')).toBe('/contact');
+
       // Institutions links/buttons
       const schoolLink = screen.getByRole('link', { name: 'For Schools & Colleges' });
       expect(schoolLink.getAttribute('href')).toBe('/#school-invitation');
 
+
       const workshopButton = screen.getByRole('button', { name: 'Request a Workshop' });
       expect(workshopButton).toBeTruthy();
+
+      // Genuine legal destinations per website standards
+      const privacyLink = screen.getByRole('link', { name: 'Privacy Policy' });
+      expect(privacyLink.getAttribute('href')).toBe('/privacy');
+
+      const termsLink = screen.getByRole('link', { name: 'Terms of Service' });
+      expect(termsLink.getAttribute('href')).toBe('/terms');
 
       // Dead anchors must not exist anywhere in footer
       expect(screen.queryByText('Career Exploration')).toBeNull();
       expect(screen.queryByText('Career Roadmap')).toBeNull();
-      expect(screen.queryByText('Privacy Policy')).toBeNull();
-      expect(screen.queryByText('Terms of Service')).toBeNull();
       expect(screen.queryByText('Support')).toBeNull();
       expect(screen.queryByText('Help & Support')).toBeNull();
     });

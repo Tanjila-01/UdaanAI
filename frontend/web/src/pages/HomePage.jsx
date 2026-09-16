@@ -1155,9 +1155,44 @@ const HomePage = () => {
 
 
         {/* ========================================================= */}
+        {/* SECTION: ABOUT UDAAN AI PREVIEW */}
+        {/* ========================================================= */}
+        <section id="about-preview" className="py-8 sm:py-10 lg:py-12 bg-slate-50 border-b border-slate-200/60 scroll-mt-28">
+          <Container size="xl">
+            <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-8 lg:p-10 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+              <div className="max-w-2xl flex flex-col items-start gap-3">
+                <Badge variant="primary" size="md" className="bg-teal-50 text-[#005F60] border-teal-200">
+                  Our Mission
+                </Badge>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-950 tracking-tight">
+                  Clear, Unbiased Direction for Karnataka Students
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-600 font-medium leading-relaxed">
+                  Udaan AI was created by a dedicated four-member team to replace guesswork with structured, verified pathways across PUC streams, Polytechnic Diplomas, and ITI Trades. Learn more about our mission, values, and the team behind the platform.
+                </p>
+              </div>
+              <div className="shrink-0">
+                <Link to="/about">
+                  <Button
+                    variant="primary"
+                    size="md"
+                    className="bg-[#005F60] hover:bg-[#004D4E] text-white font-bold h-11 px-5 rounded-xl shadow-xs cursor-pointer"
+                    rightIcon={<ArrowRight className="w-4 h-4 text-white" />}
+                  >
+                    Learn More About Udaan AI
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </Container>
+        </section>
+
+
+        {/* ========================================================= */}
         {/* SECTION 9: SCHOOL & INSTITUTION PARTICIPATION */}
         {/* ========================================================= */}
         <section id="school-invitation" className="py-8 sm:py-10 lg:py-12 bg-slate-950 text-white relative overflow-hidden border-b border-slate-800 scroll-mt-28">
+
           <Container size="xl">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
 
