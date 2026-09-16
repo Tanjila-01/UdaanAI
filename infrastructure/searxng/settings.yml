@@ -3,6 +3,8 @@ use_default_settings:
     keep_only:
       - duckduckgo
       - bing
+      - wikipedia
+      - brave
 general:
   debug: false
   instance_name: Udaan local search

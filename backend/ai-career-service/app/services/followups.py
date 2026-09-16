@@ -13,16 +13,17 @@ def followup_context(db, user_id, history_id):
         raise HTTPException(503, 'The previous answer could not be checked. Please try again.')
     if row is None:
         raise HTTPException(404, 'The selected answer is no longer available. Name the career in a new question.')
-    if row.request.get('intent', 'explore') != 'explore' or row.response.get('status') != 'answered':
+    if row.request.get('intent', 'explore') != 'explore' or row.response.get('status') not in {'answered', 'recommendations_explained'}:
         return None, None
+    from app.services.advisor_context import clean_label
     saved_topic = row.response.get('conversation_topic')
     if isinstance(saved_topic, str) and 0 < len(saved_topic) <= 250:
-        return saved_topic, row.request.get('pathway_id')
+        return clean_label(saved_topic), row.request.get('pathway_id')
     titles = {source.get('title', '').strip() for source in row.response.get('sources', [])
               if isinstance(source, dict) and isinstance(source.get('title'), str) and source['title'].strip()}
     if len(titles) != 1:
         return None, None
-    topic = titles.pop()
+    topic = clean_label(titles.pop())
     if len(topic) > 250:
         return None, None
     return topic, row.request.get('pathway_id')

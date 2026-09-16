@@ -199,3 +199,19 @@ it('does not falsely claim sources checked online when web research fails or tim
   expect(await screen.findByText('I could not finish researching that in time. Please try again shortly.')).toBeTruthy();
   expect(screen.queryByText(/Sources checked online/)).toBeNull();
 });
+
+it('formats markdown asterisks into strong bold text elements', async () => {
+  getCareerAnswerApi.mockResolvedValue({
+    ...response,
+    answer: 'Enjoying **hands-on electrical work** is an **excellent, direct fit** for your saved assessment!',
+  });
+  mount();
+  send('Actually, I enjoy hands-on electrical work.');
+  expect(await screen.findByText('hands-on electrical work')).toBeTruthy();
+  const answerEl = document.querySelector('.advisor-answer-text');
+  const strongs = answerEl.querySelectorAll('strong');
+  expect(strongs.length).toBe(2);
+  expect(strongs[0].textContent).toBe('hands-on electrical work');
+  expect(strongs[1].textContent).toBe('excellent, direct fit');
+  expect(answerEl.textContent).not.toContain('**');
+});

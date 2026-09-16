@@ -23,16 +23,30 @@ function sourceUrl(value) {
   catch { return null; }
 }
 
+function renderFormattedAnswer(text) {
+  if (typeof text !== 'string') return null;
+  const parts = text.split(/(\*\*\*[^*]+?\*\*\*|\*\*[^*]+?\*\*)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith('***') && part.endsWith('***') && part.length >= 6) {
+      return <strong key={index}><em>{part.slice(3, -3)}</em></strong>;
+    }
+    if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
+      return <strong key={index}>{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
+}
+
 function Answer({ result }) {
   return <div className="advisor-answer">
     {result.answer_origin === 'web' && Array.isArray(result.sources) && result.sources.length > 0 && <p className="advisor-caption">Sources checked online{result.checked_at ? ` · Checked ${new Date(result.checked_at).toLocaleString()}` : ''}.</p>}
-    <p className="advisor-answer-text">{result.answer}</p>
+    <p className="advisor-answer-text">{renderFormattedAnswer(result.answer)}</p>
     {result.recommendations.length > 0 && <div className="advisor-recommendations">
       <p className="advisor-caption">Match scores describe your saved assessment fit, not a guarantee of success.</p>
       {result.recommendations.map(item => <section key={item.pathway_id} className="advisor-match">
         <h3>{item.rank}. {item.title}</h3>
         <span className="advisor-match-label">{item.match_label} · Match score: {item.match_score}</span>
-        <p>{item.explanation}</p>
+        <p>{renderFormattedAnswer(item.explanation)}</p>
       </section>)}
     </div>}
     {result.status === 'recommendations_explained' && <div className="advisor-setup-links"><Link to="/pathways">Explore my pathways <ArrowUpRight size={14} /></Link><Link to="/my-roadmap">My roadmap <ArrowUpRight size={14} /></Link></div>}
@@ -197,7 +211,7 @@ function AdvisorSession() {
                         <X size={13} /> Cancel
                       </button>
                     </div>}
-                    {entry.result && <><Answer result={entry.result} /><button className="advisor-listen" disabled={voiceBusy || !readAloud.available} title={readAloud.available ? 'Read this answer aloud using an on-device voice' : 'No on-device English voice is available in this browser'} onClick={() => readAloud.speak(entry.id, [entry.result.answer, ...entry.result.recommendations.map(item => `${item.title}. ${item.explanation}`)].join(' '))}>{readAloud.speakingId === entry.id ? <Square size={14} /> : <Volume2 size={15} />}{readAloud.speakingId === entry.id ? 'Stop listening' : 'Listen'}</button></>}
+                    {entry.result && <><Answer result={entry.result} /><button className="advisor-listen" disabled={voiceBusy || !readAloud.available} title={readAloud.available ? 'Read this answer aloud using an on-device voice' : 'No on-device English voice is available in this browser'} onClick={() => readAloud.speak(entry.id, [entry.result.answer.replace(/\*\*/g, ''), ...entry.result.recommendations.map(item => `${item.title}. ${item.explanation.replace(/\*\*/g, '')}`)].join(' '))}>{readAloud.speakingId === entry.id ? <Square size={14} /> : <Volume2 size={15} />}{readAloud.speakingId === entry.id ? 'Stop listening' : 'Listen'}</button></>}
                     {entry.result?.status === 'answered' && entry.payload.intent === 'explore' && (entry.result.history_id || entry.historyId) && <button type="button" className="advisor-followup-button" disabled={locked} onClick={() => chooseFollowUp(entry)}>Ask a follow-up</button>}
                     {entry.result?.conversation_topic && <p className="advisor-caption">About: {entry.result.conversation_topic}</p>}
                     {entry.error && <p role="alert" className="advisor-error">{entry.error}</p>}

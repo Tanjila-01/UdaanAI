@@ -39,6 +39,7 @@
 .advisor-reply-label { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 4px 0 13px; font-size: 14px; }
 .advisor-reply-label > span { display: inline-flex; gap: 4px; align-items: center; font-size: 12px; color: var(--advisor-accent); }
 .advisor-answer-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 16px; line-height: 1.85; }
+.advisor-answer-text strong { font-weight: 700; color: var(--theme-text); }
 .advisor-loading { display: flex; align-items: start; gap: 8px; font-size: 14px; color: var(--theme-muted); line-height: 1.6; }
 .advisor-loading svg { flex-shrink: 0; margin-top: 3px; }
 .advisor-loading-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }

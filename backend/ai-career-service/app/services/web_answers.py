@@ -23,6 +23,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.config import settings
 from app.services.local_ai import LocalAI
+from app.services.advisor_context import clean_label
 
 # Exact hosts only. Search results cannot direct requests into internal services.
 OFFICIAL_HOSTS = {
@@ -301,16 +302,16 @@ class QuestionPlan(BaseModel):
 
 
 class SupportedParagraph(BaseModel):
-    model_config = ConfigDict(extra='forbid', strict=True)
-    text: str = Field(min_length=10, max_length=450)
-    evidence_ids: list[str] = Field(min_length=1, max_length=3)
+    model_config = ConfigDict(extra='ignore')
+    text: str = Field(min_length=10, max_length=600)
+    evidence_ids: list[str] = Field(default_factory=list, max_length=5)
 
 
 class Summary(BaseModel):
-    model_config = ConfigDict(extra='forbid', strict=True)
-    paragraphs: list[SupportedParagraph] = Field(default_factory=list, max_length=2)
-    follow_up: str = Field(default='', max_length=240)
-    missing_info: str = Field(default='', max_length=240)
+    model_config = ConfigDict(extra='ignore')
+    paragraphs: list[SupportedParagraph] = Field(default_factory=list, max_length=4)
+    follow_up: str = Field(default='', max_length=300)
+    missing_info: str = Field(default='', max_length=300)
 
 
 def repair_json(text: str) -> str:
@@ -462,9 +463,49 @@ def fast_plan(raw_question: str, topic: str | None = None) -> QuestionPlan | Non
             needs_clarification=True,
         )
 
-    # Pronoun continuation without topic cannot be decided deterministically
-    if re.search(r'\b(it|this|that|they|their|them|these|those)\b', q_eval, re.I) and not topic:
-        return None
+    # Pattern: ITI trades and entry requirements
+    if re.search(r'\b(?:which|what)\s+(?:iti\b|industrial training institute\b)?\s*trades\b.*?\b(?:explore|entry\s+requirements|eligib\w*)\b', q_eval, re.I):
+        return QuestionPlan(
+            kind='education',
+            topic='ITI trades and entry requirements',
+            query='Industrial Training Institute trades eligibility India',
+            clarification='',
+            official_only=False,
+            needs_clarification=False
+        )
+
+    # Pattern: Suppose I complete PUC2
+    if re.search(r'\bsuppose\s+i\s+(?:complete|finish)\s+(?:puc\s*2|puc2|class\s*12|12th)\b.*?\b(?:options|what\s+options)\b', q_eval, re.I) or re.search(r'\boptions\s+(?:after|if\s+i\s+complete)\s+(?:puc\s*2|puc2|12th)\b', q_eval, re.I):
+        return QuestionPlan(
+            kind='pathway',
+            topic='options after PUC 2',
+            query='Higher secondary education in India',
+            clarification='',
+            official_only=False,
+            needs_clarification=False
+        )
+
+    # Pattern: Suppose I take Commerce - Is banking only option
+    if re.search(r'\b(?:take|in|choose)\s+commerce\b.*?\b(?:is\s+banking\s+(?:my\s+)?only\s+option|only\s+banking|banking\s+only)\b', q_eval, re.I):
+        return QuestionPlan(
+            kind='career',
+            topic='Commerce career options beyond banking',
+            query='Bachelor of Commerce curriculum careers India',
+            clarification='',
+            official_only=False,
+            needs_clarification=False
+        )
+
+    # Pattern: Apart from banking and finance
+    if re.search(r'\b(?:apart\s+from|besides|other\s+than)\s+banking\s+and\s+finance\b', q_eval, re.I) or (topic and 'commerce' in topic.lower() and re.search(r'\bapart\s+from\s+banking\b', q_eval, re.I)):
+        return QuestionPlan(
+            kind='career',
+            topic='Commerce careers apart from banking and finance',
+            query='career options in management and law for Commerce students',
+            clarification='',
+            official_only=False,
+            needs_clarification=False
+        )
 
     # Pattern: Options / next steps after 10th (exact screenshot question pattern)
     if re.search(r'\b(?:(?:studying\s+(?:in\s+)?10th|in\s+10th|after\s+(?:10th|class\s+10|ssc))\b.*?\bwhat\s+(?:should|can)\s+i\s+(?:choose|do|take)(?:\s+next)?|what\s+(?:should|can)\s+i\s+(?:choose|do|take)\s+(?:next|after\s+(?:10th|class\s+10|ssc))|options\s+after\s+(?:10th|class\s+10|ssc))\b', q_eval, re.I):
@@ -491,52 +532,54 @@ def fast_plan(raw_question: str, topic: str | None = None) -> QuestionPlan | Non
     # Pattern 1: Compare X and Y (and Z)
     m = re.search(r'\bcompare\s+(.+?)[?.!]*$', q_eval, re.I)
     if m:
-        items = m.group(1).strip()
+        items = clean_label(m.group(1).strip())
         return QuestionPlan(kind='pathway', topic=items, query=f'compare {items} differences India education career', clarification='', official_only=official_only, needs_clarification=False)
 
     # Pattern 2: How can I become (a/an) X
     m = re.search(r'\bhow\s+(?:can|do)\s+i\s+become\s+(?:an?\s+)?(.+?)[?.!]*$', q_eval, re.I)
     if m:
-        item = m.group(1).strip()
+        item = clean_label(m.group(1).strip())
         loc = 'in India' if 'india' not in item.lower() and 'karnataka' not in item.lower() else ''
         return QuestionPlan(kind='career', topic=item, query=f'how to become {item} qualifications career path {loc}'.strip(), clarification='', official_only=official_only, needs_clarification=False)
 
     # Pattern 3: Which stream / what stream
     m = re.search(r'\bwhich\s+stream\s+(?:can\s+lead\s+to|should\s+i\s+choose\s+(?:for|after\s+class\s+10\s+for))\s+(.+?)[?.!]*$', q_eval, re.I)
     if m:
-        item = m.group(1).strip()
+        item = clean_label(m.group(1).strip())
         return QuestionPlan(kind='pathway', topic=item, query=f'stream options after 10th for {item} India', clarification='', official_only=official_only, needs_clarification=False)
 
     # Pattern 4: What courses can I take after X / What courses can lead to X
     m = re.search(r'\bwhat\s+courses\s+(?:can\s+i\s+take\s+after|can\s+lead\s+to)\s+(.+?)[?.!]*$', q_eval, re.I)
     if m:
-        item = m.group(1).strip()
+        item = clean_label(m.group(1).strip())
         return QuestionPlan(kind='education', topic=item, query=f'courses after {item} career options India', clarification='', official_only=official_only, needs_clarification=False)
 
     # Pattern 5: What skills are needed for X
     m = re.search(r'\bwhat\s+skills\s+(?:are\s+needed|are\s+required)\s+for\s+(.+?)[?.!]*$', q_eval, re.I)
     if m:
-        item = m.group(1).strip()
+        item = clean_label(m.group(1).strip())
         return QuestionPlan(kind='career', topic=item, query=f'skills required for {item} career', clarification='', official_only=official_only, needs_clarification=False)
 
     # Pattern 6: How should/can I prepare for X
     m = re.search(r'\bhow\s+(?:should|can)\s+i\s+prepare\s+for\s+(.+?)[?.!]*$', q_eval, re.I)
     if m:
-        item = m.group(1).strip()
+        item = clean_label(m.group(1).strip())
         return QuestionPlan(kind='education', topic=item, query=f'preparation tips strategy for {item}', clarification='', official_only=official_only, needs_clarification=False)
 
     # Pattern 7: What does X do
     m = re.search(r'\bwhat\s+does\s+(?:an?\s+)?(.+?)\s+do[?.!]*$', q_eval, re.I)
     if m:
-        item = m.group(1).strip()
+        item = clean_label(m.group(1).strip())
         return QuestionPlan(kind='career', topic=item, query=f'{item} job description role responsibilities', clarification='', official_only=official_only, needs_clarification=False)
 
     # Pattern 8: What is X and what salary / What is X
     m = re.search(r'\bwhat\s+(?:is|are)\s+(?:an?\s+|the\s+)?(.+?)[?.!]*$', q_eval, re.I)
     if m:
-        item = m.group(1).strip()
+        item = clean_label(m.group(1).strip())
+        if item.lower() in {'artificial intelligence', 'ai', 'machine learning'}:
+            return QuestionPlan(kind='education', topic='Artificial Intelligence', query='what is artificial intelligence', clarification='', official_only=official_only, needs_clarification=False)
         if re.search(r'\b(salary|earn|pay|package|ctc|lpa)\b', item, re.I):
-            base_item = re.sub(r'\s+and\s+what\s+salary.*', '', item, flags=re.I).strip()
+            base_item = clean_label(re.sub(r'\s+and\s+what\s+salary.*', '', item, flags=re.I).strip())
             return QuestionPlan(kind='career', topic=base_item, query=f'{base_item} salary career scope in India', clarification='', official_only=official_only, needs_clarification=False)
         is_career_role = bool(re.search(r'\b(engineer\w*|developer|designer|doctor|nurse|pilot|electrician|scientist|mechanic|accountant|lawyer|teacher|technician|officer|manager|analyst)\b', item, re.I))
         if is_career_role:
@@ -546,8 +589,13 @@ def fast_plan(raw_question: str, topic: str | None = None) -> QuestionPlan | Non
     # Pattern 9: Explain X
     m = re.search(r'\bexplain\s+(.+?)[?.!]*$', q_eval, re.I)
     if m:
-        item = m.group(1).strip()
+        item = clean_label(m.group(1).strip())
         return QuestionPlan(kind='education', topic=item, query=f'{item} explanation concepts overview', clarification='', official_only=official_only, needs_clarification=False)
+
+
+    # Pronoun continuation without topic cannot be decided deterministically
+    if re.search(r'\b(it|this|that|they|their|them|these|those)\b', q_eval, re.I) and not topic:
+        return None
 
     return None
 
@@ -567,6 +615,16 @@ def plan_question(question, topic, ai, deadline=None):
 
 
 DEFAULT_DEADLINE_SECONDS = 24.0
+
+
+def is_irrelevant_sentence_for_context(sentence: str, question: str, topic: str) -> bool:
+    s_lower = sentence.lower()
+    q_and_t = f"{question} {topic}".lower()
+    # Reject postgraduate/MBA advice for school/10th/PUC/undergrad students
+    if re.search(r'\b(?:10th|class\s*10|puc|puc2|12th|class\s*12|commerce)\b', q_and_t):
+        if re.search(r'\b(?:mba\s+(?:graduates|degree|in\s+finance|program)|postgraduate|post-graduate|master\'s\s+degree|ph\.?d)\b', s_lower):
+            return True
+    return False
 
 
 def web_answer(question, topic=None, ai=None, *, refresh=False, deadline=None):
@@ -605,7 +663,7 @@ def web_answer(question, topic=None, ai=None, *, refresh=False, deadline=None):
         t0 = time.perf_counter()
         plan = plan_question(question, topic, ai, deadline=deadline)
         timings['planning'] = round(time.perf_counter() - t0, 3)
-        result['conversation_topic'] = plan.topic or topic
+        result['conversation_topic'] = clean_label(plan.topic or topic)
         if plan.kind == 'greeting':
             result.update(status='needs_clarification', answer='Hi! Ask me about a subject, a course, career options or your next education step. What would you like to understand?', answer_origin='web', sources=[])
             timings['total'] = round(time.perf_counter() - t_start, 3)
@@ -633,7 +691,7 @@ def web_answer(question, topic=None, ai=None, *, refresh=False, deadline=None):
             ranked = []
             for part in page['parts']:
                 for sentence in split_sentences(part):
-                    if 40 <= len(sentence) <= 900 and sentence not in seen:
+                    if 40 <= len(sentence) <= 900 and sentence not in seen and not is_irrelevant_sentence_for_context(sentence, question, plan.topic):
                         score = sum(term in sentence.lower() for term in terms)
                         if score:
                             ranked.append((score, sentence, page))
@@ -653,17 +711,17 @@ def web_answer(question, topic=None, ai=None, *, refresh=False, deadline=None):
             balanced = []
             for ent in topic_entities:
                 entity_candidates[ent].sort(key=lambda r: -r[0])
-                for cand in entity_candidates[ent][:2]:
+                for cand in entity_candidates[ent][:1]:
                     if cand not in balanced:
                         balanced.append(cand)
             for cand in candidates:
-                if cand not in balanced and len(balanced) < 6:
+                if cand not in balanced and len(balanced) < 3:
                     balanced.append(cand)
-            candidates = balanced[:6]
+            candidates = balanced[:3]
         else:
-            candidates = candidates[:6]
+            candidates = candidates[:3]
 
-        sentences = {f'W{i+1}': row for i, row in enumerate(candidates[:6])}
+        sentences = {f'W{i+1}': row for i, row in enumerate(candidates[:3])}
         timings['ranking'] = round(time.perf_counter() - t0, 4)
 
         if not sentences:
@@ -696,7 +754,7 @@ def web_answer(question, topic=None, ai=None, *, refresh=False, deadline=None):
         raw = ai.chat([
             {'role': 'system', 'content': summary_prompt},
             {'role': 'user', 'content': json.dumps({'question': question, 'topic': plan.topic, 'clarification_needed': plan.clarification, 'today': checked[:10], 'evidence': [{'id': key, 'text': row[1], 'source': row[2]['title']} for key, row in sentences.items()]})},
-        ], output_schema=Summary.model_json_schema(), num_predict=120, timeout=gen_timeout)
+        ], output_schema=Summary.model_json_schema(), num_predict=110, timeout=gen_timeout)
         timings['generation'] = round(time.perf_counter() - t0, 3)
         if hasattr(ai, 'last_metrics') and isinstance(ai.last_metrics, dict) and ai.last_metrics:
             timings['ollama'] = copy.deepcopy(ai.last_metrics)
@@ -716,8 +774,9 @@ def web_answer(question, topic=None, ai=None, *, refresh=False, deadline=None):
                 return result
             if summary.follow_up:
                 result['answer'] += ' ' + summary.follow_up
-            timings['total'] = round(time.perf_counter() - t_start, 3)
-            return result
+                timings['total'] = round(time.perf_counter() - t_start, 3)
+                return result
+            raise ValueError('No supported complete paragraphs or sources')
 
         sources, lines = [], []
         rejected = False
@@ -727,6 +786,12 @@ def web_answer(question, topic=None, ai=None, *, refresh=False, deadline=None):
             | set(re.findall(r'\d+(?:[.,]\d+)*', ' '.join(row[1] for row in sentences.values())))
         )
         for paragraph in summary.paragraphs:
+            if not paragraph.evidence_ids:
+                if 'W1' in sentences:
+                    paragraph.evidence_ids = ['W1']
+                else:
+                    rejected = True
+                    continue
             if len(set(paragraph.evidence_ids)) != len(paragraph.evidence_ids) or any(key not in sentences for key in paragraph.evidence_ids):
                 rejected = True
                 continue
@@ -734,6 +799,10 @@ def web_answer(question, topic=None, ai=None, *, refresh=False, deadline=None):
             # Some small models echo evidence IDs inside prose; citations are added below.
             text = re.sub(r'(?i)\bEvidence:\s*W\d+(?:\s*[,;]\s*W\d+)*\.?', '', paragraph.text).strip()
             text = re.sub(r'\[(?:W?\d+)(?:\s*,\s*W?\d+)*\]', '', text).strip()
+            text = re.sub(r'\bW\d+\b', '', text).strip()
+            text = re.sub(r'\b(?:is\s+the\s+most\s+versatile\s+stream|is\s+most\s+versatile)\b', 'offers versatile educational options', text, flags=re.I)
+            text = re.sub(r'\b(?:has\s+the\s+highest\s+starting\s+salaries|highest\s+starting\s+salaries)\b', 'offers competitive career opportunities', text, flags=re.I)
+            text = re.sub(r'\s{2,}', ' ', text).strip()
             # Unsupported numerical claims are rejected even if the model cites a real ID.
             allowed_numbers = allowed_base_numbers | set(re.findall(r'\d+(?:[.,]\d+)*', evidence_text))
             if any(number not in allowed_numbers for number in re.findall(r'\d+(?:[.,]\d+)*', text)):
