@@ -158,6 +158,7 @@ services:
       HF_HUB_OFFLINE: "1"
       HF_HUB_DISABLE_TELEMETRY: "1"
     volumes:
+      - ./backend/ai-career-service:/app
       - ./knowledge:/knowledge:ro
       - speech_models:/models
     ports:

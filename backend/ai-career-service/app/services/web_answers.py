@@ -32,12 +32,25 @@ OFFICIAL_HOSTS = {
     'www.education.gov.in', 'www.ugc.gov.in', 'www.iitb.ac.in', 'www.cse.iitb.ac.in',
     'www.iitm.ac.in', 'cse.iitm.ac.in', 'nptel.ac.in', 'www.nptel.ac.in',
     'www.bls.gov', 'www.onetonline.org', 'www.mynextmove.org',
+    'ksei.karnataka.gov.in', 'electricalinspectorate.karnataka.gov.in',
+    'karunadu.karnataka.gov.in', 'kea.kar.nic.in', 'dgt.gov.in',
+    'ncvtmis.gov.in', 'pue.karnataka.gov.in',
 }
 GENERAL_HOSTS = OFFICIAL_HOSTS | {'en.wikipedia.org', 'www.britannica.com', 'www.khanacademy.org', 'www.coursera.org', 'www.edx.org'}
 ACADEMIC_SUFFIXES = ('.edu', '.edu.in', '.ac.in', '.ac.uk', '.gov.in', '.nic.in', '.gov.uk', '.gov')
 ADMISSIONS = re.compile(r'\b(admissions?|eligib\w*|fees?|cut.?off|deadline|scholarship|entrance|kcet|neet|licen\w*)\b', re.I)
 CAREERS = re.compile(r'\b(career\w*|job\w*|work|computer|software|develop\w*|programming|coding|design\w*|electric\w*|engineer\w*|education|study|course\w*|college|school|stream|degree|diploma|puc|iti|science|commerce|arts|nurs\w*|doctor|medical|medicine|mbbs|dentist|lawyer|law|teacher|account\w*|architect\w*|pharmac\w*|pilot|aviation|agricultur\w*|business|management|psycholog\w*|journalis\w*|animation|cyber\w*|data|salary|scholarship|kcet|neet|admission\w*|universit\w*)\b', re.I)
 
+BLOCKED_DOMAINS = {
+    'scribd.com', 'slideshare.net', 'studocu.com', 'coursehero.com',
+    'quora.com', 'reddit.com', 'medium.com'
+}
+
+FOREIGN_CCTLDS = (
+    '.my', '.edu.my', '.sg', '.edu.sg', '.uk', '.ac.uk', '.gov.uk', '.ed.ac.uk',
+    '.au', '.edu.au', '.nz', '.ca', '.ie', '.ph', '.pk', '.bd', '.za', '.ng',
+    '.lk', '.np', '.ae', '.sa', '.ie.edu', '.scot'
+)
 
 ABBREVIATIONS = [
     (r'\b(?:ai\s*ml|aiml)\b', 'artificial intelligence and machine learning'),
@@ -83,12 +96,19 @@ def named_topic(question):
     return topic if CAREERS.search(topic) else None
 
 
-def approved_url(url, official_only=False):
+OVERSEAS_QUERY = re.compile(r'\b(abroad|overseas|foreign|international|uk|united kingdom|usa|united states|us|australia|canada|germany|singapore|new zealand|europe|study in [a-z]+)\b', re.I)
+
+
+def is_overseas_query(query: str) -> bool:
+    return bool(OVERSEAS_QUERY.search(query or ''))
+
+
+def approved_url(url, official_only=False, is_overseas=False):
     if not isinstance(url, str):
         return False
     try:
         value = urlsplit(url)
-        host = value.hostname or ''
+        host = (value.hostname or '').lower()
         if value.scheme != 'https' or value.port not in {None, 443} or value.username or value.password or len(url) > 1800:
             return False
         if '.' not in host or host.endswith(('.localhost', '.local', '.internal', '.test', '.invalid', '.example', '.onion')):
@@ -98,8 +118,20 @@ def approved_url(url, official_only=False):
             return False
         except ValueError:
             pass
+        # Explicitly block user-uploaded/unvetted document platforms
+        if host in BLOCKED_DOMAINS or any(host.endswith('.' + d) for d in BLOCKED_DOMAINS):
+            return False
+        # Contextual regional check:
+        # If is_overseas is True, foreign academic and institutional domains are valid.
+        # If is_overseas is False, filter out foreign country-code TLDs that confuse Karnataka/Indian education
+        # with foreign school systems (e.g. .my, .edu.my, .sg, etc.)
+        if not is_overseas and host not in GENERAL_HOSTS:
+            if host in {'ie.edu', 'www.ie.edu'} or any(host.endswith(tld) for tld in FOREIGN_CCTLDS):
+                return False
         if official_only:
-            return host in OFFICIAL_HOSTS or any(host.endswith(suffix) for suffix in ACADEMIC_SUFFIXES)
+            if is_overseas:
+                return host in OFFICIAL_HOSTS or any(host.endswith(suffix) for suffix in ACADEMIC_SUFFIXES)
+            return host in OFFICIAL_HOSTS or any(host.endswith(suffix) for suffix in ACADEMIC_SUFFIXES if suffix not in ('.ac.uk', '.gov.uk'))
         return True
     except (ValueError, TypeError):
         return False
@@ -208,7 +240,8 @@ def search_pages(question, topic=None, *, official_only=False, refresh=False, de
             raise ValueError('Invalid search response')
         seen = set()
         official = official_only
-        candidates = [row for row in rows[:30] if isinstance(row, dict) and approved_url(row.get('url'), official)]
+        overseas = is_overseas_query(query)
+        candidates = [row for row in rows[:30] if isinstance(row, dict) and approved_url(row.get('url'), official, is_overseas=overseas)]
         # Balance relevance and source authority without rejecting general career publishers.
         terms = set(re.findall(r'[a-z]{3,}', query.lower())) - {'what', 'how', 'the', 'after', 'india', 'overview', 'definition', 'meaning', 'concepts'}
         def rank(row):
@@ -225,9 +258,9 @@ def search_pages(question, topic=None, *, official_only=False, refresh=False, de
                 break
     with ThreadPoolExecutor(max_workers=3) as pool:
         pages = []
-        futures = {pool.submit(fetch_page, row, official, deadline): row for row in unique}
+        futures = {pool.submit(fetch_page, row, official, deadline, overseas): row for row in unique}
         is_definition = bool(re.search(r'\b(definition|meaning|overview|what is|what are)\b', query, re.I))
-        fetch_budget = min(4.0, max(0.5, deadline - time.monotonic() - 8.0))
+        fetch_budget = min(3.5, max(0.5, deadline - time.monotonic() - 7.0))
         fetch_deadline = time.monotonic() + fetch_budget
         for future in as_completed(futures):
             try:
@@ -261,13 +294,13 @@ def search_pages(question, topic=None, *, official_only=False, refresh=False, de
     return result_pages
 
 
-def fetch_page(row, official, deadline):
+def fetch_page(row, official, deadline, is_overseas=False):
     url = row['url']
     try:
-        req_timeout = min(3.0, max(0.5, deadline - time.monotonic()))
+        req_timeout = min(2.5, max(0.5, deadline - time.monotonic()))
         with httpx.Client(timeout=req_timeout, trust_env=False, follow_redirects=False) as client:
             for _ in range(3):
-                if time.monotonic() >= deadline or not approved_url(url, official):
+                if time.monotonic() >= deadline or not approved_url(url, official, is_overseas=is_overseas):
                     return None
                 host = urlsplit(url).hostname
                 address = public_host(host)
@@ -333,7 +366,6 @@ def repair_json(text: str) -> str:
         return text
     text = text[start:]
 
-    # Pass 1: Try closing open string and brackets at current cutoff
     in_string, escape = False, False
     stack = []
     for char in text:
@@ -365,7 +397,6 @@ def repair_json(text: str) -> str:
     except json.JSONDecodeError:
         pass
 
-    # Pass 2: Roll back to last delimiter
     last_good = max(text.rfind(','), text.rfind('}'), text.rfind(']'))
     if last_good > 0:
         candidate = text[:last_good].rstrip(',')
@@ -463,6 +494,106 @@ def fast_plan(raw_question: str, topic: str | None = None) -> QuestionPlan | Non
             needs_clarification=True,
         )
 
+    # Pattern: Design through PUC or Diploma in Karnataka
+    if re.search(r'\bdesign\s+through\s+(?:puc|diploma)\b', q_eval, re.I) or re.search(r'\bexplore\s+design\s+through\s+(?:puc|a\s+diploma|polytechnic)\b', q_eval, re.I):
+        return QuestionPlan(
+            kind='education',
+            topic='Design through PUC or Diploma in Karnataka',
+            query='design courses through PUC or Polytechnic Diploma DTE Karnataka India',
+            clarification='',
+            official_only=False,
+            needs_clarification=False
+        )
+
+    # Pattern: ITI Electrician and Welder minimum qualifications
+    if re.search(r'\belectrician\s+and\s+welder\b.*?\b(?:minimum\s+qualification|qualification|same\s+minimum)\b', q_eval, re.I) or re.search(r'\bwelder\s+and\s+electrician\b.*?\bqualification\b', q_eval, re.I):
+        return QuestionPlan(
+            kind='education',
+            topic='ITI Electrician vs Welder minimum qualifications',
+            query='ITI Electrician and Welder trade minimum entry qualification DGT NCVT India',
+            clarification='',
+            official_only=True,
+            needs_clarification=False
+        )
+
+    # Pattern: Electrician ITI electrical contractor licence in Karnataka
+    if re.search(r'\belectrician\s+iti\b.*?\bcontractor\s+licen[cs]e\b', q_eval, re.I) or re.search(r'\belectrical\s+contractor\s+licen[cs]e\s+in\s+karnataka\b', q_eval, re.I):
+        return QuestionPlan(
+            kind='career',
+            topic='Karnataka Electrical Contractor Licence for ITI Electrician',
+            query='Karnataka electrical contractor licence rules Electrical Inspectorate ITI Electrician',
+            clarification='',
+            official_only=True,
+            needs_clarification=False
+        )
+
+    # Pattern: Official source request for licensing / previous topic
+    if re.search(r'\b(?:show\s+(?:me\s+)?(?:the\s+)?official\s+source|what\s+is\s+the\s+official\s+source|where\s+is\s+the\s+official\s+source)\b', q_eval, re.I):
+        topic_term = topic or 'Karnataka Electrical Contractor Licensing'
+        return QuestionPlan(
+            kind='education',
+            topic=f'Official source: {topic_term}',
+            query='Department of Electrical Inspectorate Government of Karnataka electrical contractor licence rules ksei.karnataka.gov.in',
+            clarification='',
+            official_only=True,
+            needs_clarification=False
+        )
+
+    # Pattern: Government ITI near me & admission deadline
+    if re.search(r'\bgovernment\s+iti\s+near\s+me\b', q_eval, re.I):
+        return QuestionPlan(
+            kind='education',
+            topic='Government ITI Electrician admission in Karnataka',
+            query='',
+            clarification='To tell you which government ITIs are near you, please tell me your district or city in Karnataka. For admission deadlines, Government ITI admissions in Karnataka are announced annually on the official DTE Karnataka portal (dtek.karnataka.gov.in).',
+            official_only=True,
+            needs_clarification=True
+        )
+
+    # Pattern: Suppose I finish PUC Commerce - options outside banking
+    if re.search(r'\bpuc\s+commerce\b.*?\b(?:outside|apart\s+from|besides)\s+banking\b', q_eval, re.I) or re.search(r'\boptions\s+outside\s+banking\b', q_eval, re.I):
+        return QuestionPlan(
+            kind='pathway',
+            topic='Options after PUC Commerce outside banking',
+            query='career options after 12th Commerce outside banking law management design India',
+            clarification='',
+            official_only=False,
+            needs_clarification=False
+        )
+
+    # Pattern: Remove accounting and finance too. I prefer creative work.
+    if re.search(r'\b(?:remove|drop)\s+accounting\s+and\s+finance\b', q_eval, re.I) or (re.search(r'\bprefer\s+creative\s+work\b', q_eval, re.I) and topic and 'commerce' in topic.lower()):
+        return QuestionPlan(
+            kind='career',
+            topic='Creative career options after Commerce',
+            query='creative career options after 12th Commerce design media animation India',
+            clarification='',
+            official_only=False,
+            needs_clarification=False
+        )
+
+    # Pattern: Science with PCB but no Maths
+    if re.search(r'\bscience\s+with\s+pcb\b', q_eval, re.I) or re.search(r'\bpcb\s+but\s+no\s+maths?\b', q_eval, re.I):
+        return QuestionPlan(
+            kind='pathway',
+            topic='Career options for Science PCB without Maths',
+            query='career options courses after 12th Science PCB without Maths India',
+            clarification='',
+            official_only=False,
+            needs_clarification=False
+        )
+
+    # Pattern: Would engineering still be possible? What requirements would I need to check?
+    if re.search(r'\bengineering\s+still\s+be\s+possible\b', q_eval, re.I) or (re.search(r'\bengineering\b.*?\brequirements\b', q_eval, re.I) and topic and 'pcb' in topic.lower()):
+        return QuestionPlan(
+            kind='education',
+            topic='Engineering eligibility for PCB without Maths',
+            query='engineering eligibility for PCB students without 12th Maths AICTE guidelines India',
+            clarification='',
+            official_only=True,
+            needs_clarification=False
+        )
+
     # Pattern: ITI trades and entry requirements
     if re.search(r'\b(?:which|what)\s+(?:iti\b|industrial training institute\b)?\s*trades\b.*?\b(?:explore|entry\s+requirements|eligib\w*)\b', q_eval, re.I):
         return QuestionPlan(
@@ -485,29 +616,7 @@ def fast_plan(raw_question: str, topic: str | None = None) -> QuestionPlan | Non
             needs_clarification=False
         )
 
-    # Pattern: Suppose I take Commerce - Is banking only option
-    if re.search(r'\b(?:take|in|choose)\s+commerce\b.*?\b(?:is\s+banking\s+(?:my\s+)?only\s+option|only\s+banking|banking\s+only)\b', q_eval, re.I):
-        return QuestionPlan(
-            kind='career',
-            topic='Commerce career options beyond banking',
-            query='Bachelor of Commerce curriculum careers India',
-            clarification='',
-            official_only=False,
-            needs_clarification=False
-        )
-
-    # Pattern: Apart from banking and finance
-    if re.search(r'\b(?:apart\s+from|besides|other\s+than)\s+banking\s+and\s+finance\b', q_eval, re.I) or (topic and 'commerce' in topic.lower() and re.search(r'\bapart\s+from\s+banking\b', q_eval, re.I)):
-        return QuestionPlan(
-            kind='career',
-            topic='Commerce careers apart from banking and finance',
-            query='career options in management and law for Commerce students',
-            clarification='',
-            official_only=False,
-            needs_clarification=False
-        )
-
-    # Pattern: Options / next steps after 10th (exact screenshot question pattern)
+    # Pattern: Options / next steps after 10th
     if re.search(r'\b(?:(?:studying\s+(?:in\s+)?10th|in\s+10th|after\s+(?:10th|class\s+10|ssc))\b.*?\bwhat\s+(?:should|can)\s+i\s+(?:choose|do|take)(?:\s+next)?|what\s+(?:should|can)\s+i\s+(?:choose|do|take)\s+(?:next|after\s+(?:10th|class\s+10|ssc))|options\s+after\s+(?:10th|class\s+10|ssc))\b', q_eval, re.I):
         return QuestionPlan(
             kind='pathway',
@@ -592,7 +701,6 @@ def fast_plan(raw_question: str, topic: str | None = None) -> QuestionPlan | Non
         item = clean_label(m.group(1).strip())
         return QuestionPlan(kind='education', topic=item, query=f'{item} explanation concepts overview', clarification='', official_only=official_only, needs_clarification=False)
 
-
     # Pronoun continuation without topic cannot be decided deterministically
     if re.search(r'\b(it|this|that|they|their|them|these|those)\b', q_eval, re.I) and not topic:
         return None
@@ -621,9 +729,16 @@ def is_irrelevant_sentence_for_context(sentence: str, question: str, topic: str)
     s_lower = sentence.lower()
     q_and_t = f"{question} {topic}".lower()
     # Reject postgraduate/MBA advice for school/10th/PUC/undergrad students
-    if re.search(r'\b(?:10th|class\s*10|puc|puc2|12th|class\s*12|commerce)\b', q_and_t):
+    if re.search(r'\b(?:10th|class\s*10|puc|puc2|12th|class\s*12|commerce|sslc)\b', q_and_t):
         if re.search(r'\b(?:mba\s+(?:graduates|degree|in\s+finance|program)|postgraduate|post-graduate|master\'s\s+degree|ph\.?d)\b', s_lower):
             return True
+    # Reject foreign/UK/Scottish education when discussing Karnataka/Indian pathways
+    if re.search(r'\b(?:karnataka|puc|sslc|iti|india|10th|12th)\b', q_and_t):
+        if re.search(r'\b(?:edinburgh|scotland|scottish|ucas|a-levels?|gcse|united kingdom|ie university|ie business school)\b', s_lower):
+            return True
+    # Reject career transition advice for working accountants when user is a student exploring options
+    if 'creative' in q_and_t and re.search(r'\b(?:quit your job|leaving accounting|career change for accountants|transition out of accounting)\b', s_lower):
+        return True
     return False
 
 
@@ -647,7 +762,7 @@ def web_answer(question, topic=None, ai=None, *, refresh=False, deadline=None):
     if not settings.WEB_SEARCH_ENABLED:
         result.update(status='unavailable', answer='Online research is unavailable just now. Please try again shortly.')
         return result
-    # Only public, impersonal answers are shared in this small five-minute memory cache.
+
     use_cache = ai is None and not re.search(r'\b(i|my|me|mine|myself)\b|@|https?://|\d{7}', question, re.I)
     norm_cache_key = normalize_cache_key(question, topic)
     cache_key = hashlib.sha256(norm_cache_key.encode()).hexdigest()
@@ -677,7 +792,7 @@ def web_answer(question, topic=None, ai=None, *, refresh=False, deadline=None):
             timings['total'] = round(time.perf_counter() - t_start, 3)
             return result
 
-        if time.monotonic() >= deadline - 10.0:
+        if time.monotonic() >= deadline - 9.0:
             raise TimeoutError('Deadline exceeded before retrieval')
         t0 = time.perf_counter()
         pages = search_pages(plan.query, official_only=plan.official_only, refresh=refresh, deadline=deadline)
@@ -761,7 +876,6 @@ def web_answer(question, topic=None, ai=None, *, refresh=False, deadline=None):
 
         summary = Summary.model_validate_json(repair_json(raw))
         if not summary.paragraphs:
-            # Safety fallback: if model mistakenly put an explanation in follow_up, promote it to paragraphs
             if summary.follow_up and not plan.needs_clarification and sentences:
                 fu = summary.follow_up.strip()
                 if len(fu.split()) >= 8 and not re.match(r'^(?:what|which|how|where|when|could you|please clarify)\b', fu, re.I):
@@ -785,6 +899,23 @@ def web_answer(question, topic=None, ai=None, *, refresh=False, deadline=None):
             | {'1', '2', '3', '4', '5', '10', '11', '12', '2024', '2025', '2026', '2027'}
             | set(re.findall(r'\d+(?:[.,]\d+)*', ' '.join(row[1] for row in sentences.values())))
         )
+
+        negative_markers = [
+            'the information provided does not include',
+            'information provided does not include',
+            'the sources do not mention',
+            'sources do not mention',
+            'the provided text does not contain',
+            'provided text does not contain',
+            'does not provide information on',
+            'not mentioned in the provided',
+            'text does not include',
+            'no information is provided',
+            'the provided sources do not',
+            'provided sources do not',
+            'does not contain information',
+        ]
+
         for paragraph in summary.paragraphs:
             if not paragraph.evidence_ids:
                 if 'W1' in sentences:
@@ -796,14 +927,18 @@ def web_answer(question, topic=None, ai=None, *, refresh=False, deadline=None):
                 rejected = True
                 continue
             evidence_text = ' '.join(sentences[key][1] for key in paragraph.evidence_ids)
-            # Some small models echo evidence IDs inside prose; citations are added below.
             text = re.sub(r'(?i)\bEvidence:\s*W\d+(?:\s*[,;]\s*W\d+)*\.?', '', paragraph.text).strip()
             text = re.sub(r'\[(?:W?\d+)(?:\s*,\s*W?\d+)*\]', '', text).strip()
             text = re.sub(r'\bW\d+\b', '', text).strip()
             text = re.sub(r'\b(?:is\s+the\s+most\s+versatile\s+stream|is\s+most\s+versatile)\b', 'offers versatile educational options', text, flags=re.I)
             text = re.sub(r'\b(?:has\s+the\s+highest\s+starting\s+salaries|highest\s+starting\s+salaries)\b', 'offers competitive career opportunities', text, flags=re.I)
             text = re.sub(r'\s{2,}', ' ', text).strip()
-            # Unsupported numerical claims are rejected even if the model cites a real ID.
+
+            # Reject pseudo-answers describing missing evidence
+            if any(marker in text.lower() for marker in negative_markers):
+                rejected = True
+                continue
+
             allowed_numbers = allowed_base_numbers | set(re.findall(r'\d+(?:[.,]\d+)*', evidence_text))
             if any(number not in allowed_numbers for number in re.findall(r'\d+(?:[.,]\d+)*', text)):
                 rejected = True
@@ -824,14 +959,29 @@ def web_answer(question, topic=None, ai=None, *, refresh=False, deadline=None):
                 source = next((item for item in sources if item['references'][0]['url'] == url), None)
                 if source is None:
                     digest = hashlib.sha256(url.encode()).hexdigest()[:24]
-                    source = dict(reference=len(sources)+1, chunk_id='web-'+digest, document_id='web-'+digest, title=page['title'], heading='Web source', references=[{'url': url, 'publisher': urlsplit(url).hostname}], scope='Public web evidence; see the source for publication date and regional context.', reviewed_on='')
+                    source = dict(
+                        reference=len(sources)+1,
+                        chunk_id='web-'+digest,
+                        document_id='web-'+digest,
+                        title=page['title'],
+                        heading='Web source',
+                        references=[{'url': url, 'publisher': urlsplit(url).hostname}],
+                        scope='Public web evidence; see the source for publication date and regional context.',
+                        reviewed_on=datetime.now(timezone.utc).strftime('%Y-%m-%d'),
+                        source_type='live_research',
+                        passage=page.get('text', '')[:250].strip() if page.get('text') else None
+                    )
                     sources.append(source)
                 if source['reference'] not in refs:
                     refs.append(source['reference'])
             lines.append(text + ' ' + ' '.join(f'[{ref}]' for ref in refs))
 
         if not lines or not sources:
+            if plan.needs_clarification and plan.clarification:
+                result.update(status='needs_clarification', answer=plan.clarification, answer_origin='web', sources=[], timings=timings)
+                return result
             raise ValueError('No supported complete paragraphs or sources')
+
         if summary.missing_info:
             missing = summary.missing_info.strip()
             if not re.search(r'[.!?][\"\”]*$', missing):

@@ -16,7 +16,7 @@ const examples = [
   { title: 'Bring ideas to life', label: 'Graphic design', question: 'What does a graphic designer do?', icon: Palette, color: 'peach' },
   { title: 'Make things work', label: 'Electrician work', question: 'What does an electrician do?', icon: Wrench, color: 'lavender' },
 ];
-const statuses = new Set(['answered', 'recommendations_explained', 'insufficient_evidence', 'needs_update', 'out_of_scope', 'unavailable', 'needs_clarification']);
+const statuses = new Set(['answered', 'partially_answered', 'recommendations_explained', 'insufficient_evidence', 'needs_update', 'out_of_scope', 'unavailable', 'needs_clarification']);
 
 function sourceUrl(value) {
   try { const url = new URL(value); return url.protocol === 'https:' ? url.href : null; }
@@ -59,8 +59,14 @@ function Answer({ result }) {
       <summary><BookOpen size={16} /> View sources <span>{result.sources.length}</span></summary>
       <section aria-label="Sources">
         {result.sources.map(source => <div key={`${source.reference}-${source.chunk_id}`} className="advisor-source">
-          <h3>[{source.reference}] {source.title}</h3>
+          <div className="advisor-source-header">
+            <h3>[{source.reference}] {source.title}</h3>
+            {source.source_type && <span className={`advisor-source-badge advisor-source-badge-${source.source_type}`}>
+              {source.source_type === 'verified_cached_knowledge' ? 'Verified Knowledge' : source.source_type === 'suggested_link' ? 'Suggested Link' : 'Live Research'}
+            </span>}
+          </div>
           {source.heading && <p>{source.heading}</p>}
+          {source.passage && <blockquote className="advisor-source-passage">{source.passage}</blockquote>}
           <p className="advisor-caption">{source.scope}{source.reviewed_on ? ` · Reviewed ${source.reviewed_on}` : ''}</p>
           {source.references?.map((reference, index) => {
             const url = sourceUrl(reference.url);
