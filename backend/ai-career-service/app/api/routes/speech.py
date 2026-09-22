@@ -14,7 +14,7 @@ async def transcribe(request: Request, claims=Depends(get_current_user_claims)):
     if request.headers.get('content-type', '').split(';')[0].lower() not in AUDIO_TYPES:
         raise HTTPException(415, 'Use a WebM, Ogg, MP4 or WAV audio recording.')
     if not capacity.acquire(blocking=False):
-        raise HTTPException(429, 'Local AI is busy. Please retry shortly.', headers={'Retry-After': '10'})
+        raise HTTPException(429, 'Voice typing is busy. Please retry shortly.', headers={'Retry-After': '10'})
     try:
         async def read_audio():
             data = bytearray()

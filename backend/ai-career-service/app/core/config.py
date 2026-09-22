@@ -14,10 +14,14 @@ class Settings(BaseSettings):
     STUDENT_SERVICE_URL: str = "http://localhost:8002"
     ROADMAP_SERVICE_URL: str = "http://localhost:8005"
 
-    # Local-only provider. No paid fallback.
-    OLLAMA_BASE_URL: str = "http://localhost:11434"
-    OLLAMA_TEXT_MODEL: str = "qwen3:1.7b"
+    # Text generation uses Ollama Cloud. Embeddings remain separate because the
+    # pgvector corpus is indexed with the 1024-dimensional local model below.
+    OLLAMA_GENERATION_BASE_URL: str = "https://ollama.com"
+    OLLAMA_CLOUD_API_KEY: str = ""
+    OLLAMA_TEXT_MODEL: str = "gpt-oss:120b-cloud"
+    OLLAMA_EMBEDDING_BASE_URL: str = "http://localhost:11434"
     OLLAMA_EMBEDDING_MODEL: str = "qwen3-embedding:0.6b"
+    AI_REQUEST_DEADLINE_SECONDS: float = 60.0
     WEB_SEARCH_ENABLED: bool = False
     SEARXNG_BASE_URL: str = "http://searxng:8080"
 

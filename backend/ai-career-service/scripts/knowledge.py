@@ -7,7 +7,7 @@ from pathlib import Path
 
 from app.db.session import engine
 from app.services.knowledge import load_documents, chunk_document, ingest, retrieve, model_digest
-from app.services.local_ai import LocalAI
+from app.services.local_ai import get_ai
 
 
 def main():
@@ -33,7 +33,7 @@ def main():
                   "chunks": sum(len(chunk_document(d)) for d in docs),
                   "unmapped": [d['metadata']['file'] for d in docs if not d['metadata']['pathway_ids']]}
         if args.command == "ingest":
-            ai = LocalAI()
+            ai = get_ai()
             digest = model_digest(ai)
             with engine.begin() as connection:
                 result.update(ingest(connection, docs, ai, digest))

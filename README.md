@@ -8,9 +8,33 @@ Udaan AI helps students explore education and career options. Students can compl
 
 You do not need to understand all eight services before running the website. Start with **Section 1**.
 
+## AI Model Architecture
+
+The AI Career Service uses separate models for separate jobs. Its text generation runs in Ollama Cloud, so UdaanAI does not download or load a large generation model on the machine that runs the application.
+
+```text
+                 UDAANAI
+                    |
+       +------------+------------+
+       |            |            |
+      LLM       Embeddings       STT
+       |            |            |
+gpt-oss:120b-  qwen3-embedding  whisper-tiny-en
+cloud           :0.6b             |
+       |            |            local faster-whisper
+ Ollama Cloud   local Ollama
+```
+
+- **LLM:** `gpt-oss:120b-cloud` generates grounded advisor responses through Ollama Cloud. It needs network access and Ollama Cloud authentication. Usage limits or credits may apply.
+- **Embeddings:** `qwen3-embedding:0.6b` stays local for now. PostgreSQL stores 1024-dimensional vectors made by this model, so replacing it requires a planned re-index.
+- **Speech to text:** `whisper-tiny-en` stays local through faster-whisper. It is a separate speech model and is not replaced by the LLM.
+
+Set `OLLAMA_CLOUD_API_KEY` in your untracked `.env` file. Never place it in frontend code or commit it. See [AI model setup](docs/local-ai-setup.md) for the exact startup steps.
+
 ## Find what you need
 
 - [1. Run your existing project](#1-run-your-existing-project)
+- [AI Model Architecture](#ai-model-architecture)
 - [2. Stop, restart and update it](#2-stop-restart-and-update-it)
 - [3. Understand the basic terms](#3-understand-the-basic-terms)
 - [4. See how the services connect](#4-see-how-the-services-connect)

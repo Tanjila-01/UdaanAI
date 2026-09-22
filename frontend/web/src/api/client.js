@@ -348,9 +348,9 @@ export const getWorkshopFeedbackLinkApi = async (requestId) => {
   const response = await apiClient.get(`/api/v1/workshops/admin/requests/${encodeURIComponent(requestId)}/feedback-link`);
   return response.data;
 };
-// Local inference and research bounded by 30-second end-to-end deadline.
+// Cloud generation and research use a bounded server-side deadline.
 export const getCareerAnswerApi = async (data, { signal } = {}) => {
-  const response = await apiClient.post('/api/v1/career-intelligence/answers', data, { timeout: 30000, signal });
+  const response = await apiClient.post('/api/v1/career-intelligence/answers', data, { timeout: 75000, signal });
   return response.data;
 };
 

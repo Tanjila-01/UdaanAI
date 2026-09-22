@@ -1,6 +1,6 @@
 # Career recommendations — Suggestions from rules
 
-[← Back to the project guide](../../README.md) · Port **8004** · Updated **9 September 2026**
+[← Back to the project guide](../../README.md) · Port **8004** · Updated **22 September 2026**
 
 ## 1. What is this service for?
 
@@ -32,8 +32,9 @@ Three sources feed one recommendation calculation. These arrows show data inputs
 - Applies programmed scoring and filtering rules.
 - Saves suggestions, ranks, explanation strings and their source identifiers.
 - Returns the most recently saved recommendation record.
+- Provides source-grounded career answers and student-owned answer history through its advisor routes.
 
-**What it does not do:** There is no language-model integration here yet. The name ai-career-service does not mean ChatGPT or another AI provider generates the current suggestions.
+**Recommendation boundary:** the cloud language model can write grounded advisor explanations, but it does not generate, re-rank or change assessment recommendations. Recommendation scores remain programmed rules.
 
 ## 4. Which parts does it connect to?
 
@@ -44,6 +45,9 @@ Three sources feed one recommendation calculation. These arrows show data inputs
 | Assessment service | Supplies interest result |
 | Roadmap service | Supplies pathway metadata |
 | Database: career_ai area | Stores recommendation history |
+| Ollama Cloud | Generates advisor text with `gpt-oss:120b-cloud` |
+| Local Ollama | Generates the existing 1024-dimensional retrieval embeddings |
+| Local faster-whisper | Transcribes English voice input |
 
 ## 5. What information does it save?
 
@@ -93,7 +97,7 @@ Install this service's requirements in that host environment first. Host and ima
 
 ## 7. What still needs attention?
 
-Some predefined reasons contain strong aptitude or educational-route claims that need review. Stale recommendations and pathway relationships need improvement. A future grounded AI explanation feature must be built and evaluated separately.
+Some predefined reasons contain strong aptitude or educational-route claims that need review. Stale recommendations and pathway relationships need improvement. Cloud-answer quality, cost and failure behavior also need ongoing evaluation.
 
 ## 8. Developer reference — read when you need more detail
 
@@ -121,6 +125,8 @@ All paths below are inside [backend/ai-career-service](../../backend/ai-career-s
 | --- | --- |
 | [app/api/routes/recommendation.py](../../backend/ai-career-service/app/api/routes/recommendation.py) | Receives recommendation requests |
 | [app/services/recommendation_service.py](../../backend/ai-career-service/app/services/recommendation_service.py) | Reads inputs and applies scoring rules |
+| [app/services/local_ai.py](../../backend/ai-career-service/app/services/local_ai.py) | Calls Ollama Cloud for text generation and local Ollama for embeddings |
+| [app/services/speech.py](../../backend/ai-career-service/app/services/speech.py) | Transcribes short English recordings with the retained local speech model |
 | [app/models/recommendation.py](../../backend/ai-career-service/app/models/recommendation.py) | Describes results and suggestion tables |
 | [app/schemas/recommendation.py](../../backend/ai-career-service/app/schemas/recommendation.py) | Describes API responses |
 | [requirements.txt](../../backend/ai-career-service/requirements.txt) | Lists installed dependencies; migration tool is currently missing |
@@ -143,11 +149,9 @@ These labels describe the rule output, not a calibrated probability of career su
 
 Configuration includes database/JWT settings and `STUDENT_SERVICE_URL`, `ASSESSMENT_SERVICE_URL`, `ROADMAP_SERVICE_URL`. Requests to those services forward the user's access token. A profile and completed assessment are prerequisites.
 
-### Fresh-installation gap
+### Fresh-installation note
 
-This service has an initial Alembic migration for its tables, but its `requirements.txt` does **not** declare Alembic. A fresh image may report `No module named alembic`. Resolve the dependency and verify database setup before claiming a working clean installation.
-
-`app/main.py` does not create these tables at startup. Reading the latest saved result also does not regenerate it automatically after a profile change.
+Run the Alembic migrations before relying on existing recommendation or advisor-history tables. `app/main.py` does not create these tables at startup. Reading the latest saved result also does not regenerate it automatically after a profile change.
 
 ---
 

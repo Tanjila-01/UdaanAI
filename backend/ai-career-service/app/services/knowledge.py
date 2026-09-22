@@ -11,7 +11,7 @@ from sqlalchemy import text
 
 from app.core.config import settings
 from app.core.stage_config import STAGE_CONFIG
-from app.services.local_ai import LocalAI
+from app.services.local_ai import get_ai
 
 RECIPE = "headings-char1200-v1-qwen-query-instruction"
 DIMENSIONS = 1024
@@ -98,10 +98,10 @@ def chunk_document(document):
 
 
 def model_digest(ai):
-    # Querying tags is local too. Never mix vectors from different model versions.
+    # Query local tags. Never mix vectors from different model versions.
     import httpx
     with httpx.Client(timeout=10, trust_env=False) as client:
-        response = client.get(ai.base_url + "/api/tags")
+        response = client.get(ai.embedding_base_url + "/api/tags")
         response.raise_for_status()
         for model in response.json()["models"]:
             if model["name"] == settings.OLLAMA_EMBEDDING_MODEL:
@@ -169,7 +169,7 @@ def retrieve(connection, query, *, ai=None, digest=None, category=None, stage=No
                            (region, {"Karnataka", "India", "general"})]:
         if value is not None and value not in allowed:
             raise ValueError("Unknown retrieval filter")
-    ai = ai or LocalAI()
+    ai = ai or get_ai()
     digest = digest or model_digest(ai)
     vector = vector_literal(ai.embed(["Instruct: Retrieve career and education information relevant to the question.\nQuery: " + query])[0])
     conditions = ["d.active", "c.embedding_model=:model", "c.model_digest=:digest", "c.recipe=:recipe"]

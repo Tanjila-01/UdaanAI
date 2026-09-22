@@ -120,7 +120,7 @@ export function useLocalVoiceInput(onTranscript) {
         } catch (failure) {
           if (active.current !== session) return;
           const status = failure.response?.status;
-          setError(status === 429 ? 'The local AI is busy. Please wait, then record again.'
+          setError(status === 429 ? 'Voice typing is busy. Please wait, then record again.'
             : status === 422 ? 'We could not hear a clear, short question. Please try again.'
             : 'Voice typing is unavailable. Please type your question or try recording again.');
         } finally {

@@ -38,7 +38,7 @@ Send a screenshot or describe the first issue you see. Full browser visual QA an
 
 - Verified India/Karnataka course, eligibility and admissions knowledge, with source review before ingestion.
 - Broader career-answer evaluation and coverage.
-- Kannada support after local model and voice suitability is verified.
+- Kannada support after suitable generation and voice support is verified.
 - Broader conversation memory beyond explicit saved-topic follow-ups.
 - Production load, security and data-retention review.
 
@@ -48,7 +48,7 @@ No paid provider or billing integration was introduced.
 
 The user confirmed Speak, Listen, Stop, desktop layout, phone-width layout and dark mode work on their device (13 September 2026).
 
-Fixed topic recognition for “What is graphic designing?” and plural designers. The running local AI returned a cited graphic-design duties answer for the exact screenshot question. Broad inputs “career exploration” and “what can you help” now offer concrete starting points rather than a missing-evidence message. Occupational answers remain sourced; course/admissions knowledge coverage is still limited.
+Fixed topic recognition for “What is graphic designing?” and plural designers. The advisor returned a cited graphic-design duties answer for the exact screenshot question. Broad inputs “career exploration” and “what can you help” now offer concrete starting points rather than a missing-evidence message. Occupational answers remain sourced; course/admissions knowledge coverage is still limited.
 
 Saved history now explains newest-first ordering, displays the shown range/count and only offers Earlier answers / More recent answers when another page exists. Each page holds up to 20 saved answers. Refresh reloads the current page; it does not regenerate answers. Reopen a question and use Get updated answer for fresh guidance.
 

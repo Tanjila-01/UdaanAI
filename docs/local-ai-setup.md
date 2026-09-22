@@ -1,47 +1,75 @@
-# Local AI setup (no API billing)
+# AI model setup
 
-Udaan uses Ollama in Docker for local text generation and embeddings. No account,
-API key or cloud fallback is configured. `OLLAMA_NO_CLOUD=1` disables cloud features.
-The host port is bound to localhost only. Models persist in `ollama_models`.
+Udaan sends career-answer generation to Ollama Cloud with `gpt-oss:120b-cloud`.
+It does not download `gpt-oss:120b` or any large local text-generation model. The
+small local Ollama container remains only for the existing 1024-dimensional
+`qwen3-embedding:0.6b` retrieval model. English voice input remains local through
+faster-whisper and `whisper-tiny-en`.
 
-From the project folder in PowerShell:
+## Recommended Docker setup
 
-```powershell
-docker compose up -d ollama
-docker compose exec ollama ollama pull qwen3:1.7b
-docker compose exec ollama ollama pull qwen3-embedding:0.6b
-docker compose up -d --build --no-deps ai-career-service
-docker compose exec -T ai-career-service python -m scripts.check_local_ai
-```
+1. Create an Ollama Cloud API key in your Ollama account. Put it only in the
+   untracked root `.env` file:
 
-Initial image/model downloads require internet and several GB of disk space.
-Inference uses local hardware and electricity. The small CPU model is a starting
-point for this 16 GB machine; assess English/Kannada quality before student use.
-Docker has about 8 GB available. One loaded model and one parallel request keep
-memory use modest. To free model memory, stop just Ollama:
+   ```text
+   OLLAMA_GENERATION_BASE_URL=https://ollama.com
+   OLLAMA_CLOUD_API_KEY=replace_with_your_key
+   OLLAMA_TEXT_MODEL=gpt-oss:120b-cloud
+   ```
 
-```powershell
-docker compose stop ollama
-```
+   Do not put this key in source code, `.env.example`, or frontend variables.
 
-This installs the provider foundation, not the completed student chat feature.
-Local knowledge ingestion and filtered retrieval have since been added; see
-[the retrieval guide](knowledge-retrieval.md). PostgreSQL now includes pgvector and
-additive knowledge tables; the existing student data was retained and backed up.
-Student-context integration, generated answers and the chat UI remain to be built.
+2. Start the services and install only the required local embedding model:
 
-Voice must also avoid paid APIs: use local Whisper for transcription and installed
-device voices for playback where available. These voice components are not yet
-installed or integrated. Kannada voice availability and recognition quality must be
-tested; do not promise Kannada playback until a suitable local voice is available.
+   ```powershell
+   docker compose up -d ollama
+   docker compose exec ollama ollama pull qwen3-embedding:0.6b
+   docker compose up -d --build
+   docker compose exec -T ai-career-service python -m scripts.check_local_ai
+   ```
 
-References: https://docs.ollama.com/docker and https://docs.ollama.com/faq
+   `scripts.check_local_ai` checks both the cloud text response and local embeddings.
+   It never pulls the local `gpt-oss:120b` model.
 
-## Verified on this computer, 12 September 2026
+## Ollama authentication
 
-- Ollama 0.34.0, pinned image digest in Compose.
-- Qwen3 1.7B text model and Qwen3 Embedding 0.6B downloaded successfully.
-- Backend smoke check returned a career answer and two 1024-dimensional vectors.
-- First short CPU answer took 14.6 seconds (not a production latency benchmark).
-- AI service test suite: 13 passed, including remote/cloud rejection and no fallback.
-- Existing AI service health endpoint passed after rebuilding.
+The Docker configuration uses the direct Ollama Cloud API. It requires
+`OLLAMA_CLOUD_API_KEY` because the AI Career Service runs in a container, separate
+from any Ollama sign-in on the host machine. This is the recommended setup for a
+shared or deployed service.
+
+For a developer-only alternative, run `ollama signin` on a host Ollama installation
+and set `OLLAMA_GENERATION_BASE_URL=http://host.docker.internal:11434` in the Docker
+environment. The signed-in host Ollama service can forward
+`gpt-oss:120b-cloud` requests without downloading its weights. Do not use this mode
+for a deployed service unless the host daemon and access controls are intentionally
+managed. Direct cloud API authentication is simpler and more portable.
+
+Official references: [Ollama Cloud](https://docs.ollama.com/cloud) and
+[Ollama authentication](https://docs.ollama.com/api/authentication).
+
+## Local models that remain
+
+- **Embeddings:** `qwen3-embedding:0.6b` remains local. The `career_ai.knowledge_chunks`
+  table holds 1024-dimensional vectors and records the model digest. Changing this
+  model needs a migration and complete re-index; do not mix vectors from different models.
+- **Speech to text:** `whisper-tiny-en` remains in the `speech_models` Docker volume.
+  It is loaded on CPU only during voice transcription. No cloud STT replacement is
+  implemented in this project.
+
+If the previous local text model is still present in the `ollama_models` volume, first
+verify a cloud answer and embedding retrieval. You may then remove that no-longer-used
+model with `docker compose exec ollama ollama rm <old-text-model>`. This deletes model
+data, so do it only after the verification checklist passes.
+
+## Troubleshooting
+
+- **Authentication failure:** confirm that `OLLAMA_CLOUD_API_KEY` is set in `.env`,
+  rebuild `ai-career-service`, and check that the key has Ollama Cloud access.
+- **Cloud model unavailable or usage limit:** check your Ollama account usage and the
+  configured model name. The required cloud model is `gpt-oss:120b-cloud`.
+- **Embedding search unavailable:** start the `ollama` container and ensure
+  `qwen3-embedding:0.6b` is installed. Do not point the embedding setting at the
+  generative cloud model.
+- **Voice typing unavailable:** verify the existing local speech model using the
+  [voice setup guide](local-voice.md). It is independent of Ollama Cloud.

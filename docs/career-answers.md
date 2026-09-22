@@ -1,7 +1,7 @@
 # Local career answers: first backend release
 
 `POST /api/v1/career-intelligence/answers` through the existing gateway. Requires the
-student's access token. No paid provider, API key or cloud fallback is used.
+student's access token. Text generation uses Ollama Cloud; the server keeps its API key outside source code.
 
 ## Explore a career
 
@@ -16,7 +16,7 @@ student's access token. No paid provider, API key or cloud fallback is used.
 
 The pathway filter is optional. Explore mode does not require a completed assessment
 and does not restrict questions to the student's saved recommendations. It searches
-verified knowledge and asks the local model to select relevant sentence IDs. The
+verified knowledge and asks the configured Ollama Cloud model to select relevant sentence IDs. The
 backend assembles those exact source sentences and attaches source references. It
 never displays a model-invented sentence or citation URL. This deliberately conservative,
 extractive design is not yet free-form conversational generation.
@@ -67,12 +67,12 @@ Statuses:
 
 | Status | Meaning |
 | --- | --- |
-| answered | Local model selected valid sentences; source references included. |
+| answered | The configured model selected valid, source-backed content; source references are included. |
 | recommendations_explained | Current saved results summarized; may have no external evidence. |
 | insufficient_evidence | Verified knowledge cannot support the requested topic. |
 | needs_update | Complete/update the profile, questionnaire or saved suggestions. |
 | out_of_scope | Ask an education/career question. |
-| unavailable | Local model, evidence validation, database or context service failed. |
+| unavailable | Ollama Cloud, evidence validation, database or context service failed. |
 
 Each source includes a numbered reference, chunk/document ID, title, section, original
 publisher URLs, jurisdiction, source scope and review date. The `[1]` markers in the
@@ -158,4 +158,4 @@ Remaining product work: broaden verified India/Karnataka course/admission knowle
 
 ## Web-search update, 14 September 2026
 
-The advisor now researches general education and career questions online first, using local inference and an internal SearXNG service. The source-mode dropdown and separate web-search button are removed. Saved assessment explanations stay local; seeded evidence is a fallback. The earlier usage-limit block is resolved. See [local web search](local-web-search.md) for current verification, privacy and limitations.
+The advisor now researches general education and career questions online first, using Ollama Cloud generation and an internal SearXNG service. The source-mode dropdown and separate web-search button are removed. Saved assessment explanations stay local; seeded evidence is a fallback. See [web search](local-web-search.md) for current verification, privacy and limitations.

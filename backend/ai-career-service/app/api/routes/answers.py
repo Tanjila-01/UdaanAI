@@ -52,7 +52,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/career-intelligence", tags=["Career answers"])
 capacity = BoundedSemaphore(1)
-SHARED_BACKEND_DEADLINE = 24.0
 
 
 class AnswerRequest(BaseModel):
@@ -122,9 +121,9 @@ def career_answer(request: AnswerRequest, claims=Depends(get_current_user_claims
                   credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
     t_req_start = time.perf_counter()
     req_id = str(uuid.uuid4())
-    req_deadline = time.monotonic() + SHARED_BACKEND_DEADLINE
+    req_deadline = time.monotonic() + settings.AI_REQUEST_DEADLINE_SECONDS
     if not capacity.acquire(blocking=False):
-        raise HTTPException(429, "Local AI is busy. Please retry shortly.", headers={"Retry-After": "10"})
+        raise HTTPException(429, "The AI service is busy. Please retry shortly.", headers={"Retry-After": "10"})
     wait_capacity = round(time.perf_counter() - t_req_start, 3)
 
     try:

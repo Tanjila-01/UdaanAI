@@ -2,7 +2,7 @@
 
 This phase implements evidence search. A subsequent [career-answer endpoint](career-answers.md)
 now provides AI-selected source sentences and summaries of saved recommendations.
-No paid API or model is used. The existing recommendation scoring is unchanged.
+Embeddings remain locally hosted; text generation is configured separately through Ollama Cloud. The existing recommendation scoring is unchanged.
 
 ## Storage and startup
 
@@ -75,7 +75,7 @@ not confidence or evidence sufficiency. This initial endpoint has no calibrated 
 threshold and can return weak neighbours. The future answer layer must check relevance
 and source scope and decline unsupported questions rather than treating every hit as an answer.
 
-A local provider/database failure returns 503; it never switches to a paid provider.
+A local embedding provider/database failure returns 503; it does not substitute a different embedding model.
 This is a protected development API; public rollout still needs rate limiting and
 answer-layer evaluation. Queries are not stored as conversation history by this feature.
 

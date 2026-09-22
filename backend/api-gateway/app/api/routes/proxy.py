@@ -213,9 +213,9 @@ async def _proxy_career(path: str, request: Request) -> Response:
     clean_path = f"/{path.lstrip('/')}" if path else ""
     target_url = f"{settings.AI_CAREER_SERVICE_URL.rstrip('/')}/career-intelligence{clean_path}"
     if clean_path.rstrip('/') == '/speech/transcribe' and request.method == 'POST':
-        return await forward_request(target_url, request, error_detail='Local voice typing is temporarily unavailable.', timeout=120.0)
+        return await forward_request(target_url, request, error_detail='Voice typing is temporarily unavailable.', timeout=120.0)
     if clean_path.rstrip('/') == "/answers" and request.method == "POST":
-        return await forward_request(target_url, request, error_detail="Local career answers are temporarily unavailable.", timeout=28.0)
+        return await forward_request(target_url, request, error_detail="UdaanAI could not connect to the AI inference service. Please try again shortly.", timeout=70.0)
     if clean_path.rstrip('/') == "/knowledge/search" and request.method == "POST":
         # Local CPU embeddings can need a cold model load; preserve existing timeouts elsewhere.
         return await forward_request(target_url, request, error_detail="AI Career service is temporarily unavailable.", timeout=200.0)

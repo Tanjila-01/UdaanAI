@@ -22,7 +22,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.core.config import settings
-from app.services.local_ai import LocalAI
+from app.services.local_ai import AIServiceError, get_ai
 from app.services.advisor_context import clean_label
 
 # Exact hosts only. Search results cannot direct requests into internal services.
@@ -772,7 +772,7 @@ def web_answer(question, topic=None, ai=None, *, refresh=False, deadline=None):
             if cached and time.monotonic() - cached[0] < CACHE_SECONDS:
                 return copy.deepcopy(cached[1])
     try:
-        ai = ai or LocalAI()
+        ai = ai or get_ai()
         if time.monotonic() >= deadline - 2.0:
             raise TimeoutError('Deadline exceeded before planning')
         t0 = time.perf_counter()
@@ -1007,6 +1007,10 @@ def web_answer(question, topic=None, ai=None, *, refresh=False, deadline=None):
                 _cache.move_to_end(cache_key)
                 while len(_cache) > 64:
                     _cache.popitem(last=False)
+        return result
+    except AIServiceError as exc:
+        timings['total'] = round(time.perf_counter() - t_start, 3)
+        result.update(status='unavailable', answer=str(exc), answer_origin='web', sources=[], timings=timings)
         return result
     except (httpx.TimeoutException, TimeoutError):
         timings['total'] = round(time.perf_counter() - t_start, 3)

@@ -28,9 +28,9 @@ def search_knowledge(request: SearchRequest, claims=Depends(get_current_user_cla
         # Deliberately no client-controlled draft flag. This endpoint returns evidence, not recommendations.
         matches = retrieve(db, **request.model_dump())
     except ValueError:
-        raise HTTPException(422, "Invalid search filters or local model configuration")
+        raise HTTPException(422, "Invalid search filters or embedding model configuration")
     except (httpx.HTTPError, SQLAlchemyError, KeyError):
-        raise HTTPException(503, "Local knowledge search is unavailable. Please try again later.")
+        raise HTTPException(503, "Knowledge search is unavailable. Please try again later.")
     return {
         "status": "matches_found" if matches else "no_verified_matches",
         "matches": matches,

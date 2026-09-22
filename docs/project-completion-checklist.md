@@ -9,12 +9,12 @@ Status date: 14 September 2026
 - [x] **Strict Citation Invariant**: Any answered response requires at least one verified internet source. Responses without sources cannot have status `answered`.
 - [x] **Recommendation Separation Maintained**: Interest assessment scoring remains deterministic and local; saved recommendation explanations remain local (`answer_origin: local`) and explicitly identify saved results.
 - [x] **Deterministic Query Planning**: Implemented `fast_plan` with abbreviation expansion (`AIML`, `CSE`, `ITI`, `PUC`, `BTech`, `BSc`, `BCom`, `BA`, `MTech`, `MBBS`, `NEET`, `KCET`), dropping planning latency from ~14s to <1ms (~99.9% reduction).
-- [x] **Persistent Model & Memory Context**: Configured `keep_alive: "30m"` in Ollama and set `num_ctx: 2048`, cutting KV cache memory overhead and eliminating repeated cold load penalties.
+- [x] **Cloud Generation Migration**: Replaced the prior local generation model with `gpt-oss:120b-cloud` through Ollama Cloud. Local model retention no longer applies to text generation.
 - [x] **Streamlined Single-Paragraph Summaries**: Reduced summary generation schema to one concise paragraph (70–90 words max, `num_predict: 180`, top 5–6 candidate sentences), cutting CPU generation time by ~50%.
 - [x] **Entity-Balanced Ranking & Resilient JSON Recovery**: Balanced multi-entity comparison queries (e.g. Science vs. Commerce vs. Arts) and added `repair_json` fallback, completely eliminating prior unanswered/unavailable question dropouts.
 - [x] **Early-Stopping Concurrent Retrieval & Engine Pruning**: Pruned failing/slow SearXNG engines, added query cache (`_search_cache`), and used `as_completed()` with early-stopping (1 authoritative source for definitions, 2 for general queries), reducing retrieval latency to 1.0–2.5s.
 - [x] **Perceived Speed & Frontend UX**: Immediate staged feedback ("Checking reliable sources…" -> "Preparing your answer…"), plus inline Cancel button that aborts cleanly without leaving empty history.
-- [x] **Model Benchmark**: Benchmarked `qwen2.5:0.5b` vs `qwen3:1.7b`. Retained `qwen3:1.7b` because 0.5B had unacceptable quality regressions (50% schema failure, lost citations).
+- [x] **Model Benchmark**: The prior small local-model benchmark found unacceptable quality regressions in the smaller alternative. The current generation model is `gpt-oss:120b-cloud`.
 - [x] **Latency Goals Met**:
   - Simple fresh definitions: **12.2s – 14.5s** (Target 10–18s: **MET**).
   - Cached repeat: **0.039s** (Target < 1s: **MET**).
@@ -65,7 +65,7 @@ Status date: 14 September 2026
 - [ ] Test Alembic migration status across all services on a clean disposable schema/container.
 
 ### G. Knowledge review and stale documentation
-- [ ] Review documentation files to ensure no references to paid APIs, cloud models, or removed UI controls remain.
+- [ ] Review documentation files for current Ollama Cloud setup and removed UI controls.
 
 ### H. Frontend lint configuration and final release checks
 - [ ] Run `npm run lint` and verify production build bundles.

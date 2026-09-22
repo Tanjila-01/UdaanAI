@@ -1,16 +1,16 @@
 """Run with: python -m scripts.check_local_ai (inside the service)."""
-from app.services.local_ai import LocalAI
+from app.services.local_ai import get_ai
 
 
 def main():
-    ai = LocalAI()
+    ai = get_ai()
     vectors = ai.embed(["A software engineer builds software.", "An electrician installs electrical wiring."])
-    print(f"Local embeddings OK: {len(vectors)} vectors, {len(vectors[0])} dimensions")
+    print(f"Embeddings OK: {len(vectors)} vectors, {len(vectors[0])} dimensions")
     answer = ai.chat([
         {"role": "system", "content": "You are Udaan, a career exploration assistant. Answer in one short sentence."},
         {"role": "user", "content": "How can I explore whether I enjoy programming?"},
     ])
-    print("Local text generation OK:", answer)
+    print("Ollama Cloud text generation OK:", answer)
 
 
 if __name__ == "__main__":

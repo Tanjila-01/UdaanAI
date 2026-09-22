@@ -13,7 +13,7 @@ from app.core.config import settings
 from app.core.stage_config import STAGE_CONFIG
 from app.models.recommendation import CareerRecommendationResult
 from app.services.knowledge import retrieve
-from app.services.local_ai import LocalAI
+from app.services.local_ai import AIServiceError, get_ai
 
 
 class EvidenceSelection(BaseModel):
@@ -163,7 +163,7 @@ def answer_question(db, user_id, token, question, intent="explore", pathway_id=N
         response["answer"] = (response["answer"] + "\n\n" if response["recommendations"] else "") + "I don't yet have verified Indian admission, eligibility, salary or licensing information for that question. Please check the current official authority or institution guidance."
         return response
     try:
-        ai = ai or LocalAI()
+        ai = ai or get_ai()
         matches = retrieve(db, retrieval_query, ai=ai, pathway_id=pathway_id, language="en", limit=5)
         sentences = evidence_sentences(matches)
         if not sentences:
@@ -199,7 +199,11 @@ def answer_question(db, user_id, token, question, intent="explore", pathway_id=N
         prefix = response["answer"] + "\n\n" if response["recommendations"] else "Here is what the verified career overview says:\n\n"
         response.update(status="answered", answer=prefix + "\n".join(lines), sources=sources)
         return response
+    except AIServiceError as exc:
+        response["status"] = "unavailable"
+        response["answer"] = (response["answer"] + "\n\n" if response["recommendations"] else "") + str(exc)
+        return response
     except (httpx.HTTPError, SQLAlchemyError, ValueError, KeyError, TypeError):
         response["status"] = "unavailable"
-        response["answer"] = (response["answer"] + "\n\n" if response["recommendations"] else "") + "Local AI couldn't produce a verified answer just now. Please try again later."
+        response["answer"] = (response["answer"] + "\n\n" if response["recommendations"] else "") + "UdaanAI couldn't produce a verified answer just now. Please try again later."
         return response

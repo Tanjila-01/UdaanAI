@@ -1,5 +1,6 @@
 import json
 import time
+from datetime import date
 from unittest.mock import Mock
 
 import httpx
@@ -75,7 +76,7 @@ def test_summarizes_fetched_evidence_with_valid_citations(monkeypatch):
     assert result['answer'].startswith('Computer science is the study')
     assert '[1]' in result['answer']
     assert result['answer_origin'] == 'web' and result['checked_at']
-    assert result['sources'][0]['reviewed_on'] == ''
+    assert result['sources'][0]['reviewed_on'] == date.today().isoformat()
     assert result['sources'][0]['references'][0]['url'] == page()['url']
 
 
@@ -175,7 +176,7 @@ def test_impersonal_cache_skips_repeated_inference_but_refresh_researches(monkey
     web._cache.clear()
     instance = model()
     factory = Mock(return_value=instance)
-    monkeypatch.setattr(web, 'LocalAI', factory)
+    monkeypatch.setattr(web, 'get_ai', factory)
     first = web.web_answer('Computer science definition')
     second = web.web_answer('Computer science definition')
     assert first == second and first is not second
@@ -339,5 +340,3 @@ def test_deadline_budget_expiration_returns_honest_unavailable_without_hanging(m
     assert result['sources'] == []
     assert result['answer_origin'] == 'web'
     assert 'in time' in result['answer'] or 'shortly' in result['answer']
-
-
