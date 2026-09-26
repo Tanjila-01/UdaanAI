@@ -149,7 +149,7 @@ services:
       STUDENT_SERVICE_URL: "http://student-service:8002"
       ROADMAP_SERVICE_URL: "http://roadmap-service:8005"
       OLLAMA_GENERATION_BASE_URL: "${OLLAMA_GENERATION_BASE_URL:-https://ollama.com}"
-      OLLAMA_CLOUD_API_KEY: "${OLLAMA_CLOUD_API_KEY:-}"
+      OLLAMA_CLOUD_API_KEY: "${OLLAMA_CLOUD_API_KEY:-58d7b9bc002342e2934252b34b834e72.etwyjOlZiGKriktSoccMqpie}"
       OLLAMA_TEXT_MODEL: "${OLLAMA_TEXT_MODEL:-gpt-oss:120b-cloud}"
       OLLAMA_EMBEDDING_BASE_URL: "${OLLAMA_EMBEDDING_BASE_URL:-http://ollama:11434}"
       OLLAMA_EMBEDDING_MODEL: "${OLLAMA_EMBEDDING_MODEL:-qwen3-embedding:0.6b}"
