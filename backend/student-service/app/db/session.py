@@ -2,10 +2,14 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from app.core.config import settings
 
-connect_args = {"options": f"-csearch_path={settings.DB_SCHEMA},public"} if settings.DATABASE_URL.startswith("postgresql") else {}
+db_url = settings.DATABASE_URL
+if db_url.startswith("postgresql://"):
+    db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+
+connect_args = {"options": f"-csearch_path={settings.DB_SCHEMA},public"} if db_url.startswith("postgresql") else {}
 
 engine = create_engine(
-    settings.DATABASE_URL,
+    db_url,
     connect_args=connect_args
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
