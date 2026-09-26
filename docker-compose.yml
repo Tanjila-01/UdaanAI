@@ -83,7 +83,7 @@ services:
     restart: always
     environment:
       PORT: 8001
-      DATABASE_URL: "postgresql://${POSTGRES_USER:-udaan_user}:${POSTGRES_PASSWORD:-change_me_in_dev}@postgres:5432/${POSTGRES_DB:-udaan_ai}"
+      DATABASE_URL: "postgresql+psycopg2://${POSTGRES_USER:-udaan_user}:${POSTGRES_PASSWORD:-change_me_in_dev}@postgres:5432/${POSTGRES_DB:-udaan_ai}"
       DB_SCHEMA: "auth"
       JWT_SECRET_KEY: "${JWT_SECRET_KEY:-dev_secret_key_udaan_ai_phase2_change_in_prod}"
       JWT_ALGORITHM: "${JWT_ALGORITHM:-HS256}"
@@ -101,7 +101,7 @@ services:
     restart: always
     environment:
       PORT: 8002
-      DATABASE_URL: "postgresql://${POSTGRES_USER:-udaan_user}:${POSTGRES_PASSWORD:-change_me_in_dev}@postgres:5432/${POSTGRES_DB:-udaan_ai}"
+      DATABASE_URL: "postgresql+psycopg2://${POSTGRES_USER:-udaan_user}:${POSTGRES_PASSWORD:-change_me_in_dev}@postgres:5432/${POSTGRES_DB:-udaan_ai}"
       DB_SCHEMA: "student"
       JWT_SECRET_KEY: "${JWT_SECRET_KEY:-dev_secret_key_udaan_ai_phase2_change_in_prod}"
       JWT_ALGORITHM: "${JWT_ALGORITHM:-HS256}"
@@ -119,7 +119,7 @@ services:
     restart: always
     environment:
       PORT: 8003
-      DATABASE_URL: "postgresql://${POSTGRES_USER:-udaan_user}:${POSTGRES_PASSWORD:-change_me_in_dev}@postgres:5432/${POSTGRES_DB:-udaan_ai}"
+      DATABASE_URL: "postgresql+psycopg2://${POSTGRES_USER:-udaan_user}:${POSTGRES_PASSWORD:-change_me_in_dev}@postgres:5432/${POSTGRES_DB:-udaan_ai}"
       DB_SCHEMA: "assessment"
       JWT_SECRET_KEY: "${JWT_SECRET_KEY:-dev_secret_key_udaan_ai_phase2_change_in_prod}"
       JWT_ALGORITHM: "${JWT_ALGORITHM:-HS256}"
@@ -141,7 +141,7 @@ services:
     restart: always
     environment:
       PORT: 8004
-      DATABASE_URL: "postgresql://${POSTGRES_USER:-udaan_user}:${POSTGRES_PASSWORD:-change_me_in_dev}@postgres:5432/${POSTGRES_DB:-udaan_ai}"
+      DATABASE_URL: "postgresql+psycopg2://${POSTGRES_USER:-udaan_user}:${POSTGRES_PASSWORD:-change_me_in_dev}@postgres:5432/${POSTGRES_DB:-udaan_ai}"
       DB_SCHEMA: "career_ai"
       JWT_SECRET_KEY: "${JWT_SECRET_KEY:-dev_secret_key_udaan_ai_phase2_change_in_prod}"
       JWT_ALGORITHM: "${JWT_ALGORITHM:-HS256}"
@@ -178,7 +178,7 @@ services:
     restart: always
     environment:
       PORT: 8005
-      DATABASE_URL: "postgresql://${POSTGRES_USER:-udaan_user}:${POSTGRES_PASSWORD:-change_me_in_dev}@postgres:5432/${POSTGRES_DB:-udaan_ai}"
+      DATABASE_URL: "postgresql+psycopg2://${POSTGRES_USER:-udaan_user}:${POSTGRES_PASSWORD:-change_me_in_dev}@postgres:5432/${POSTGRES_DB:-udaan_ai}"
       DB_SCHEMA: "roadmap"
       JWT_SECRET_KEY: "${JWT_SECRET_KEY:-dev_secret_key_udaan_ai_phase2_change_in_prod}"
       JWT_ALGORITHM: "${JWT_ALGORITHM:-HS256}"
@@ -196,7 +196,7 @@ services:
     restart: always
     environment:
       PORT: 8006
-      DATABASE_URL: "postgresql://${POSTGRES_USER:-udaan_user}:${POSTGRES_PASSWORD:-change_me_in_dev}@postgres:5432/${POSTGRES_DB:-udaan_ai}"
+      DATABASE_URL: "postgresql+psycopg2://${POSTGRES_USER:-udaan_user}:${POSTGRES_PASSWORD:-change_me_in_dev}@postgres:5432/${POSTGRES_DB:-udaan_ai}"
       DB_SCHEMA: "institution"
       JWT_SECRET_KEY: "${JWT_SECRET_KEY:-dev_secret_key_udaan_ai_phase2_change_in_prod}"
       JWT_ALGORITHM: "${JWT_ALGORITHM:-HS256}"
@@ -214,7 +214,7 @@ services:
     restart: always
     environment:
       PORT: 8007
-      DATABASE_URL: "postgresql://${POSTGRES_USER:-udaan_user}:${POSTGRES_PASSWORD:-change_me_in_dev}@postgres:5432/${POSTGRES_DB:-udaan_ai}"
+      DATABASE_URL: "postgresql+psycopg2://${POSTGRES_USER:-udaan_user}:${POSTGRES_PASSWORD:-change_me_in_dev}@postgres:5432/${POSTGRES_DB:-udaan_ai}"
       DB_SCHEMA: "admin_analytics"
     ports:
       - "8007:8007"
