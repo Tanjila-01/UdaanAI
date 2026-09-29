@@ -47,7 +47,7 @@ Three sources feed one recommendation calculation. These arrows show data inputs
 | Database: career_ai area | Stores recommendation history |
 | Ollama Cloud | Generates advisor text with `gpt-oss:120b-cloud` |
 | Sentence Transformers (Local) | Generates 384-dimensional retrieval embeddings (`all-MiniLM-L6-v2`) |
-| BharatGenAI Shrutam-2 (Local) | Transcribes multilingual voice input (Kannada, Hindi, English, code-mixed) |
+| BharatGenAI Shrutam-2 (2B) | Code/API integrated for multilingual STT; local inference currently blocked by hardware/memory |
 
 ## 5. What information does it save?
 

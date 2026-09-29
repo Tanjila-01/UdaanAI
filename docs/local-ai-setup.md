@@ -3,7 +3,7 @@
 Udaan sends career-answer generation to Ollama Cloud with `gpt-oss:120b-cloud`.
 It does not download `gpt-oss:120b` or any large local text-generation model.
 Embeddings are locally computed via `sentence-transformers/all-MiniLM-L6-v2` (384 dimensions) directly in Python.
-Speech-to-text is handled by `BharatGenAI Shrutam-2` (`bharatgenai/Shrutam-2`) supporting multilingual recognition (Kannada, Hindi, English, code-mixed).
+Speech-to-text integration uses `BharatGenAI Shrutam-2` (`bharatgenai/Shrutam-2`), a 2B-parameter model released under the BharatGen non-commercial license. Shrutam-2 is integrated at the code/API level but local inference is currently blocked by available hardware/memory. Whisper Tiny has been removed and there is no automatic Whisper fallback.
 
 ## Recommended Docker setup
 
@@ -49,8 +49,7 @@ Official references: [Ollama Cloud](https://docs.ollama.com/cloud) and
 
 - **Embeddings:** `sentence-transformers/all-MiniLM-L6-v2` runs locally via Sentence Transformers. The `career_ai.knowledge_chunks`
   table holds 384-dimensional vectors and records the model name and recipe (`headings-char1200-v1-minilm`).
-- **Speech to text:** `BharatGenAI Shrutam-2` (`bharatgenai/Shrutam-2`) resides in the `speech_models` Docker volume.
-  It is loaded on device (auto / CPU / CUDA) during voice transcription.
+- **Speech to text:** `BharatGenAI Shrutam-2` (`bharatgenai/Shrutam-2`) resides in the `speech_models` Docker volume. The official BharatGen model card identifies Shrutam-2 as a 2B-parameter model released under the BharatGen non-commercial license. Shrutam-2 is integrated at the code/API level but local inference is currently blocked by available hardware/memory. Whisper Tiny has been removed and there is no automatic Whisper fallback. Actual speech endpoint tests returned HTTP 503 across English, Kannada, Hindi, and Kannada-English code-mixed speech; Shrutam-2 is not production-ready in this environment.
 
 If the previous local text model is still present in the `ollama_models` volume, first
 verify a cloud answer and embedding retrieval. You may then remove that no-longer-used
@@ -66,5 +65,4 @@ data, so do it only after the verification checklist passes.
 - **Embedding search unavailable:** verify that PostgreSQL is healthy, migration `004`
   is applied, and the knowledge corpus is ingested with `all-MiniLM-L6-v2`. Embeddings
   run directly in Python without requiring Ollama.
-- **Voice typing unavailable:** verify the existing local speech model using the
-  [voice setup guide](local-voice.md). It is independent of Ollama Cloud.
+- **Voice typing unavailable:** Shrutam-2 is integrated at the code/API level but local inference is currently blocked by available hardware/memory (returning HTTP 503). Whisper Tiny has been removed and there is no automatic Whisper fallback. See the [voice guide](local-voice.md).

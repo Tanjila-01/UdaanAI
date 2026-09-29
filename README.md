@@ -28,7 +28,7 @@ cloud          L6-v2 (384d)      |
 
 - **LLM:** `gpt-oss:120b-cloud` generates grounded advisor responses through Ollama Cloud. It needs network access and Ollama Cloud authentication.
 - **Embeddings:** `sentence-transformers/all-MiniLM-L6-v2` runs locally via Sentence Transformers. PostgreSQL stores 384-dimensional vectors with cosine retrieval.
-- **Speech to text:** `BharatGenAI Shrutam-2` runs locally, supporting multilingual voice transcription (Kannada, Hindi, English, and code-mixed speech).
+- **Speech to text:** `BharatGenAI Shrutam-2` (2B parameters, BharatGen non-commercial license) is integrated at the code/API level, but local inference is currently blocked by available hardware/memory. Whisper Tiny has been removed and there is no automatic Whisper fallback.
 
 Set `OLLAMA_CLOUD_API_KEY` in your untracked `.env` file. Never place it in frontend code or commit it. See [AI model setup](docs/local-ai-setup.md) for the exact startup steps.
 
