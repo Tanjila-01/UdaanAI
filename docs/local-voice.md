@@ -13,13 +13,14 @@ English is the only supported language in this release. Short, clear recordings 
 
 ## Free, local processing
 
-- Transcription uses `faster-whisper==1.2.1` and the `Systran/faster-whisper-tiny.en` model, pinned to revision `0d3d19a32d3338f10357c0889762bd8d64bbdeba`. It runs on CPU with INT8 computation and two threads.
-- The model is stored in the persistent `speech_models` Docker volume. No paid API key or billing account is needed.
-- The service loads only the installed model directory with `local_files_only=True`. Docker also sets `HF_HUB_OFFLINE=1` and disables Hub telemetry. No model download or remote transcription fallback occurs during student requests.
-- Read-aloud selects an English voice only when its browser `localService` property is true. If there is no local English voice, Listen is disabled and the page explains why. The browser or operating system must supply that voice. See [MDN's localService documentation](https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesisVoice/localService).
-- Browser microphone access requires localhost or HTTPS and a supported MediaRecorder format. WebM/Opus, Ogg/Opus and MP4 recording are supported when exposed by the browser. There is no browser cloud speech-recognition fallback.
+- Transcription uses `BharatGenAI Shrutam-2` (`bharatgenai/Shrutam-2`), supporting multilingual recognition including Kannada, Hindi, English, and code-mixed speech.
+- The model is stored in the persistent `speech_models` Docker volume at `/models/shrutam-2`.
+- Licensing: Shrutam-2 is released under the BharatGen Non-Commercial Research & Educational Use License. Commercial deployment requires compliance with official BharatGen licensing and authorization terms.
+- The service loads the installed model directory. PyAV decodes incoming audio (WebM/Opus, OGG, MP4) to 16 kHz mono float32.
+- Read-aloud selects a local voice when available.
+- Browser microphone access requires localhost or HTTPS and a supported MediaRecorder format. WebM/Opus, Ogg/Opus and MP4 recording are supported when exposed by the browser.
 
-The one-time model download uses the official [Systran model repository](https://huggingface.co/Systran/faster-whisper-tiny.en). The implementation follows the [faster-whisper project](https://github.com/SYSTRAN/faster-whisper).
+The model download uses the official [BharatGenAI Shrutam-2 repository](https://huggingface.co/bharatgenai/Shrutam-2).
 
 ## Setup on another machine
 

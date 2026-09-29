@@ -237,3 +237,32 @@ it('does not send question when Shift+Enter is pressed in the textarea', async (
   fireEvent.keyDown(textarea, { key: 'Enter', code: 'Enter', shiftKey: true });
   expect(getCareerAnswerApi).not.toHaveBeenCalled();
 });
+
+it('submits a suggested follow-up chip when clicked with conversation history link', async () => {
+  getCareerAnswerApi.mockResolvedValueOnce({
+    ...response,
+    history_id: 'hist-software-101',
+    conversation_topic: 'Software development',
+    answer: 'Software developers build applications.'
+  }).mockResolvedValueOnce({
+    ...response,
+    answer: 'Software developers need coding and problem-solving skills.'
+  });
+
+  mount();
+  send('What does a software developer do?');
+
+  const chip = await screen.findByRole('button', { name: 'What skills do I need to become a software developer?' });
+  expect(chip).toBeTruthy();
+
+  fireEvent.click(chip);
+  await waitFor(() => expect(getCareerAnswerApi).toHaveBeenCalledTimes(2));
+  expect(getCareerAnswerApi.mock.calls[1][0]).toEqual({
+    question: 'What skills do I need to become a software developer?',
+    intent: 'explore',
+    language: 'en',
+    follow_up_to: 'hist-software-101'
+  });
+  expect(await screen.findByText('Software developers need coding and problem-solving skills.')).toBeTruthy();
+});
+

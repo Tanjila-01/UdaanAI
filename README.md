@@ -19,15 +19,16 @@ The AI Career Service uses separate models for separate jobs. Its text generatio
        |            |            |
       LLM       Embeddings       STT
        |            |            |
-gpt-oss:120b-  qwen3-embedding  whisper-tiny-en
-cloud           :0.6b             |
-       |            |            local faster-whisper
- Ollama Cloud   local Ollama
+gpt-oss:120b-  all-MiniLM-   Shrutam-2
+cloud          L6-v2 (384d)      |
+       |            |       BharatGenAI
+ Ollama Cloud   Sentence-   Multilingual
+               Transformers
 ```
 
-- **LLM:** `gpt-oss:120b-cloud` generates grounded advisor responses through Ollama Cloud. It needs network access and Ollama Cloud authentication. Usage limits or credits may apply.
-- **Embeddings:** `qwen3-embedding:0.6b` stays local for now. PostgreSQL stores 1024-dimensional vectors made by this model, so replacing it requires a planned re-index.
-- **Speech to text:** `whisper-tiny-en` stays local through faster-whisper. It is a separate speech model and is not replaced by the LLM.
+- **LLM:** `gpt-oss:120b-cloud` generates grounded advisor responses through Ollama Cloud. It needs network access and Ollama Cloud authentication.
+- **Embeddings:** `sentence-transformers/all-MiniLM-L6-v2` runs locally via Sentence Transformers. PostgreSQL stores 384-dimensional vectors with cosine retrieval.
+- **Speech to text:** `BharatGenAI Shrutam-2` runs locally, supporting multilingual voice transcription (Kannada, Hindi, English, and code-mixed speech).
 
 Set `OLLAMA_CLOUD_API_KEY` in your untracked `.env` file. Never place it in frontend code or commit it. See [AI model setup](docs/local-ai-setup.md) for the exact startup steps.
 

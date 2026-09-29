@@ -11,8 +11,7 @@ def cloud_settings(monkeypatch):
     monkeypatch.setattr(settings, "OLLAMA_GENERATION_BASE_URL", "https://ollama.com")
     monkeypatch.setattr(settings, "OLLAMA_CLOUD_API_KEY", "test-key")
     monkeypatch.setattr(settings, "OLLAMA_TEXT_MODEL", "gpt-oss:120b-cloud")
-    monkeypatch.setattr(settings, "OLLAMA_EMBEDDING_BASE_URL", "http://ollama:11434")
-    monkeypatch.setattr(settings, "OLLAMA_EMBEDDING_MODEL", "qwen3-embedding:0.6b")
+    monkeypatch.setattr(settings, "EMBEDDING_MODEL_NAME", "sentence-transformers/all-MiniLM-L6-v2")
 
 
 def test_generation_uses_ollama_cloud_and_cloud_model(cloud_settings):
@@ -49,11 +48,19 @@ def test_cloud_auth_failure_has_a_safe_message(cloud_settings):
         OllamaAI(transport).chat([])
 
 
-def test_embedding_count_must_match(cloud_settings):
-    def handler(request):
-        assert str(request.url) == "http://ollama:11434/api/embed"
-        assert request.headers.get("authorization") is None
-        return httpx.Response(200, json={"embeddings": [[1.0]]})
+def test_embedding_returns_384_dimensions(cloud_settings):
+    ai = OllamaAI(httpx.MockTransport(lambda r: None))
+    vectors = ai.embed(["Hello world", "Career guidance"])
+    assert len(vectors) == 2
+    assert len(vectors[0]) == 384
+    assert len(vectors[1]) == 384
 
+
+def test_embedding_error_raises_ai_service_error(cloud_settings, monkeypatch):
+    from unittest.mock import Mock
+    mock_svc = Mock()
+    mock_svc.embed.side_effect = RuntimeError("Model loading failure")
+    monkeypatch.setattr("app.services.embedding.get_embedding_service", lambda: mock_svc)
+    ai = OllamaAI(httpx.MockTransport(lambda r: None))
     with pytest.raises(AIServiceError, match="invalid vectors"):
-        OllamaAI(httpx.MockTransport(handler)).embed(["one", "two"])
+        ai.embed(["text"])

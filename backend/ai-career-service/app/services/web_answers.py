@@ -19,7 +19,7 @@ from urllib.parse import urljoin, urlsplit
 logger = logging.getLogger(__name__)
 
 import httpx
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.config import settings
 from app.services.local_ai import AIServiceError, get_ai
@@ -345,6 +345,20 @@ class Summary(BaseModel):
     paragraphs: list[SupportedParagraph] = Field(default_factory=list, max_length=4)
     follow_up: str = Field(default='', max_length=300)
     missing_info: str = Field(default='', max_length=300)
+
+    @field_validator('missing_info', mode='before')
+    @classmethod
+    def normalize_missing_info(cls, v):
+        if isinstance(v, list):
+            return ', '.join(str(x) for x in v) if v else ''
+        return str(v) if v is not None else ''
+
+    @field_validator('follow_up', mode='before')
+    @classmethod
+    def normalize_follow_up(cls, v):
+        if isinstance(v, list):
+            return ', '.join(str(x) for x in v) if v else ''
+        return str(v) if v is not None else ''
 
 
 def repair_json(text: str) -> str:
@@ -869,7 +883,7 @@ def web_answer(question, topic=None, ai=None, *, refresh=False, deadline=None):
         raw = ai.chat([
             {'role': 'system', 'content': summary_prompt},
             {'role': 'user', 'content': json.dumps({'question': question, 'topic': plan.topic, 'clarification_needed': plan.clarification, 'today': checked[:10], 'evidence': [{'id': key, 'text': row[1], 'source': row[2]['title']} for key, row in sentences.items()]})},
-        ], output_schema=Summary.model_json_schema(), num_predict=110, timeout=gen_timeout)
+        ], output_schema=Summary.model_json_schema(), num_predict=1024, timeout=gen_timeout)
         timings['generation'] = round(time.perf_counter() - t0, 3)
         if hasattr(ai, 'last_metrics') and isinstance(ai.last_metrics, dict) and ai.last_metrics:
             timings['ollama'] = copy.deepcopy(ai.last_metrics)

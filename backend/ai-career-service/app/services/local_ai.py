@@ -1,11 +1,14 @@
 """Ollama Cloud generation with a separate local Ollama embedding connection."""
 from functools import lru_cache
+import logging
 import math
 from urllib.parse import urlparse
 
 import httpx
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class AIServiceError(RuntimeError):
@@ -20,9 +23,9 @@ def _valid_endpoint(value, *, direct_cloud=False):
         if clean and url.scheme == "https" and url.hostname == "ollama.com":
             return base_url
         raise ValueError("OLLAMA_GENERATION_BASE_URL must be https://ollama.com or a signed-in local Ollama endpoint")
-    if clean and url.scheme == "http" and url.hostname in {"localhost", "127.0.0.1", "ollama"}:
+    if clean and url.scheme == "http" and url.hostname in {"localhost", "127.0.0.1", "ollama", "host.docker.internal"}:
         return base_url
-    raise ValueError("OLLAMA_EMBEDDING_BASE_URL must be the local Ollama embedding service")
+    raise ValueError("Invalid Ollama endpoint")
 
 
 class OllamaAI:
@@ -41,7 +44,6 @@ class OllamaAI:
             # `ollama signin` authenticates this supported local proxy path. It
             # does not download the cloud model weights.
             self.generation_base_url = self._signed_in_local_endpoint(self.generation_base_url)
-        self.embedding_base_url = _valid_endpoint(settings.OLLAMA_EMBEDDING_BASE_URL)
         if not settings.OLLAMA_TEXT_MODEL.endswith("-cloud"):
             raise AIServiceError("Text generation must use an Ollama Cloud model ending in -cloud.")
         self.client = httpx.Client(trust_env=False, transport=transport)
@@ -83,11 +85,15 @@ class OllamaAI:
             provider = "Ollama Cloud" if cloud else "the embedding service"
             raise AIServiceError(f"UdaanAI could not get a valid response from {provider}. Please try again later.") from exc
 
-    def chat(self, messages, *, output_schema=None, num_predict=180, timeout: float = 180.0):
+    def chat(self, messages, *, output_schema=None, num_predict=1024, timeout: float = 180.0):
+        # Reasoning models such as gpt-oss:120b-cloud generate internal chain-of-thought
+        # tokens that count against num_predict. Ensure at least 1024 tokens so that reasoning
+        # completes and the final output content is generated without truncation.
+        effective_num_predict = max(num_predict, 1024) if settings.OLLAMA_TEXT_MODEL.startswith("gpt-oss") else num_predict
         payload = {
             "model": settings.OLLAMA_TEXT_MODEL,
             "messages": messages, "stream": False, "think": False,
-            "options": {"temperature": 0.2, "num_ctx": 2048, "num_predict": num_predict},
+            "options": {"temperature": 0.2, "num_ctx": 4096, "num_predict": effective_num_predict},
         }
         if output_schema is not None:
             payload["format"] = output_schema
@@ -100,24 +106,26 @@ class OllamaAI:
             "generated_tokens": data.get("eval_count", 0),
             "total_ollama": round(data.get("total_duration", 0) / 1e9, 3),
         }
-        answer = data["message"]["content"]
+        answer = data.get("message", {}).get("content", "")
         if not isinstance(answer, str) or not answer.strip():
+            done_reason = data.get("done_reason")
+            eval_count = data.get("eval_count")
+            thinking = data.get("message", {}).get("thinking", "")
+            logger.warning(
+                "Ollama Cloud returned empty content. done_reason=%s, eval_count=%s, thinking_len=%s",
+                done_reason, eval_count, len(thinking) if thinking else 0
+            )
             raise AIServiceError("Ollama Cloud returned an empty answer. Please try again.")
         return answer
 
     def embed(self, texts):
         if not texts:
             return []
-        data = self._post(self.embedding_base_url, "/api/embed", {
-            "model": settings.OLLAMA_EMBEDDING_MODEL,
-            "input": texts, "truncate": False,
-        }, timeout=30.0)
-        vectors = data["embeddings"]
-        if (len(vectors) != len(texts) or not vectors[0]
-                or any(len(v) != len(vectors[0]) for v in vectors)
-                or any(not math.isfinite(n) for v in vectors for n in v)):
-            raise AIServiceError("The local embedding service returned invalid vectors.")
-        return vectors
+        try:
+            from app.services.embedding import get_embedding_service
+            return get_embedding_service().embed(texts)
+        except Exception as exc:
+            raise AIServiceError(f"The local embedding service returned invalid vectors: {exc}") from exc
 
 
 @lru_cache(maxsize=1)

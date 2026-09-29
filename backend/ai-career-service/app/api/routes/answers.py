@@ -351,10 +351,10 @@ def career_answer(request: AnswerRequest, claims=Depends(get_current_user_claims
                 conv_state, raw_question, request.intent, result, topic=result.get('conversation_topic')
             )
 
-        # Route H: Explore Mode - General Education / Career Web Guidance
+        # Route H: Explore Mode - Unified Career Intelligence Guidance (Category A, B, C via answer_question)
         else:
-            selected_route = "web_explore"
-            route_reason = "General education/career question requiring external evidence"
+            selected_route = "career_answers"
+            route_reason = "General career, pathway, or educational question handled by answer_question pipeline"
             reset_subject = is_standalone_subject_reset(raw_question)
             new_topic = named_topic(raw_question)
 
@@ -379,22 +379,20 @@ def career_answer(request: AnswerRequest, claims=Depends(get_current_user_claims
                         sources=[],
                         recommendations=[],
                         context_status='not_requested',
-                        answer_origin='web'
+                        answer_origin='local'
                     )
             elif new_topic:
                 topic = new_topic
 
-            if not settings.WEB_SEARCH_ENABLED:
-                result = dict(
-                    status='unavailable',
-                    answer='Online research is currently unavailable. General career, course and education guidance requires internet research.',
-                    sources=[],
-                    recommendations=[],
-                    context_status='not_requested',
-                    answer_origin='web',
-                )
-            else:
+            if settings.WEB_SEARCH_ENABLED and request.answer_mode != 'local':
+                selected_route = "web_explore"
                 result = web_answer(question, topic, deadline=req_deadline, **({'refresh': True} if request.refresh else {}))
+            else:
+                result = answer_question(
+                    db, claims['sub'], token_str, raw_question,
+                    intent=request.intent, pathway_id=pathway_id,
+                    conversation_topic=topic, deadline=req_deadline
+                )
 
             result['conversation_topic'] = clean_label(result.get('conversation_topic') or topic or new_topic)
             conv_state = update_conversation_state(

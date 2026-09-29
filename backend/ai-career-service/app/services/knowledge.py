@@ -11,10 +11,11 @@ from sqlalchemy import text
 
 from app.core.config import settings
 from app.core.stage_config import STAGE_CONFIG
+from app.services.embedding import EMBEDDING_DIMENSION, EMBEDDING_MODEL_NAME, get_embedding_service
 from app.services.local_ai import get_ai
 
-RECIPE = "headings-char1200-v1-qwen-query-instruction"
-DIMENSIONS = 1024
+RECIPE = "headings-char1200-v1-minilm"
+DIMENSIONS = EMBEDDING_DIMENSION
 CATEGORIES = {"careers", "education", "streams", "iti", "puc", "karnataka"}
 PATHWAYS = {p for c in STAGE_CONFIG.values() for p in c["candidate_ids"]}
 
@@ -97,21 +98,15 @@ def chunk_document(document):
     return chunks
 
 
-def model_digest(ai):
-    # Query local tags. Never mix vectors from different model versions.
-    import httpx
-    with httpx.Client(timeout=10, trust_env=False) as client:
-        response = client.get(ai.embedding_base_url + "/api/tags")
-        response.raise_for_status()
-        for model in response.json()["models"]:
-            if model["name"] == settings.OLLAMA_EMBEDDING_MODEL:
-                return model["digest"]
-    raise ValueError("Configured local embedding model is not installed")
+def model_digest(ai=None):
+    if hasattr(ai, "model_digest") and callable(getattr(ai, "model_digest")):
+        return ai.model_digest()
+    return get_embedding_service().model_digest()
 
 
 def vector_literal(vector):
     if len(vector) != DIMENSIONS or not all(math.isfinite(x) for x in vector) or not any(vector):
-        raise ValueError("Expected a finite, nonzero 1024-dimensional vector")
+        raise ValueError(f"Expected a finite, nonzero {DIMENSIONS}-dimensional vector")
     return json.dumps(vector)
 
 
@@ -123,7 +118,7 @@ def ingest(connection, documents, ai, digest):
     for document in documents:
         meta = document["metadata"]
         checksum = sha(json.dumps(meta, sort_keys=True) + document["body"] + RECIPE
-                       + settings.OLLAMA_EMBEDDING_MODEL + digest)
+                       + EMBEDDING_MODEL_NAME + digest)
         if old.get(meta["id"]) == checksum:
             connection.execute(text("UPDATE career_ai.knowledge_documents SET active=true WHERE id=:id"), {"id": meta["id"]})
             skipped += 1
@@ -148,9 +143,11 @@ def ingest(connection, documents, ai, digest):
                 VALUES (:id,:doc,:ordinal,:heading,:content,CAST(:vector AS public.vector),:model,:digest,:recipe)
             """), {"id": sha(meta["id"] + checksum + str(ordinal)), "doc": meta["id"],
                    "ordinal": ordinal, "heading": chunk["heading"], "content": chunk["content"],
-                   "vector": vector, "model": settings.OLLAMA_EMBEDDING_MODEL, "digest": digest, "recipe": RECIPE})
+                   "vector": vector, "model": EMBEDDING_MODEL_NAME, "digest": digest, "recipe": RECIPE})
         changed += 1
         count += len(chunks)
+    # Ensure column is strictly NOT NULL once chunks are written
+    connection.execute(text("ALTER TABLE career_ai.knowledge_chunks ALTER COLUMN embedding SET NOT NULL"))
     # Removed sources become inactive, preserving traceability without remaining searchable.
     incoming = {d["metadata"]["id"] for d in documents}
     removed = set(old) - incoming
@@ -171,9 +168,9 @@ def retrieve(connection, query, *, ai=None, digest=None, category=None, stage=No
             raise ValueError("Unknown retrieval filter")
     ai = ai or get_ai()
     digest = digest or model_digest(ai)
-    vector = vector_literal(ai.embed(["Instruct: Retrieve career and education information relevant to the question.\nQuery: " + query])[0])
+    vector = vector_literal(ai.embed([query])[0])
     conditions = ["d.active", "c.embedding_model=:model", "c.model_digest=:digest", "c.recipe=:recipe"]
-    params = {"model": settings.OLLAMA_EMBEDDING_MODEL, "digest": digest, "recipe": RECIPE,
+    params = {"model": EMBEDDING_MODEL_NAME, "digest": digest, "recipe": RECIPE,
               "vector": vector, "limit": limit, "today": date.today().isoformat()}
     if not include_drafts:
         conditions += ["d.metadata->>'status'='verified'", "d.metadata->>'review_due' >= :today"]

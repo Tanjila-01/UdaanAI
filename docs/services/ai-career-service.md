@@ -46,8 +46,8 @@ Three sources feed one recommendation calculation. These arrows show data inputs
 | Roadmap service | Supplies pathway metadata |
 | Database: career_ai area | Stores recommendation history |
 | Ollama Cloud | Generates advisor text with `gpt-oss:120b-cloud` |
-| Local Ollama | Generates the existing 1024-dimensional retrieval embeddings |
-| Local faster-whisper | Transcribes English voice input |
+| Sentence Transformers (Local) | Generates 384-dimensional retrieval embeddings (`all-MiniLM-L6-v2`) |
+| BharatGenAI Shrutam-2 (Local) | Transcribes multilingual voice input (Kannada, Hindi, English, code-mixed) |
 
 ## 5. What information does it save?
 

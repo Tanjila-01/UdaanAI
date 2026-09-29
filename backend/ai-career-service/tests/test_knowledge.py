@@ -54,7 +54,7 @@ def test_unmapped_file_rejected(tmp_path):
         load_documents(tmp_path)
 
 
-@pytest.mark.parametrize("vector", [[1.0], [0.0]*1024, [float('nan')]*1024, [float('inf')]*1024])
+@pytest.mark.parametrize("vector", [[1.0], [0.0]*384, [float('nan')]*384, [float('inf')]*384])
 def test_invalid_vectors_rejected(vector):
     with pytest.raises(ValueError):
         vector_literal(vector)

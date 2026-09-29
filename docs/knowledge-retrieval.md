@@ -35,8 +35,8 @@ PDF and audit documents are not ingested. See [content audit](knowledge-audit.md
 - Split on Markdown section headings, with a maximum of 1200 characters per piece.
   Embed the document title and section heading alongside its content. No PDF/OCR needed.
 - Store content, heading, ID, editorial metadata, source references and review dates.
-- Use local `qwen3-embedding:0.6b` vectors of 1024 dimensions. Track the installed model
-  digest and chunking/query recipe. Query and stored vectors must use the same identity.
+- Use local `sentence-transformers/all-MiniLM-L6-v2` vectors of 384 dimensions. Track the installed model
+  digest and chunking/query recipe (`headings-char1200-v1-minilm`). Query and stored vectors must use the same identity.
 - Checksum includes text, metadata, model identity and recipe. Unchanged imports skip
   embeddings. Changes atomically replace that document's chunks. Removed documents
   become inactive. Reimporting a removed document reactivates it.

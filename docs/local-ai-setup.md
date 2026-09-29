@@ -1,10 +1,9 @@
 # AI model setup
 
 Udaan sends career-answer generation to Ollama Cloud with `gpt-oss:120b-cloud`.
-It does not download `gpt-oss:120b` or any large local text-generation model. The
-small local Ollama container remains only for the existing 1024-dimensional
-`qwen3-embedding:0.6b` retrieval model. English voice input remains local through
-faster-whisper and `whisper-tiny-en`.
+It does not download `gpt-oss:120b` or any large local text-generation model.
+Embeddings are locally computed via `sentence-transformers/all-MiniLM-L6-v2` (384 dimensions) directly in Python.
+Speech-to-text is handled by `BharatGenAI Shrutam-2` (`bharatgenai/Shrutam-2`) supporting multilingual recognition (Kannada, Hindi, English, code-mixed).
 
 ## Recommended Docker setup
 
@@ -19,16 +18,14 @@ faster-whisper and `whisper-tiny-en`.
 
    Do not put this key in source code, `.env.example`, or frontend variables.
 
-2. Start the services and install only the required local embedding model:
+2. Start the services and check local AI and embeddings:
 
    ```powershell
-   docker compose up -d ollama
-   docker compose exec ollama ollama pull qwen3-embedding:0.6b
-   docker compose up -d --build
+   docker compose up -d --build ai-career-service
    docker compose exec -T ai-career-service python -m scripts.check_local_ai
    ```
 
-   `scripts.check_local_ai` checks both the cloud text response and local embeddings.
+   `scripts.check_local_ai` checks both the cloud text response and local 384-dimensional MiniLM embeddings.
    It never pulls the local `gpt-oss:120b` model.
 
 ## Ollama authentication
@@ -50,12 +47,10 @@ Official references: [Ollama Cloud](https://docs.ollama.com/cloud) and
 
 ## Local models that remain
 
-- **Embeddings:** `qwen3-embedding:0.6b` remains local. The `career_ai.knowledge_chunks`
-  table holds 1024-dimensional vectors and records the model digest. Changing this
-  model needs a migration and complete re-index; do not mix vectors from different models.
-- **Speech to text:** `whisper-tiny-en` remains in the `speech_models` Docker volume.
-  It is loaded on CPU only during voice transcription. No cloud STT replacement is
-  implemented in this project.
+- **Embeddings:** `sentence-transformers/all-MiniLM-L6-v2` runs locally via Sentence Transformers. The `career_ai.knowledge_chunks`
+  table holds 384-dimensional vectors and records the model name and recipe (`headings-char1200-v1-minilm`).
+- **Speech to text:** `BharatGenAI Shrutam-2` (`bharatgenai/Shrutam-2`) resides in the `speech_models` Docker volume.
+  It is loaded on device (auto / CPU / CUDA) during voice transcription.
 
 If the previous local text model is still present in the `ollama_models` volume, first
 verify a cloud answer and embedding retrieval. You may then remove that no-longer-used
@@ -68,8 +63,8 @@ data, so do it only after the verification checklist passes.
   rebuild `ai-career-service`, and check that the key has Ollama Cloud access.
 - **Cloud model unavailable or usage limit:** check your Ollama account usage and the
   configured model name. The required cloud model is `gpt-oss:120b-cloud`.
-- **Embedding search unavailable:** start the `ollama` container and ensure
-  `qwen3-embedding:0.6b` is installed. Do not point the embedding setting at the
-  generative cloud model.
+- **Embedding search unavailable:** verify that PostgreSQL is healthy, migration `004`
+  is applied, and the knowledge corpus is ingested with `all-MiniLM-L6-v2`. Embeddings
+  run directly in Python without requiring Ollama.
 - **Voice typing unavailable:** verify the existing local speech model using the
   [voice setup guide](local-voice.md). It is independent of Ollama Cloud.

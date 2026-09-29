@@ -8,7 +8,7 @@ from sqlalchemy import create_engine, text
 
 from app.core.config import settings
 from app.db.session import engine
-from app.services.knowledge import ingest, retrieve
+from app.services.knowledge import DIMENSIONS, ingest, retrieve
 
 
 class FakeAI:
@@ -16,7 +16,7 @@ class FakeAI:
 
     def embed(self, inputs):
         self.calls += 1
-        return [[1.0] + [0.0] * 1023 for _ in inputs]
+        return [[1.0] + [0.0] * (DIMENSIONS - 1) for _ in inputs]
 
 
 def document(doc_id, status="verified", **changes):
@@ -68,7 +68,7 @@ def main():
                 self.calls += 1
                 if self.calls > 1:
                     raise RuntimeError("Simulated provider failure")
-                return [[1.0] + [0.0] * 1023 for _ in inputs]
+                return [[1.0] + [0.0] * (DIMENSIONS - 1) for _ in inputs]
         try:
             with test_engine.begin() as c:
                 ingest(c, changed, FailingAI(), "new-digest")

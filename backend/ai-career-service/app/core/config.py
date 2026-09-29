@@ -14,13 +14,21 @@ class Settings(BaseSettings):
     STUDENT_SERVICE_URL: str = "http://localhost:8002"
     ROADMAP_SERVICE_URL: str = "http://localhost:8005"
 
-    # Text generation uses Ollama Cloud. Embeddings remain separate because the
-    # pgvector corpus is indexed with the 1024-dimensional local model below.
+    # Text generation uses Ollama Cloud (gpt-oss:120b-cloud).
     OLLAMA_GENERATION_BASE_URL: str = "https://ollama.com"
     OLLAMA_CLOUD_API_KEY: str = "58d7b9bc002342e2934252b34b834e72.etwyjOlZiGKriktSoccMqpie"
     OLLAMA_TEXT_MODEL: str = "gpt-oss:120b-cloud"
-    OLLAMA_EMBEDDING_BASE_URL: str = "http://localhost:11434"
-    OLLAMA_EMBEDDING_MODEL: str = "qwen3-embedding:0.6b"
+
+    # Embeddings use local Sentence Transformers (all-MiniLM-L6-v2, 384 dimensions).
+    EMBEDDING_MODEL_NAME: str = "sentence-transformers/all-MiniLM-L6-v2"
+    EMBEDDING_DIMENSION: int = 384
+    EMBEDDING_DEVICE: str = "cpu"
+
+    # Speech recognition uses BharatGenAI Shrutam-2.
+    SPEECH_MODEL_ID: str = "bharatgenai/Shrutam-2"
+    SPEECH_MODEL_PATH: str = "/models/shrutam-2"
+    SPEECH_MODEL_DEVICE: str = "auto"
+
     AI_REQUEST_DEADLINE_SECONDS: float = 60.0
     WEB_SEARCH_ENABLED: bool = False
     SEARXNG_BASE_URL: str = "http://searxng:8080"

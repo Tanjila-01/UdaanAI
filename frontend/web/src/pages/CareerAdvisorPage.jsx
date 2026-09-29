@@ -10,6 +10,8 @@ import Header from '../components/Header';
 import EditProfileDrawer from '../components/EditProfileDrawer';
 import '../styles/career-advisor.css';
 import AdvisorHistory from '../components/AdvisorHistory';
+import CareerAnswerRenderer, { renderInline } from '../components/CareerAnswerRenderer';
+import { getSuggestedFollowUps } from '../utils/advisorSuggestions';
 
 const examples = [
   { title: 'Build with technology', label: 'Software development', question: 'What does a software developer do?', icon: Code2, color: 'mint' },
@@ -23,30 +25,16 @@ function sourceUrl(value) {
   catch { return null; }
 }
 
-function renderFormattedAnswer(text) {
-  if (typeof text !== 'string') return null;
-  const parts = text.split(/(\*\*\*[^*]+?\*\*\*|\*\*[^*]+?\*\*)/g);
-  return parts.map((part, index) => {
-    if (part.startsWith('***') && part.endsWith('***') && part.length >= 6) {
-      return <strong key={index}><em>{part.slice(3, -3)}</em></strong>;
-    }
-    if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
-      return <strong key={index}>{part.slice(2, -2)}</strong>;
-    }
-    return part;
-  });
-}
-
 function Answer({ result }) {
   return <div className="advisor-answer">
     {result.answer_origin === 'web' && Array.isArray(result.sources) && result.sources.length > 0 && <p className="advisor-caption">Sources checked online{result.checked_at ? ` · Checked ${new Date(result.checked_at).toLocaleString()}` : ''}.</p>}
-    <p className="advisor-answer-text">{renderFormattedAnswer(result.answer)}</p>
+    <CareerAnswerRenderer content={result.answer} />
     {result.recommendations.length > 0 && <div className="advisor-recommendations">
       <p className="advisor-caption">Match scores describe your saved assessment fit, not a guarantee of success.</p>
       {result.recommendations.map(item => <section key={item.pathway_id} className="advisor-match">
         <h3>{item.rank}. {item.title}</h3>
         <span className="advisor-match-label">{item.match_label} · Match score: {item.match_score}</span>
-        <p>{renderFormattedAnswer(item.explanation)}</p>
+        <p>{renderInline(item.explanation)}</p>
       </section>)}
     </div>}
     {result.status === 'recommendations_explained' && <div className="advisor-setup-links"><Link to="/pathways">Explore my pathways <ArrowUpRight size={14} /></Link><Link to="/my-roadmap">My roadmap <ArrowUpRight size={14} /></Link></div>}
@@ -167,6 +155,16 @@ function AdvisorSession() {
     setFollowUp({ id: entry.result.history_id || entry.historyId, label: entry.result.conversation_topic || entry.result.sources[0]?.title || entry.payload.question });
     input.current?.focus();
   };
+  const handleSuggestedFollowUp = (suggestedText, entry) => {
+    readAloud.stop(); setNotice('');
+    const historyId = entry.result?.history_id || entry.historyId;
+    ask({
+      question: suggestedText,
+      intent: 'explore',
+      language: 'en',
+      ...(historyId ? { follow_up_to: historyId } : {})
+    });
+  };
   const refreshSaved = entry => ask({ ...entry.payload, answer_mode: 'auto', refresh: true, ...(entry.payload.follow_up_to ? { follow_up_to: entry.historyId } : {}) });
   const explain = () => ask({ question: 'Explain my saved career recommendations.', intent: 'explain_recommendations', language: 'en' });
   // Defer until mounted so StrictMode's first cleanup cannot abort a duplicate request.
@@ -213,7 +211,7 @@ function AdvisorSession() {
                   <div className="advisor-question"><span className="advisor-caption">You</span><p>{entry.payload.question}</p></div>
                   <div className="advisor-reply"><span className="advisor-avatar"><Sparkles size={17} /></span><div className="advisor-reply-body"><div className="advisor-reply-label"><strong>Udaan</strong>{entry.result?.sources.length > 0 && <span><ShieldCheck size={13} /> With sources</span>}</div>
                     {entry.savedAt && <div className="advisor-snapshot"><p>Saved {new Date(entry.savedAt).toLocaleDateString()}. This is a saved answer. Refresh to check the latest information.</p><button type="button" className="advisor-secondary" disabled={locked} onClick={() => refreshSaved(entry)}>Refresh answer</button></div>}
-                    {!entry.savedAt && entry.result?.history_id && <p className="advisor-caption">Saved to Previous questions</p>}
+                    {!entry.savedAt && entry.result?.history_id && <p className="advisor-caption advisor-saved-caption"><Check size={12} className="advisor-check-icon" /> Saved to Previous questions</p>}
                     {!entry.savedAt && entry.result && ['answered', 'recommendations_explained'].includes(entry.result.status) && entry.result.history_id === null && <p className="advisor-caption">This answer could not be saved. It is available on this page only.</p>}
                     {entry.loading && <div className="advisor-loading-row">
                       <p role="status" className="advisor-loading">
@@ -227,7 +225,31 @@ function AdvisorSession() {
                       </button>
                     </div>}
                     {entry.result && <><Answer result={entry.result} /><button className="advisor-listen" disabled={voiceBusy || !readAloud.available} title={readAloud.available ? 'Read this answer aloud using an on-device voice' : 'No on-device English voice is available in this browser'} onClick={() => readAloud.speak(entry.id, [entry.result.answer.replace(/\*\*/g, ''), ...entry.result.recommendations.map(item => `${item.title}. ${item.explanation.replace(/\*\*/g, '')}`)].join(' '))}>{readAloud.speakingId === entry.id ? <Square size={14} /> : <Volume2 size={15} />}{readAloud.speakingId === entry.id ? 'Stop listening' : 'Listen'}</button></>}
-                    {entry.result?.status === 'answered' && entry.payload.intent === 'explore' && (entry.result.history_id || entry.historyId) && <button type="button" className="advisor-followup-button" disabled={locked} onClick={() => chooseFollowUp(entry)}>Ask a follow-up</button>}
+                    {entry.result?.status === 'answered' && entry.payload.intent === 'explore' && (
+                      <div className="advisor-followups-container">
+                        <div className="advisor-suggested-section">
+                          <span className="advisor-suggested-label"><Sparkles size={13} /> Explore next:</span>
+                          <div className="advisor-chips-row">
+                            {getSuggestedFollowUps(entry.result.conversation_topic, entry.payload.question).map((promptText, pIdx) => (
+                              <button
+                                key={pIdx}
+                                type="button"
+                                className="advisor-suggested-chip"
+                                disabled={locked}
+                                onClick={() => handleSuggestedFollowUp(promptText, entry)}
+                              >
+                                {promptText}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        {(entry.result.history_id || entry.historyId) && (
+                          <button type="button" className="advisor-followup-button" disabled={locked} onClick={() => chooseFollowUp(entry)}>
+                            Ask a follow-up
+                          </button>
+                        )}
+                      </div>
+                    )}
                     {entry.result?.conversation_topic && <p className="advisor-caption">About: {entry.result.conversation_topic}</p>}
                     {entry.error && <p role="alert" className="advisor-error">{entry.error}</p>}
                     {entry.retryable && <button className="advisor-secondary" disabled={locked} onClick={() => ask(entry.payload, entry.id)}>Retry answer</button>}
