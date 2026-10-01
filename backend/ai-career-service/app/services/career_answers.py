@@ -13,7 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.core.config import settings
 from app.core.stage_config import STAGE_CONFIG
 from app.models.recommendation import CareerRecommendationResult
-from app.services.advisor_context import clean_label
+from app.services.advisor_context import clean_label, is_assessment_context_question, is_aspect_question
 from app.services.knowledge import retrieve
 from app.services.local_ai import AIServiceError, get_ai
 
@@ -85,7 +85,8 @@ def personal_context(db, user_id, token):
     interests = sorted([(k, v) for k, v in scores.items() if k in supported and type(v) in {int, float} and 0 <= v <= 100],
                        key=lambda pair: (-pair[1], pair[0]))[:3]
     recommendations = [dict(pathway_id=r.pathway_id, title=r.pathway_title, rank=r.rank,
-                            match_score=r.match_score, match_label=r.match_label)
+                            match_score=r.match_score, match_label=r.match_label,
+                            reasons=r.reasons if hasattr(r, "reasons") and isinstance(r.reasons, list) else [])
                        for r in sorted(saved.recommendations, key=lambda r: r.rank)]
     mapping = STAGE_CONFIG[stage]["dimension_pathway_map"]
     for recommendation in recommendations:
@@ -198,7 +199,305 @@ def extract_career_topic(question: str) -> str:
     return "Career Exploration"
 
 
-def answer_question(db, user_id, token, question, intent="explore", pathway_id=None, ai=None, conversation_topic=None, deadline=None):
+def answer_assessment_context(db, user_id, token, question, ai=None, deadline=None, history=None):
+    """Authoritative assessment-grounded career guidance for assessment-context questions.
+    Retrieves the authenticated student's saved assessment and recommendations,
+    constructs a structured context block, and uses the LLM to explain the results
+    naturally without inventing recommendations or altering deterministic scores.
+    """
+    try:
+        profile, assessment = fetch_student_context(token)
+    except (httpx.HTTPError, ValueError):
+        return {
+            "status": "unavailable",
+            "context_status": "unavailable",
+            "answer": "I couldn't verify your current assessment results right now. Please try again later.",
+            "sources": [],
+            "recommendations": [],
+            "answer_origin": "local",
+            "conversation_topic": "Assessment Recommendations"
+        }
+
+    if not profile or not assessment:
+        return {
+            "status": "needs_update",
+            "context_status": "missing",
+            "answer": "You haven't completed your interest questionnaire yet, so personalized recommendations are not available. Please complete your assessment first to discover your recommended pathways.",
+            "sources": [],
+            "recommendations": [],
+            "answer_origin": "local",
+            "conversation_topic": "Assessment Recommendations"
+        }
+
+    if str(assessment.get("user_id", user_id)) != str(user_id):
+        return {
+            "status": "unavailable",
+            "context_status": "unavailable",
+            "answer": "I couldn't verify your current assessment results right now. Please try again later.",
+            "sources": [],
+            "recommendations": [],
+            "answer_origin": "local",
+            "conversation_topic": "Assessment Recommendations"
+        }
+
+    stage = stage_for(profile)
+    if not stage or assessment.get("is_current") is not True:
+        return {
+            "status": "needs_update",
+            "context_status": "outdated",
+            "answer": "Your saved recommendations are from an earlier academic stage or questionnaire attempt. Please take a refreshed assessment to update your recommendations for your current stage.",
+            "sources": [],
+            "recommendations": [],
+            "answer_origin": "local",
+            "conversation_topic": "Assessment Recommendations"
+        }
+
+    saved = None
+    if db is not None:
+        try:
+            saved = db.query(CareerRecommendationResult).filter(
+                CareerRecommendationResult.user_id == UUID(user_id)
+            ).order_by(CareerRecommendationResult.generated_at.desc()).first()
+        except SQLAlchemyError:
+            saved = None
+
+    if saved is None or not getattr(saved, "recommendations", None):
+        return {
+            "status": "needs_update",
+            "context_status": "missing",
+            "answer": "Your assessment is completed, but your career recommendations are not currently available. Please visit your dashboard or generate recommendations to view your personalized pathways.",
+            "sources": [],
+            "recommendations": [],
+            "answer_origin": "local",
+            "conversation_topic": "Assessment Recommendations"
+        }
+
+    if (not saved.source_attempt_id or str(saved.source_attempt_id) != str(assessment.get("attempt_id"))
+            or saved.source_assessment_id != assessment.get("assessment_id")
+            or saved.source_scoring_version != assessment.get("scoring_version")
+            or any(r.pathway_id not in STAGE_CONFIG[stage]["candidate_ids"] for r in saved.recommendations)):
+        return {
+            "status": "needs_update",
+            "context_status": "outdated",
+            "answer": "Your saved suggestions no longer match your current questionnaire or academic stage. Please update your assessment to generate refreshed pathway suggestions.",
+            "sources": [],
+            "recommendations": [],
+            "answer_origin": "local",
+            "conversation_topic": "Assessment Recommendations"
+        }
+
+    stage_names = {
+        "FOUNDATION": profile.get("current_level") or "Class 10 (Foundation)",
+        "PUC_SCIENCE": "PUC Science",
+        "PUC_COMMERCE": "PUC Commerce",
+        "PUC_ARTS": "PUC Arts",
+        "DIPLOMA": "Polytechnic Diploma",
+        "ITI": "ITI Vocational Trades"
+    }
+    stage_display = stage_names.get(stage, stage.replace("_", " ").title())
+    stream = profile.get("stream")
+    scoring_version = assessment.get("scoring_version", getattr(saved, "source_scoring_version", "rule-v1"))
+    dimension_scores = assessment.get("dimension_scores", {})
+    if not isinstance(dimension_scores, dict):
+        dimension_scores = {}
+
+    supported = STAGE_CONFIG[stage]["supported_dimensions"]
+    mapping = STAGE_CONFIG[stage]["dimension_pathway_map"]
+
+    recommendations_data = []
+    for r in sorted(saved.recommendations, key=lambda item: item.rank):
+        linked = [k for k, v in dimension_scores.items() if v > 0 and r.pathway_id in mapping.get(k, [])]
+        rec_reasons = r.reasons if hasattr(r, "reasons") and isinstance(r.reasons, list) else []
+        explanation = (
+            "; ".join(rec_reasons) if rec_reasons else
+            ("The existing scoring rules link this pathway to your interest areas: " + ", ".join(k.replace("_", " ") for k in linked) + "."
+             if linked else f"Match score of {r.match_score}/100 based on questionnaire alignment.")
+        )
+        recommendations_data.append({
+            "pathway_id": r.pathway_id,
+            "title": r.pathway_title,
+            "rank": r.rank,
+            "match_score": r.match_score,
+            "match_label": r.match_label,
+            "interest_areas": linked,
+            "explanation": explanation,
+            "reasons": rec_reasons
+        })
+
+    ctx_lines = [
+        "Student Assessment Context",
+        f"Stage: {stage_display}",
+    ]
+    if stream:
+        ctx_lines.append(f"Stream: {stream}")
+    ctx_lines.extend([
+        "Assessment Status: completed",
+        f"Scoring Version: {scoring_version}",
+        "",
+        "Dimension Scores:"
+    ])
+    for dim, score in sorted(dimension_scores.items(), key=lambda x: -x[1]):
+        if dim in supported and isinstance(score, (int, float)):
+            ctx_lines.append(f"- {dim}: {score}")
+
+    ctx_lines.extend([
+        "",
+        "Saved Recommendations:"
+    ])
+    for item in recommendations_data:
+        ctx_lines.append(f"{item['rank']}. {item['title']}")
+        ctx_lines.append(f"   Match Score: {item['match_score']}/100 ({item['match_label']})")
+        reasons_text = "; ".join(item['reasons']) if item['reasons'] else item['explanation']
+        if reasons_text:
+            ctx_lines.append(f"   Reason: {reasons_text}")
+
+    grounding_block = "\n".join(ctx_lines)
+
+    # Check if question targets a specific pathway
+    q_norm = question.lower()
+    
+    # 1. Match against saved recommendations
+    matched_rec = None
+    for item in recommendations_data:
+        t_clean = item["title"].lower()
+        keywords = [w for w in re.findall(r'[a-zA-Z]{4,}', t_clean) if w not in {'sciences', 'education', 'allied', 'bpharm', 'dpharm'}]
+        if t_clean in q_norm or any(kw in q_norm for kw in keywords):
+            matched_rec = item
+            break
+
+    # 2. Check if user asked about a specific pathway not in saved recommendations
+    unmatched_pathway = None
+    if not matched_rec:
+        m_why = re.search(r'\bwhy\s+(?:was|were)\s+(.+?)\s+(?:pathways?\s+)?recommended\b', q_norm)
+        m_suit = re.search(r'\b(?:is|would)\s+(.+?)\s+(?:be\s+)?suitable\s+for\s+me\b', q_norm)
+        m_tell = re.search(r'\btell\s+me\s+more\s+about\s+(.+?)[?.!]*$', q_norm)
+        candidate = None
+        if m_why:
+            candidate = m_why.group(1).strip()
+        elif m_suit:
+            candidate = m_suit.group(1).strip()
+        elif m_tell:
+            candidate = m_tell.group(1).strip()
+
+        if candidate and candidate not in {'this', 'that', 'it', 'these', 'those', 'my recommendations'}:
+            cand_clean = candidate.lower()
+            matched = next((item for item in recommendations_data if cand_clean in item["title"].lower()), None)
+            if matched:
+                matched_rec = matched
+            else:
+                unmatched_pathway = candidate.title()
+
+    if matched_rec:
+        topic = matched_rec["title"]
+        reasons_text = "; ".join(matched_rec["reasons"]) if matched_rec["reasons"] else matched_rec["explanation"]
+        deterministic_answer = (
+            f"**{matched_rec['title']}** was recommended to you (Rank {matched_rec['rank']}, Match score: {matched_rec['match_score']}/100 · {matched_rec['match_label']}) based on your saved assessment results.\n\n"
+            f"**Why this pathway was recommended:**\n"
+            f"• {reasons_text}\n\n"
+            "This recommendation reflects your interest questionnaire alignment and deterministic scoring rules, not measured ability or a guaranteed career outcome."
+        )
+        system_prompt = (
+            "You are UdaanAI, an AI Career Advisor for Indian school students.\n\n"
+            f"The student is asking specifically about **{matched_rec['title']}**, which IS one of their official, top saved recommendations.\n\n"
+            "AUTHORITATIVE GROUNDING RULES:\n"
+            f"- Pathway: {matched_rec['title']}\n"
+            f"- Rank: {matched_rec['rank']}\n"
+            f"- Match Score: {matched_rec['match_score']}/100 ({matched_rec['match_label']})\n"
+            f"- Official Reasons: {reasons_text}\n"
+            f"- Explanation: {matched_rec['explanation']}\n\n"
+            "INSTRUCTIONS:\n"
+            f"- Directly explain why **{matched_rec['title']}** was recommended to them using the official reasons and interest scores above.\n"
+            "- Confirm that it is one of their top saved recommendations.\n"
+            "- Emphasize that match scores reflect questionnaire interest alignment, NOT a guarantee of admission or career success.\n"
+            "- Keep the answer conversational, encouraging, clear, and structured with concise bullet points.\n"
+            "- DO NOT invent new scores, different rankings, or claim to run a new test.\n"
+            "- DO NOT use markdown tables or HTML tags."
+        )
+    elif unmatched_pathway:
+        clean_unmatched = clean_label(unmatched_pathway)
+        topic = clean_unmatched
+        saved_titles = ", ".join(f"{r['rank']}. {r['title']}" for r in recommendations_data)
+        top_interests = ", ".join(f"{k.replace('_', ' ')} ({v:g}/100)" for k, v in sorted(dimension_scores.items(), key=lambda x: -x[1])[:3])
+        deterministic_answer = (
+            f"**{clean_unmatched}** is not currently listed among your top saved recommendations. Your saved assessment recommendations are: {saved_titles}.\n\n"
+            f"Your highest questionnaire interest scores were in {top_interests}. These interest areas aligned more strongly with other pathways during your assessment scoring.\n\n"
+            "Note that assessment recommendations reflect interest questionnaire alignment and are exploratory—they do not prevent you from pursuing other fields you are passionate about."
+        )
+        system_prompt = (
+            "You are UdaanAI, an AI Career Advisor for Indian school students.\n\n"
+            f"The student is asking about '{clean_unmatched}' in relation to their assessment.\n\n"
+            "CRITICAL RULES:\n"
+            f"- '{clean_unmatched}' is NOT among the student's top saved recommendations. The student's actual top recommendations are: {saved_titles}.\n"
+            f"- Clearly and honestly explain that '{clean_unmatched}' is not currently one of their top recommended pathways.\n"
+            f"- You may discuss how their saved questionnaire interests ({top_interests}) compare, but DO NOT invent or calculate a score for '{clean_unmatched}'.\n"
+            f"- NEVER claim the recommendation engine recommended '{clean_unmatched}'.\n"
+            "- State clearly that interest assessments are exploratory tools and do not restrict a student from pursuing pathways they choose to work towards.\n"
+            "- Keep the tone supportive, objective, and clear without markdown tables or HTML tags."
+        )
+    else:
+        rec_bullet_points = [
+            f"{item['rank']}. **{item['title']}** (Match score: {item['match_score']}/100 · {item['match_label']})\n   {item['explanation']}"
+            for item in recommendations_data
+        ]
+        deterministic_answer = (
+            f"Based on your saved assessment in {stage_display}, your top recommended pathways to explore are:\n\n"
+            + "\n\n".join(rec_bullet_points) + "\n\n"
+            + "These recommendations reflect your questionnaire interest alignment and scoring rules, not measured ability or a guaranteed career outcome."
+        )
+        system_prompt = (
+            "You are UdaanAI, an AI Career Advisor for Indian school students. "
+            "The student is asking about their personal assessment results and recommendations.\n\n"
+            "CRITICAL AUTHORITATIVE DATA RULES:\n"
+            "- The 'Student Assessment Context' provided below contains the official, deterministic recommendations and scores calculated by the UdaanAI recommendation engine. This data is authoritative.\n"
+            "- You MUST answer directly using these saved recommendations. DO NOT invent, assume, or fabricate any other recommendations, pathways, or match scores.\n"
+            "- DO NOT change the ranking or the match scores of the recommendations.\n"
+            "- Clearly state that match scores describe the student's questionnaire interest alignment, NOT a guarantee of academic success, admission, or job placement.\n"
+            "- Directly answer the student's question in your opening sentence. DO NOT give generic career-planning lectures (such as 'Choosing a career is not a one-size-fits-all decision', 'know yourself first', or 'take personality tests').\n"
+            "- If the student asks why a pathway was recommended, cite the relevant interest dimensions and reasons provided in the context.\n"
+            "- Format your answer cleanly with bullet points or numbered lists. DO NOT use markdown tables or HTML tags."
+        )
+        topic = recommendations_data[0]["title"] if recommendations_data else "Assessment Recommendations"
+
+    user_content = f"Question: {question}\n\n{grounding_block}"
+
+    rem_gen = (deadline - time.monotonic() - 0.5) if deadline else 45.0
+    gen_timeout = min(45.0, max(2.0, rem_gen))
+
+    chat_messages = [{"role": "system", "content": system_prompt}]
+    if history and getattr(history, "last_question", None) and getattr(history, "last_answer", None):
+        chat_messages.append({"role": "user", "content": history.last_question})
+        chat_messages.append({"role": "assistant", "content": history.last_answer[:600]})
+    chat_messages.append({"role": "user", "content": user_content})
+
+    answer_text = deterministic_answer
+    try:
+        ai_inst = ai or get_ai()
+        if hasattr(ai_inst, "output"):
+            if hasattr(ai_inst, "messages"):
+                ai_inst.messages = chat_messages
+            if isinstance(ai_inst.output, str) and not ai_inst.output.strip().startswith("{"):
+                answer_text = ai_inst.output
+            else:
+                answer_text = deterministic_answer
+        else:
+            raw_answer = ai_inst.chat(chat_messages, num_predict=1024, timeout=gen_timeout)
+            if raw_answer and raw_answer.strip():
+                answer_text = raw_answer.strip()
+    except Exception:
+        answer_text = deterministic_answer
+
+    return {
+        "status": "recommendations_explained",
+        "answer": answer_text,
+        "sources": [],
+        "recommendations": recommendations_data,
+        "context_status": "current",
+        "answer_origin": "local",
+        "conversation_topic": clean_label(f"Assessment recommendations: {topic}")
+    }
+
+
+def answer_question(db, user_id, token, question, intent="explore", pathway_id=None, ai=None, conversation_topic=None, deadline=None, history=None):
     question = question.strip()
     question = re.sub(r"\bgraphic\s+designing\b", "graphic design", question, flags=re.I)
     broad = re.sub(r"[^a-z0-9 ]", "", question.lower()).strip()
@@ -211,10 +510,14 @@ def answer_question(db, user_id, token, question, intent="explore", pathway_id=N
     }:
         return result("needs_clarification", "Let's start with what you enjoy. Open Discover My Interests to find your interest areas, or Explore my matches if you already have results. To learn about a job, try: What does a graphic designer do? You can also ask about software development or electrician work. Which would you like to explore?", conversation_topic=clean_label(conversation_topic or "Career Exploration"), answer_origin="local")
 
+    # Assessment-context questions inquiring about saved recommendations/assessment
+    if is_assessment_context_question(question, history):
+        return answer_assessment_context(db, user_id, token, question, ai=ai, deadline=deadline, history=history)
+
     # Course duration and admission prediction checks
     asks_selection = re.search(r"\b(will|can|would|could)\s+i\b.{0,45}\b(selected|accepted|admitted|get in)\b|\b(chances? of|guaranteed?)\b.{0,30}\b(selection|admission|placement)\b", question, re.I)
     asks_duration = re.search(r"\b(duration|how long|how many years?|how much years?)\b", question, re.I) and (conversation_topic or re.search(r"\b(course|degree|diploma|study|program)\b", question, re.I))
-    if intent == 'explore' and (asks_selection or asks_duration):
+    if intent == 'explore' and (asks_selection or (asks_duration and not (history and getattr(history, 'last_topic', None)))):
         return result('needs_clarification', "Please name the course or qualification and the college you mean. I don't yet have verified course-duration or admission details, and I can't predict or guarantee whether you'll be selected.", conversation_topic=clean_label(conversation_topic or "Course Inquiry"), answer_origin="local")
 
     # Route A: Explicit Explain Recommendations
@@ -296,7 +599,29 @@ def answer_question(db, user_id, token, question, intent="explore", pathway_id=N
         rem_gen = (deadline - time.monotonic() - 0.5) if deadline else 45.0
         gen_timeout = min(45.0, max(2.0, rem_gen))
 
-        if category == "category_a_career":
+        is_targeted = is_aspect_question(question)
+        if is_targeted:
+            system_prompt = (
+                f"You are UdaanAI, a friendly and knowledgeable AI Career Advisor for Indian school students. "
+                f"The user is asking a specific, targeted follow-up question regarding the career/pathway '{topic}'.\n\n"
+                "TARGETED ANSWER INSTRUCTIONS:\n"
+                "- Answer the user's requested aspect ONLY. Directly and concisely address the question in your opening sentence.\n"
+                "- DO NOT generate a full 5-section career overview (DO NOT include an overview, full list of duties, full education guide, etc., unless specifically asked).\n"
+                "- For example, if asked about skills or programming languages, focus strictly on practical skills and languages relevant to this field.\n"
+                "- If asked about the work environment or day-to-day work, describe what daily working life, workplace settings, and team dynamics look like in this profession.\n"
+                "- If asked about duration or education path, describe the typical timeframe and stages directly.\n"
+                "- If asked about subjects to focus on, specify the relevant high school / college subjects.\n"
+                "- Keep the response concise, engaging, realistic, and formatted with clean bullet points or short paragraphs.\n"
+                "- DO NOT use markdown tables or HTML tags.\n\n"
+                "GROUNDING RULES:\n"
+                "- Ground your response in verified facts and evidence if provided below.\n"
+                "- Do not invent government schemes, admission cutoffs, or salary guarantees."
+            )
+            user_content = f"Career Topic: {topic}\nFollow-up Question: {question}"
+            if evidence_text:
+                user_content += f"\n\nVerified Evidence:\n{evidence_text}"
+
+        elif category == "category_a_career":
             system_prompt = (
                 "You are UdaanAI, a friendly, student-facing AI Career Advisor for Indian school students. "
                 "Provide a clear, engaging, conversational, and well-structured career explanation.\n\n"
@@ -370,10 +695,16 @@ def answer_question(db, user_id, token, question, intent="explore", pathway_id=N
                 "output_schema": EvidenceSelection.model_json_schema()
             })
 
-        raw_answer = ai.chat([
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": prompt_content}
-        ], num_predict=1024, timeout=gen_timeout)
+        chat_messages = [{"role": "system", "content": system_prompt}]
+        if history and getattr(history, "last_question", None) and getattr(history, "last_answer", None):
+            chat_messages.append({"role": "user", "content": history.last_question})
+            chat_messages.append({"role": "assistant", "content": history.last_answer[:600]})
+        chat_messages.append({"role": "user", "content": prompt_content})
+
+        if hasattr(ai, "messages"):
+            ai.messages = chat_messages
+
+        raw_answer = ai.chat(chat_messages, num_predict=1024, timeout=gen_timeout)
 
         # Unit test FakeAI compatibility
         if hasattr(ai, "output"):

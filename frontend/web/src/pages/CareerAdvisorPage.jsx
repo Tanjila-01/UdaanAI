@@ -92,7 +92,7 @@ function AdvisorSession() {
       setQuestion(combined);
       setNotice('Voice added. Check your question, then send it when you are ready.');
     }
-  });
+  }, { language: 'en' });
   const voiceBusy = voice.phase !== 'idle';
   const locked = busy || voiceBusy || historyBusy;
   useEffect(() => () => { pending.current?.abort(); pending.current = null; }, []);
@@ -140,7 +140,15 @@ function AdvisorSession() {
     }
   }
   const explore = text => ask({ question: text.trim(), intent: 'explore', language: 'en' });
-  const submitQuestion = text => ask({ question: text.trim(), intent: 'explore', language: 'en', ...(followUp ? { follow_up_to: followUp.id } : {}) });
+  const submitQuestion = text => {
+    const latestHistoryId = followUp ? followUp.id : (followUp === false ? undefined : exchanges[exchanges.length - 1]?.result?.history_id);
+    ask({
+      question: text.trim(),
+      intent: 'explore',
+      language: 'en',
+      ...(latestHistoryId ? { follow_up_to: latestHistoryId } : {})
+    });
+  };
   const handleKeyDown = event => {
     if (event.key === 'Enter' && !event.shiftKey) {
       if (event.isComposing || event.keyCode === 229) return;
@@ -260,7 +268,7 @@ function AdvisorSession() {
               <div ref={bottom} />
             </div>
             <form className="advisor-composer" onSubmit={event => { event.preventDefault(); if (question.trim() && question.trim().length <= 1000) submitQuestion(question); }}>
-              {followUp && <div className="advisor-context-chip"><span>Following up on: <strong>{followUp.label}</strong></span><button type="button" className="advisor-icon-button" disabled={locked} aria-label="Clear follow-up context" onClick={() => setFollowUp(null)}><X size={15} /></button></div>}
+              {followUp && <div className="advisor-context-chip"><span>Following up on: <strong>{followUp.label}</strong></span><button type="button" className="advisor-icon-button" disabled={locked} aria-label="Clear follow-up context" onClick={() => setFollowUp(false)}><X size={15} /></button></div>}
               <label htmlFor="career-question">Ask a career question</label>
               <div className="advisor-input-box"><textarea ref={input} id="career-question" rows={2} maxLength={1000} disabled={voiceBusy} value={question} onChange={event => setQuestion(event.target.value)} onKeyDown={handleKeyDown} placeholder="What are you curious about?" aria-describedby="question-limit voice-description search-description" />
                 <div className="advisor-composer-actions"><div className="advisor-voice-actions">
@@ -269,7 +277,7 @@ function AdvisorSession() {
                 </div><button type="submit" disabled={locked || !question.trim()} className="advisor-send" aria-label="Ask Udaan" title="Ask Udaan"><ArrowUp size={20} /></button></div>
               </div>
               <p id="search-description" className="advisor-caption">Udaan researches online and explains the findings. Your profile and assessment scores stay private.</p>
-              <div className="advisor-composer-meta"><span id="voice-description">{voice.supported ? 'Speak in English. Review before sending.' : 'Voice typing is not supported here. You can type instead.'}</span><span id="question-limit">{question.length}/1000</span></div>
+              <div className="advisor-composer-meta"><span id="voice-description">{voice.supported ? 'Review before sending.' : 'Voice typing is not supported here. You can type instead.'}</span><span id="question-limit">{question.length}/1000</span></div>
               {(voice.error || readAloud.error) && <p role="alert" className="advisor-error">{voice.error || readAloud.error}</p>}
               {notice && <p role="status" className="advisor-notice"><Check size={15} />{notice}</p>}
             </form>

@@ -29,11 +29,16 @@ async def transcribe(request: Request, claims=Depends(get_current_user_claims)):
             raise HTTPException(408, 'Recording upload timed out.')
         if not data:
             raise HTTPException(422, 'Please record a question first.')
+        language = request.query_params.get('language')
         try:
+            if language is not None:
+                return await run_in_threadpool(transcribe_clip, data, language=language)
             return await run_in_threadpool(transcribe_clip, data)
         except AudioInputError as exc:
             raise HTTPException(422, str(exc))
-        except Exception:
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).exception("Transcription error: %s", exc)
             raise HTTPException(503, 'Local voice typing is unavailable. Please type your question for now.')
     finally:
         capacity.release()

@@ -354,8 +354,9 @@ export const getCareerAnswerApi = async (data, { signal } = {}) => {
   return response.data;
 };
 
-export const transcribeCareerAudioApi = async (audio, { signal } = {}) => {
+export const transcribeCareerAudioApi = async (audio, { language, signal } = {}) => {
   const response = await apiClient.post('/api/v1/career-intelligence/speech/transcribe', audio, {
+    params: language ? { language } : {},
     timeout: 130000, signal, headers: { 'Content-Type': audio.type || 'audio/webm' },
   });
   return response.data;

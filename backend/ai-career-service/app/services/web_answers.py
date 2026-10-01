@@ -23,7 +23,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.config import settings
 from app.services.local_ai import AIServiceError, get_ai
-from app.services.advisor_context import clean_label
+from app.services.advisor_context import clean_label, is_aspect_question
 
 # Exact hosts only. Search results cannot direct requests into internal services.
 OFFICIAL_HOSTS = {
@@ -86,12 +86,14 @@ def split_sentences(text):
 
 def named_topic(question):
     """Explicit new subjects supersede selected pronouns; never infer from 'this/they'."""
-    question = normalize_question(question).split('?')[0]
-    match = re.search(r'\b(?:what (?:is|are)|tell me about|explain|what does)\s+(?:a |an |the )?(.+?)[?.!]*$', question.strip(), re.I)
+    question_clean = normalize_question(question).split('?')[0]
+    match = re.search(r'\b(?:what (?:is|are)|tell me about|explain|what does)\s+(?:a |an |the )?(.+?)[?.!]*$', question_clean.strip(), re.I)
     if not match:
         return None
     topic = re.sub(r'\s+do(?: each day| at work)?$', '', match[1], flags=re.I).strip(' ?.!,')
     if len(topic) > 120 or re.search(r'\b(it|this|that|they|their|them|these|those|my|me)\b', topic, re.I):
+        return None
+    if is_aspect_question(topic) or is_aspect_question(question_clean):
         return None
     return topic if CAREERS.search(topic) else None
 

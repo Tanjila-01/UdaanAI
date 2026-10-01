@@ -24,14 +24,19 @@ from app.services.advisor_context import (
     is_profile_question,
     is_provenance_question,
     is_assessment_or_scoring_question,
+    is_assessment_behavioral_question,
+    is_assessment_context_question,
     is_direct_guidance_question,
     is_options_filtering_question,
+    is_education_context_statement,
+    handle_education_context_statement,
     is_referral_source_question,
     is_near_me_institution_question,
     is_design_pathways_question,
     is_electrical_licensing_question,
     is_standalone_subject_reset,
     parse_preference_and_exclusion,
+    is_aspect_question,
 )
 from app.services.advisor_history import save_answer
 from app.services.assessment_grounding import (
@@ -43,7 +48,7 @@ from app.services.assessment_grounding import (
     handle_near_me_institution,
     handle_design_pathways,
 )
-from app.services.career_answers import answer_question, personal_context
+from app.services.career_answers import answer_question, personal_context, answer_assessment_context
 from app.services.followups import followup_context
 from app.services.knowledge import PATHWAYS
 from app.services.web_answers import named_topic, normalize_question, web_answer
@@ -99,8 +104,9 @@ class SavedPathwayExplanation(BaseModel):
     rank: int
     match_score: int
     match_label: str
-    interest_areas: list[str]
-    explanation: str
+    interest_areas: list[str] = Field(default_factory=list)
+    explanation: str = ""
+    reasons: list[str] = Field(default_factory=list)
 
 
 class AnswerResponse(BaseModel):
@@ -215,6 +221,16 @@ def career_answer(request: AnswerRequest, claims=Depends(get_current_user_claims
             selected_route = "options_filtering"
             route_reason = "Question filters discussed creative options without a degree"
             result = handle_options_filtering(raw_question, conv_state)
+            conv_state = update_conversation_state(
+                conv_state, raw_question, request.intent, result, topic=result.get('conversation_topic')
+            )
+
+        # Route E2: Education Context Statements (e.g. "I am studying in 1st PUC.", "I already took science PCMB.")
+        elif is_education_context_statement(raw_question):
+            edu_info = is_education_context_statement(raw_question)
+            selected_route = "education_context_statement"
+            route_reason = "Statement shares education stage or stream context without asking a career question"
+            result = handle_education_context_statement(raw_question, edu_info, conv_state)
             conv_state = update_conversation_state(
                 conv_state, raw_question, request.intent, result, topic=result.get('conversation_topic')
             )
@@ -336,8 +352,8 @@ def career_answer(request: AnswerRequest, claims=Depends(get_current_user_claims
                 conv_state, raw_question, request.intent, result, topic=result.get('conversation_topic')
             )
 
-        # Route G: Assessment Scoring, Ties, SSLC Options & Stated Preference Overrides
-        elif is_assessment_or_scoring_question(raw_question, conv_state) or (
+        # Route G1: Assessment Behavioral Inquiries (Ties, Disclaimers, SSLC Options, Preferences)
+        elif is_assessment_behavioral_question(raw_question, conv_state) or (
             'iti' in parse_preference_and_exclusion(raw_question)[0] and parse_preference_and_exclusion(raw_question)[1]
         ):
             selected_route = "assessment_grounding"
@@ -347,6 +363,17 @@ def career_answer(request: AnswerRequest, claims=Depends(get_current_user_claims
             except Exception:
                 personal_ctx = ("unavailable", [], "I couldn't verify your current assessment results right now.")
             result = build_assessment_response(personal_ctx, raw_question, conv_state)
+            conv_state = update_conversation_state(
+                conv_state, raw_question, request.intent, result, topic=result.get('conversation_topic')
+            )
+
+        # Route G2: Assessment Context Questions (e.g. "What is my recommended path to follow?")
+        elif is_assessment_context_question(raw_question, conv_state):
+            selected_route = "assessment_context"
+            route_reason = "Question asks for personal assessment recommendations or summary"
+            result = answer_assessment_context(
+                db, claims['sub'], token_str, raw_question, deadline=req_deadline, history=conv_state
+            )
             conv_state = update_conversation_state(
                 conv_state, raw_question, request.intent, result, topic=result.get('conversation_topic')
             )
@@ -366,10 +393,11 @@ def career_answer(request: AnswerRequest, claims=Depends(get_current_user_claims
                 conv_state.stated_preferences = []
                 conv_state.discussed_options = []
                 conv_state.last_topic = topic
+            elif new_topic:
+                topic = new_topic
+                pathway_id = None
             elif request.follow_up_to:
                 topic, pathway_id = followup_context(db, claims['sub'], request.follow_up_to)
-                if new_topic:
-                    topic, pathway_id = new_topic, None
                 if topic is None and conv_state.last_topic and not re.search(r'^(?:what|how)\s+about\s+(?:this|that|it)\b', raw_question, re.I):
                     topic = conv_state.last_topic
                 if topic is None:
@@ -381,8 +409,8 @@ def career_answer(request: AnswerRequest, claims=Depends(get_current_user_claims
                         context_status='not_requested',
                         answer_origin='local'
                     )
-            elif new_topic:
-                topic = new_topic
+            elif conv_state.last_topic and not re.search(r'^(?:what|how)\s+about\s+(?:this|that|it)\b', raw_question, re.I):
+                topic = conv_state.last_topic
 
             if settings.WEB_SEARCH_ENABLED and request.answer_mode != 'local':
                 selected_route = "web_explore"
@@ -391,7 +419,8 @@ def career_answer(request: AnswerRequest, claims=Depends(get_current_user_claims
                 result = answer_question(
                     db, claims['sub'], token_str, raw_question,
                     intent=request.intent, pathway_id=pathway_id,
-                    conversation_topic=topic, deadline=req_deadline
+                    conversation_topic=topic, deadline=req_deadline,
+                    history=conv_state
                 )
 
             result['conversation_topic'] = clean_label(result.get('conversation_topic') or topic or new_topic)

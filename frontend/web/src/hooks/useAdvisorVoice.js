@@ -48,7 +48,8 @@ export function useLocalReadAloud() {
   return { speak, stop, speakingId, error, available: voices.length > 0 };
 }
 
-export function useLocalVoiceInput(onTranscript) {
+export function useLocalVoiceInput(onTranscript, options = {}) {
+  const language = options?.language || 'en';
   const [phase, setPhase] = useState('idle');
   const [seconds, setSeconds] = useState(0);
   const [error, setError] = useState('');
@@ -58,6 +59,7 @@ export function useLocalVoiceInput(onTranscript) {
   const supported = typeof window.MediaRecorder !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
 
   function release(session) {
+    if (!session) return;
     clearTimeout(session.timeout); clearInterval(session.interval);
     session.stream?.getTracks().forEach(track => track.stop());
   }
@@ -66,7 +68,9 @@ export function useLocalVoiceInput(onTranscript) {
     active.current = null;
     if (session) {
       session.controller.abort();
-      if (session.recorder?.state === 'recording') session.recorder.stop();
+      if (session.recorder && session.recorder.state === 'recording') {
+        try { session.recorder.stop(); } catch {}
+      }
       release(session);
     }
     setPhase('idle'); setSeconds(0);
@@ -76,15 +80,28 @@ export function useLocalVoiceInput(onTranscript) {
     active.current = null;
     if (session) {
       session.controller.abort();
-      if (session.recorder?.state === 'recording') session.recorder.stop();
+      if (session.recorder && session.recorder.state === 'recording') {
+        try { session.recorder.stop(); } catch {}
+      }
       release(session);
     }
   }, []);
 
   function finish() {
     const session = active.current;
-    if (session?.recorder?.state === 'recording') {
-      session.recorder.stop(); release(session); setPhase('transcribing');
+    if (!session) return;
+    clearTimeout(session.timeout); clearInterval(session.interval);
+    if (session.recorder && session.recorder.state === 'recording') {
+      setPhase('transcribing');
+      try {
+        session.recorder.stop();
+      } catch {
+        cancel();
+        return;
+      }
+      session.stream?.getTracks().forEach(track => track.stop());
+    } else {
+      cancel();
     }
   }
   async function start() {
@@ -99,6 +116,7 @@ export function useLocalVoiceInput(onTranscript) {
       if (active.current !== session) { release(session); return; }
       const mimeType = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4'].find(type => window.MediaRecorder.isTypeSupported(type));
       if (!mimeType) throw new Error('unsupported');
+      session.mimeType = mimeType;
       const recorder = new window.MediaRecorder(stream, { mimeType, audioBitsPerSecond: 64000 });
       session.recorder = recorder;
       recorder.ondataavailable = event => {
@@ -113,18 +131,28 @@ export function useLocalVoiceInput(onTranscript) {
         if (active.current !== session) return;
         setPhase('transcribing');
         try {
-          const result = await transcribeCareerAudioApi(new Blob(session.chunks, { type: mimeType }), { signal: session.controller.signal });
+          if (!session.chunks.length || session.bytes === 0) {
+            setError('We could not hear a clear, short question. Please try again.');
+            return;
+          }
+          const blob = new Blob(session.chunks, { type: session.mimeType || mimeType });
+          if (!blob.size) {
+            setError('We could not hear a clear, short question. Please try again.');
+            return;
+          }
+          const result = await transcribeCareerAudioApi(blob, { language, signal: session.controller.signal });
           if (active.current !== session) return;
           if (typeof result?.text !== 'string' || !result.text.trim()) throw new Error('empty');
           callback.current(result.text.trim());
         } catch (failure) {
           if (active.current !== session) return;
+          if (session.controller.signal.aborted) return;
           const status = failure.response?.status;
           setError(status === 429 ? 'Voice typing is busy. Please wait, then record again.'
             : status === 422 ? 'We could not hear a clear, short question. Please try again.'
             : 'Voice typing is unavailable. Please type your question or try recording again.');
         } finally {
-          if (active.current === session) { active.current = null; setPhase('idle'); }
+          if (active.current === session) { active.current = null; setPhase('idle'); setSeconds(0); }
         }
       };
       recorder.start(250); setPhase('recording');

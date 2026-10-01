@@ -75,6 +75,89 @@ describe('Local voice input', () => {
     expect(transcribeCareerAudioApi).toHaveBeenCalledTimes(1);
     expect(tracks[0].stop).toHaveBeenCalled();
   });
+  it('allows recording again immediately after transcription succeeds', async () => {
+    const onText = vi.fn();
+    transcribeCareerAudioApi
+      .mockResolvedValueOnce({ text: 'First question' })
+      .mockResolvedValueOnce({ text: 'Second question' });
+    const { result } = renderHook(() => useLocalVoiceInput(onText));
+
+    // First recording
+    await act(() => result.current.start());
+    expect(result.current.phase).toBe('recording');
+    await act(() => result.current.finish());
+    await waitFor(() => expect(onText).toHaveBeenCalledWith('First question'));
+    expect(result.current.phase).toBe('idle');
+
+    // Second recording
+    await act(() => result.current.start());
+    expect(result.current.phase).toBe('recording');
+    await act(() => result.current.finish());
+    await waitFor(() => expect(onText).toHaveBeenCalledWith('Second question'));
+    expect(result.current.phase).toBe('idle');
+  });
+  it('resets busy state on 429 and clears error on subsequent Speak click', async () => {
+    transcribeCareerAudioApi.mockRejectedValueOnce({ response: { status: 429 } });
+    const onText = vi.fn();
+    const { result } = renderHook(() => useLocalVoiceInput(onText));
+
+    await act(() => result.current.start());
+    await act(() => result.current.finish());
+    expect(result.current.phase).toBe('idle');
+    expect(result.current.error).toBe('Voice typing is busy. Please wait, then record again.');
+
+    // Second click on Speak
+    transcribeCareerAudioApi.mockResolvedValueOnce({ text: 'Recovered question' });
+    await act(() => result.current.start());
+    expect(result.current.error).toBe('');
+    expect(result.current.phase).toBe('recording');
+    await act(() => result.current.finish());
+    await waitFor(() => expect(onText).toHaveBeenCalledWith('Recovered question'));
+    expect(result.current.phase).toBe('idle');
+  });
+  it('resets busy state on network failure and allows retry', async () => {
+    transcribeCareerAudioApi.mockRejectedValueOnce(new Error('Network error'));
+    const { result } = renderHook(() => useLocalVoiceInput(vi.fn()));
+
+    await act(() => result.current.start());
+    await act(() => result.current.finish());
+    expect(result.current.phase).toBe('idle');
+    expect(result.current.error).toContain('Voice typing is unavailable');
+
+    await act(() => result.current.start());
+    expect(result.current.error).toBe('');
+    expect(result.current.phase).toBe('recording');
+    act(() => result.current.cancel());
+    expect(result.current.phase).toBe('idle');
+  });
+  it('handles empty audio gracefully without calling API', async () => {
+    const { result } = renderHook(() => useLocalVoiceInput(vi.fn()));
+    // Mock empty recorder chunk
+    class EmptyRecorder extends Recorder {
+      stop() {
+        this.state = 'inactive';
+        this.onstop?.();
+      }
+    }
+    vi.stubGlobal('MediaRecorder', EmptyRecorder);
+
+    await act(() => result.current.start());
+    await act(() => result.current.finish());
+    await waitFor(() => expect(result.current.phase).toBe('idle'));
+    expect(result.current.error).toContain('We could not hear a clear');
+  });
+  it('prevents multiple simultaneous recording sessions on rapid repeated clicks', async () => {
+    const { result } = renderHook(() => useLocalVoiceInput(vi.fn()));
+    await act(async () => {
+      const p1 = result.current.start();
+      const p2 = result.current.start();
+      await Promise.all([p1, p2]);
+    });
+    expect(getUserMedia).toHaveBeenCalledTimes(1);
+    expect(result.current.phase).toBe('recording');
+    act(() => result.current.cancel());
+    expect(result.current.phase).toBe('idle');
+  });
 });
 
 describe('On-device read-aloud', () => {

@@ -43,6 +43,7 @@ class ConversationState(BaseModel):
     last_recommended_pathway: Optional[str] = None # e.g. "ITI Vocational Trades"
     last_topic: Optional[str] = None            # e.g. "options after SSLC"
     last_question: Optional[str] = None
+    last_answer: Optional[str] = None
     last_intent: Optional[str] = None
     last_status: Optional[str] = None           # e.g. "answered", "failed", "unavailable"
     referral_subject: Optional[str] = None      # e.g. "electrical contractor licence in Karnataka"
@@ -100,46 +101,158 @@ def is_provenance_question(question: str, state: Optional[ConversationState] = N
     return False
 
 
-def is_assessment_or_scoring_question(question: str, state: Optional[ConversationState] = None) -> bool:
-    """Detect questions inquiring about personal assessment results, scores, ties, or options based on student records."""
+ASSESSMENT_CONTEXT_PATTERNS = [
+    r'\b(?:what\s+is|what\s+are|show\s+me|tell\s+me|explain)\s+(?:my|the)\s+(?:saved\s+|career\s+|top\s+)*(?:recommended|recommendations?)\b',
+    r'\b(?:my|the)\s+recommended\s+(?:path|pathway|career|stream|course|track|option)s?\b',
+    r'\b(?:paths?|pathways?|careers?|options?|courses?)\s+(?:was\s+|were\s+|are\s+|is\s+)?recommended\s+(?:for|to)\s+me\b',
+    r'\bwhy\s+(?:was|were)\s+(.+?)\s+(?:pathways?\s+)?recommended\s*(?:to|for)?\s*me?\b',
+    r'\bwhy\s+was\s+(.+?)\s+recommended\b',
+    r'\bwhat\s+(?:was|were|is|are)\s+recommended\s+(?:to|for)\s+me\b',
+    r'\bwhat\s+(?:are|were)\s+my\s+(?:top\s+)?(?:recommendations?|matches?|results?)\b',
+    r'\bmy\s+(?:saved\s+|career\s+|top\s+)*(?:recommendations?|matches?)\b',
+    r'\bwhat\s+did\s+(?:my|the)\s+assessment\s+(?:say|recommend|suggest|show|give)\b',
+    r'\bwhat\s+did\s+i\s+get\s+(?:in|on|from)\s+(?:my|the)\s+assessment\b',
+    r'\bwhat\s+did\s+i\s+get\b.*\b(?:assessment|results?|test)\b',
+    r'\b(?:my\s+(?:saved\s+)?(?:assessment|questionnaire|test\s+results?))\b',
+    r'\b(?:is|would)\s+(.+?)\s+(?:be\s+)?suitable\s+for\s+me\b',
+    r'\bsuitable\s+for\s+me\b',
+]
+
+
+def is_assessment_context_question(question: str, state: Optional[ConversationState] = None) -> bool:
+    """Detect questions inquiring about personal assessment recommendations and results."""
+    q = normalize_text(question).lower().strip()
+    if any(re.search(p, q) for p in ASSESSMENT_CONTEXT_PATTERNS):
+        return True
+    # If active conversation context just explained recommendations, follow-up "Tell me more about X" is assessment-context
+    if state and getattr(state, "last_status", None) == "recommendations_explained":
+        if re.search(r'\btell\s+me\s+more\s+about\s+(.+?)\b', q) or re.search(r'\bwhat\s+about\s+(.+?)\b', q):
+            return True
+    return False
+
+
+ASPECT_PATTERNS = re.compile(
+    r'\b(?:skills?|key\s+skills?|technical\s+skills?|programming\s+languages?|'
+    r'work\s+environment|working\s+environment|day-to-day\s+work|typical\s+work\s+day|'
+    r'daily\s+work|day-to-day|responsibilit(?:y|ies)|salary|salaries|pay|earnings?|'
+    r'education\s+path(?:way)?|degree|qualifications?|preparation|how\s+to\s+prepare|'
+    r'exams?|subjects?|eligibilit(?:y|ies)|career\s+growth|opportunities|'
+    r'how\s+long\s+(?:does\s+it\s+take|is\s+it)|duration|job\s+roles?|kinds?\s+of\s+jobs?|'
+    r'subjects\s+should\s+i\s+focus\s+on)\b',
+    re.I
+)
+
+
+def is_aspect_question(question: str) -> bool:
+    """Detect if a question is asking about a specific aspect of a career/pathway rather than a full overview."""
+    q = normalize_text(question).lower().strip()
+    return bool(ASPECT_PATTERNS.search(q))
+
+
+EDUCATION_STATEMENT_PATTERNS = [
+    r'\b(?:i\s+(?:am\s+)?(?:currently\s+)?studying\s+in|i\s+am\s+in|i\s+study\s+in)\s+(?:1st\s+puc|2nd\s+puc|puc\s*[12]|class\s*(?:8|9|10|11|12)|10th|11th|12th|sslc)\b',
+    r'\b(?:i\s+(?:have\s+)?(?:already\s+)?(?:took|taken|chosen|opted\s+for|selected)|my\s+stream\s+is|my\s+combination\s+is)\s+(?:science\s+)?(?:pcmb|pcmc|pcme|pcmb\s+combination|commerce|arts)\b',
+    r'\b(?:i\s+took|i\s+have\s+taken)\s+(?:science\s+)?(?:pcmb|pcmc|pcme|commerce|arts)\b',
+]
+
+
+def is_education_context_statement(question: str) -> Optional[dict]:
+    """Detect statements where a student shares their current study stage or stream context without asking a career question."""
+    q = normalize_text(question).lower().strip()
+    if re.search(r'^(?:what|how|why|which|can|is|does|will|where)\b', q) or '?' in q:
+        return None
+    for pattern in EDUCATION_STATEMENT_PATTERNS:
+        if re.search(pattern, q):
+            hypo_stage = extract_hypothetical_stage(q)
+            stream = extract_stream(q)
+            if 'pcmb' in q:
+                stream = 'Science (PCMB)'
+            elif 'pcmc' in q:
+                stream = 'Science (PCMC)'
+            return {'stage': hypo_stage, 'stream': stream, 'raw': question}
+    return None
+
+
+def handle_education_context_statement(question: str, edu_info: dict, state: ConversationState) -> dict:
+    q_lower = question.lower()
+    stage = edu_info.get('stage') or state.hypothetical_stage or state.actual_stage or "PUC"
+    stream = edu_info.get('stream') or state.stream or "Science"
+
+    if 'pcmb' in q_lower or (stream and 'pcmb' in stream.lower()):
+        answer_text = (
+            "Studying **Science with PCMB (Physics, Chemistry, Mathematics, Biology)** in PUC is a versatile combination in Karnataka that keeps multiple major pathways open:\n\n"
+            "• **Engineering & Technology**: Eligible for B.E./B.Tech programs via KCET and JEE using your Physics, Chemistry, and Mathematics scores.\n"
+            "• **Medical & Healthcare**: Eligible for MBBS, BDS, B.Sc Nursing, and Allied Health Sciences via NEET using your Physics, Chemistry, and Biology scores.\n"
+            "• **Pharmacy & Agricultural Sciences**: Eligible for B.Pharm and B.Sc (Hons) Agriculture via KCET.\n"
+            "• **Pure & Applied Sciences**: Direct eligibility for B.Sc research and degree programs in physics, chemistry, biotechnology, and mathematics.\n\n"
+            "Would you like to explore technical engineering options, healthcare and allied sciences, or check what your interest assessment recommends?"
+        )
+        topic = "PUC Science (PCMB)"
+    elif '1st puc' in q_lower or 'puc 1' in q_lower:
+        answer_text = (
+            "Great! Being in **1st PUC** is an important transitional stage in Karnataka where you build your core subject foundation.\n\n"
+            "Which stream are you studying in—such as Science (PCMB/PCMC), Commerce, or Arts—or what career directions are you curious to explore?"
+        )
+        topic = "1st PUC Studies"
+    elif '2nd puc' in q_lower or 'puc 2' in q_lower:
+        answer_text = (
+            "Being in **2nd PUC** is your board examination and entrance preparation year in Karnataka.\n\n"
+            "What stream or entrance exams (such as KCET, NEET, or JEE) are you preparing for, or which degree pathways would you like to explore?"
+        )
+        topic = "2nd PUC Studies"
+    else:
+        answer_text = (
+            f"Understood! You are studying in {stage} with {stream}. What career pathways, courses, or options would you like to explore?"
+        )
+        topic = f"{stage} {stream}"
+
+    return {
+        "status": "answered",
+        "answer": answer_text,
+        "sources": [],
+        "recommendations": [],
+        "context_status": "not_requested",
+        "answer_origin": "local",
+        "conversation_topic": topic
+    }
+
+
+def is_assessment_behavioral_question(question: str, state: Optional[ConversationState] = None) -> bool:
+    """Detect specific assessment behavioral edge-cases (score ties, probability disclaimers, SSLC options)."""
     q = normalize_text(question).lower().strip()
 
-    # Inquiry based on saved background / assessment / questionnaire / what you know
-    if re.search(r'\b(?:based\s+on|according\s+to|given)\s+(?:what\s+you\s+know|my\s+(?:saved\s+)?(?:assessment|questionnaire|background|test|results|profile))\b', q):
+    # 1. Score ties & list ordering
+    if (re.search(r'\b(?:both|each)\b.*?\b(?:show|have|scored?|rating|marks?|points?)\b.*?\b\d+\b', q)
+            or re.search(r'\b(?:tie\b|tied\b|same\s+score|equal\s+score)\b', q)
+            or re.search(r'\bwhy\s+(?:are\s+you\s+putting|is)\s+.*?\b(?:first|ranked\s+above|above|before)\b', q)):
         return True
+
+    # 2. Score meaning / probability / chance of success
+    if (re.search(r'\b(?:match\s+score|score|rating)\s+(?:of\s+)?\d+\b.*?\b(?:mean|indicate|signify|tell|show)\b.*?\b(?:chance|probability|succeed|success|doing\s+well|succeeding)\b', q)
+            or re.search(r'\b\d+%\s+(?:chance|probability)\b', q)
+            or re.search(r'\b\d+\s+percent\s+(?:chance|probability)\b', q)
+            or re.search(r'\b(?:chance\s+of\s+(?:succeeding|doing\s+well)|probability\s+of\s+success)\b', q)):
+        return True
+
+    # 3. Explicit SSLC options inquiry
     if re.search(r'\b(?:which|what)\s+(?:two|2|top)?\s*(?:options?|tracks?|pathways?|courses?)\s+(?:should|could|can)\s+i\s+(?:explore|take|choose|look\s+at)\s+after\s+(?:sslc|10th|class\s*10)\b', q):
         return True
 
-    # Inquiry about score ties / ratings / why one is ranked above another
-    if re.search(r'\b(?:both|each)\b.*?\b(?:show|have|scored?|rating|marks?|points?)\b.*?\b50\b', q) or re.search(r'\b(?:tie\b|tied\b|same\s+score|equal\s+score)\b', q):
-        return True
-    if re.search(r'\bwhy\s+(?:are\s+you\s+putting|is)\s+.*?\b(?:first|ranked\s+above|above|before)\b', q):
-        return True
-
-    # Inquiry about score meaning / probability / chance of success / doing well
-    if re.search(r'\b(?:match\s+score|score|rating)\s+(?:of\s+)?\d+\b.*?\b(?:mean|indicate|signify|tell|show)\b.*?\b(?:chance|probability|succeed|success|doing\s+well|succeeding)\b', q):
-        return True
-    if re.search(r'\b\d+%\s+(?:chance|probability)\b', q) or re.search(r'\b\d+\s+percent\s+(?:chance|probability)\b', q):
-        return True
-    if re.search(r'\b(?:chance\s+of\s+(?:succeeding|doing\s+well)|probability\s+of\s+success)\b', q):
-        return True
-
-    # Explicit query about saved assessment / recommendations
-    if re.search(r'\b(?:my\s+(?:saved\s+)?assessment|my\s+recommendations?|my\s+matches?|my\s+results?)\b', q):
-        return True
-    # "Why did my assessment recommend that?" / "Why was that recommended?"
-    if re.search(r'\bwhy\s+(?:did\s+(?:my\s+)?(?:assessment|it)\s+recommend|was\s+that\s+recommended)\b', q):
-        return True
-    # "Does that mean I must choose X?" / "Must I choose ITI?"
+    # 4. Compulsory inquiry ("Must I choose ITI?")
     if re.search(r'\b(?:does\s+that\s+mean\s+i\s+must|must\s+i\s+choose|is\s+(?:iti|puc|that)\s+compulsory)\b', q):
         return True
-    # "How does that fit my assessment?"
+
+    # 5. Fit assessment
     if re.search(r'\bfit\s+my\s+assessment\b', q):
         return True
-    # "What should I do next?" in context of assessment
-    if re.search(r'\bwhat\s+(?:should|do)\s+i\s+do\s+next\b', q) and state and state.last_intent == 'explain_recommendations':
-        return True
+
     return False
+
+
+def is_assessment_or_scoring_question(question: str, state: Optional[ConversationState] = None) -> bool:
+    """Detect questions inquiring about personal assessment results, scores, ties, or options based on student records."""
+    return is_assessment_behavioral_question(question, state) or is_assessment_context_question(question)
+
 
 
 def is_direct_guidance_question(question: str) -> Optional[str]:
@@ -337,32 +450,77 @@ def load_conversation_state(
     actual_stage: Optional[str] = None
 ) -> ConversationState:
     """Load conversation state strictly for the active thread when follow_up_to is provided.
-    If follow_up_to is None (new chat or fresh start), returns a fresh state.
+    If follow_up_to is None, recovers the most recent AdvisorHistory for the current user.
     """
     state = ConversationState(actual_stage=actual_stage)
 
-    if follow_up_to:
-        history_row = db.query(AdvisorHistory).filter(
-            AdvisorHistory.id == follow_up_to,
-            AdvisorHistory.user_id == UUID(user_id)
-        ).first()
+    history_row = None
+    try:
+        user_uuid = UUID(user_id) if isinstance(user_id, str) else user_id
+    except Exception:
+        user_uuid = None
 
-        if history_row and isinstance(history_row.response, dict):
-            resp = history_row.response
-            saved_state = resp.get('conversation_state')
-            if isinstance(saved_state, dict):
+    if user_uuid:
+        if follow_up_to:
+            try:
+                history_row = db.query(AdvisorHistory).filter(
+                    AdvisorHistory.id == follow_up_to,
+                    AdvisorHistory.user_id == user_uuid
+                ).first()
+            except Exception:
+                history_row = None
+            if not history_row:
+                try:
+                    history_row = db.query(AdvisorHistory).filter(
+                        AdvisorHistory.id == str(follow_up_to),
+                        AdvisorHistory.user_id == str(user_uuid)
+                    ).first()
+                except Exception:
+                    history_row = None
+        else:
+            # Recover most recent history for user if available
+            try:
+                history_row = db.query(AdvisorHistory).filter(
+                    AdvisorHistory.user_id == user_uuid
+                ).order_by(AdvisorHistory.created_at.desc()).first()
+            except Exception:
+                history_row = None
+            if not history_row:
+                try:
+                    history_row = db.query(AdvisorHistory).filter(
+                        AdvisorHistory.user_id == str(user_uuid)
+                    ).order_by(AdvisorHistory.created_at.desc()).first()
+                except Exception:
+                    history_row = None
+
+    if history_row and isinstance(history_row.response, dict):
+        resp = history_row.response
+        saved_state = resp.get('conversation_state')
+        if isinstance(saved_state, dict):
+            try:
                 state = ConversationState.model_validate(saved_state)
-                if actual_stage:
-                    state.actual_stage = actual_stage
-            else:
-                # Reconstruct from response metadata
-                state.last_topic = clean_label(resp.get('conversation_topic', ''))
-                state.last_question = history_row.question
-                state.last_intent = history_row.request.get('intent', 'explore')
-                state.last_status = resp.get('status')
-                recs = resp.get('recommendations')
-                if isinstance(recs, list) and recs:
-                    state.last_recommended_pathway = recs[0].get('title')
+            except Exception:
+                state = ConversationState(actual_stage=actual_stage)
+            if actual_stage:
+                state.actual_stage = actual_stage
+        else:
+            # Reconstruct from response metadata
+            state.last_topic = clean_label(resp.get('conversation_topic', ''))
+            state.last_question = history_row.question
+            state.last_answer = resp.get('answer', '')
+            state.last_intent = history_row.request.get('intent', 'explore') if isinstance(history_row.request, dict) else 'explore'
+            state.last_status = resp.get('status')
+            recs = resp.get('recommendations')
+            if isinstance(recs, list) and recs:
+                state.last_recommended_pathway = recs[0].get('title')
+
+        # Ensure last_question, last_answer, and last_topic are populated
+        if not state.last_question and history_row.question:
+            state.last_question = history_row.question
+        if not state.last_answer and resp.get('answer'):
+            state.last_answer = resp.get('answer')
+        if not state.last_topic and resp.get('conversation_topic'):
+            state.last_topic = clean_label(resp.get('conversation_topic'))
 
     return state
 
@@ -413,6 +571,7 @@ def update_conversation_state(
             state.last_topic = clean_label(topic)
 
     state.last_question = question
+    state.last_answer = response.get('answer', '')
     state.last_intent = intent
     state.last_status = response.get('status')
 

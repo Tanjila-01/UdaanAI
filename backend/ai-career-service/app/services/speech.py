@@ -97,12 +97,15 @@ def detect_language(text: str) -> str:
 
 @lru_cache(maxsize=1)
 def speech_model():
-    """Load BharatGenAI Shrutam-2 model and tokenizer."""
+    """Load BharatGenAI Shrutam-2 model and tokenizer with CPU thread tuning and token bounds."""
     import torch
     from transformers import AutoModel, AutoTokenizer
 
-    model_source = MODEL_PATH if (os.path.exists(MODEL_PATH) and os.path.isdir(MODEL_PATH)) else REPO_ID
+    # Optimal CPU concurrency: 4 threads avoids core thrashing and context switching
+    if not torch.cuda.is_available():
+        torch.set_num_threads(min(4, os.cpu_count() or 4))
 
+    model_source = MODEL_PATH if (os.path.exists(MODEL_PATH) and os.path.isdir(MODEL_PATH)) else REPO_ID
     target_device = "cuda" if (DEVICE == "auto" and torch.cuda.is_available()) or DEVICE == "cuda" else "cpu"
 
     try:
@@ -111,6 +114,20 @@ def speech_model():
         model.to(target_device)
         model.eval()
         model.tokenizer = tokenizer
+
+        # Safe tokenizer patch for transformers v5+
+        def _safe_tokenize(self, prompt: str, tok):
+            conversation = [{"content": prompt, "role": "user"}]
+            res = tok.apply_chat_template(conversation, tokenize=True, add_generation_prompt=True, return_dict=False)
+            if isinstance(res, dict) or hasattr(res, "input_ids"):
+                prompt_ids = res["input_ids"]
+            else:
+                prompt_ids = res
+            prompt_length = len(prompt_ids)
+            prompt_ids = torch.tensor(prompt_ids, dtype=torch.int64)
+            return prompt_ids, prompt_length
+
+        model.__class__._tokenize = _safe_tokenize
         return model
     except Exception as exc:
         raise RuntimeError(f"Could not load Shrutam-2 model from '{model_source}' on '{target_device}': {exc}") from exc
@@ -121,23 +138,34 @@ def transcribe_clip(data: bytes, language: Optional[str] = None):
     model = speech_model()
     tokenizer = getattr(model, "tokenizer", None)
 
-    # Shrutam-2 prompt construction
-    if language == 'kn':
+    # Shrutam-2 prompt steering
+    lang_code = (language or '').strip().lower()
+    if lang_code in ('kn', 'kannada'):
         prompt = "Transcribe speech to Kannada text."
-    elif language == 'hi':
+        steered_lang = 'kn'
+    elif lang_code in ('hi', 'hindi'):
         prompt = "Transcribe speech to Hindi text."
-    elif language == 'en':
+        steered_lang = 'hi'
+    elif lang_code in ('en', 'english'):
         prompt = "Transcribe speech to English text."
+        steered_lang = 'en'
     else:
         prompt = "Transcribe speech."
+        steered_lang = None
 
-    # model.transcribe accepts a list of waveforms or file paths
-    predictions = model.transcribe([audio], prompts=[prompt], tokenizer=tokenizer)
+    # Optimized generation: greedy search (num_beams=1), early stop tokens, bounded max_new_tokens=48
+    predictions = model.transcribe(
+        [audio],
+        prompts=[prompt],
+        tokenizer=tokenizer,
+        num_beams=1,
+        max_new_tokens=48
+    )
     text = predictions[0].strip() if predictions else ""
     if not text:
         raise AudioInputError('No clear speech was detected. Please try again in a quieter place.')
     if len(text) > 1000:
         raise AudioInputError('Please record a shorter question, up to 1000 characters.')
 
-    detected_lang = language or detect_language(text)
+    detected_lang = steered_lang or detect_language(text)
     return {'text': text, 'language': detected_lang}
