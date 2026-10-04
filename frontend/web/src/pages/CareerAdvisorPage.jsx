@@ -281,7 +281,7 @@ function AdvisorSession() {
                 </div><button type="submit" disabled={locked || !question.trim()} className="advisor-send" aria-label="Ask Udaan" title="Ask Udaan"><ArrowUp size={20} /></button></div>
               </div>
               <p id="search-description" className="advisor-caption">Udaan researches online and explains the findings. Your profile and assessment scores stay private.</p>
-              <div className="advisor-composer-meta"><span id="voice-description">{voice.supported ? 'Review before sending. Voice input currently supports English only.' : 'Voice typing is not supported here. You can type instead.'}</span><span id="question-limit">{question.length}/1000</span></div>
+              <div className="advisor-composer-meta"><span id="voice-description">{voice.supported ? 'Review before sending. Voice input supports English only.' : 'Voice typing is not supported here. You can type instead.'}</span><span id="question-limit">{question.length}/1000</span></div>
               {(voice.error || readAloud.error) && <p role="alert" className="advisor-error">{voice.error || readAloud.error}</p>}
               {notice && <p role="status" className="advisor-notice"><Check size={15} />{notice}</p>}
             </form>
