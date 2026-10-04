@@ -1,5 +1,5 @@
-import torch
-from app.services.speech import speech_model, decode_clip
+import torch  # type: ignore
+from app.services.speech import speech_model, decode_clip  # type: ignore
 
 with open('/tmp/audio_samples/sample_en1.mp3', 'rb') as f:
     audio1 = decode_clip(f.read())

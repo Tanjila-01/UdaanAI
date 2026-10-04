@@ -158,9 +158,10 @@ services:
       KNOWLEDGE_ROOT: "/knowledge"
       WEB_SEARCH_ENABLED: "false"
       SEARXNG_BASE_URL: "http://searxng:8080"
-      SPEECH_MODEL_ID: "${SPEECH_MODEL_ID:-bharatgenai/Shrutam-2}"
-      SPEECH_MODEL_PATH: "${SPEECH_MODEL_PATH:-/models/shrutam-2}"
-      SPEECH_MODEL_DEVICE: "${SPEECH_MODEL_DEVICE:-auto}"
+      SPEECH_MODEL_ID: "${SPEECH_MODEL_ID:-vasista22/whisper-kannada-small}"
+      SPEECH_MODEL_PATH: "${SPEECH_MODEL_PATH:-/models/whisper-kannada-small-ct2-int8}"
+      SPEECH_MODEL_DEVICE: "${SPEECH_MODEL_DEVICE:-cpu}"
+      SPEECH_MODEL_COMPUTE_TYPE: "${SPEECH_MODEL_COMPUTE_TYPE:-int8}"
       HF_HUB_DISABLE_TELEMETRY: "1"
     volumes:
       - ./backend/ai-career-service:/app

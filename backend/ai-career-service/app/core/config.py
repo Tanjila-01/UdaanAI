@@ -24,10 +24,11 @@ class Settings(BaseSettings):
     EMBEDDING_DIMENSION: int = 384
     EMBEDDING_DEVICE: str = "cpu"
 
-    # Speech recognition uses BharatGenAI Shrutam-2.
-    SPEECH_MODEL_ID: str = "bharatgenai/Shrutam-2"
-    SPEECH_MODEL_PATH: str = "/models/shrutam-2"
-    SPEECH_MODEL_DEVICE: str = "auto"
+    # Speech recognition uses converted vasista22/whisper-kannada-small (CTranslate2 INT8).
+    SPEECH_MODEL_ID: str = "vasista22/whisper-kannada-small"
+    SPEECH_MODEL_PATH: str = "/models/whisper-kannada-small-ct2-int8"
+    SPEECH_MODEL_DEVICE: str = "cpu"
+    SPEECH_MODEL_COMPUTE_TYPE: str = "int8"
 
     AI_REQUEST_DEADLINE_SECONDS: float = 60.0
     WEB_SEARCH_ENABLED: bool = False

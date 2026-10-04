@@ -1,7 +1,7 @@
 import time
-import torch
-from transformers import LogitsProcessor, LogitsProcessorList
-from app.services.speech import speech_model, decode_clip
+import torch  # type: ignore
+from transformers import LogitsProcessor, LogitsProcessorList  # type: ignore
+from app.services.speech import speech_model, decode_clip  # type: ignore
 
 print("Loading audio...")
 with open('/tmp/audio_samples/sample_en1.mp3', 'rb') as f:

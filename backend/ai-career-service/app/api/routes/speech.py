@@ -2,7 +2,7 @@ import asyncio
 from fastapi import APIRouter, Depends, HTTPException, Request
 from starlette.concurrency import run_in_threadpool
 from app.core.security import get_current_user_claims
-from app.services.speech import MAX_AUDIO_BYTES, AudioInputError, transcribe_clip
+from app.services.speech import MAX_AUDIO_BYTES, AudioInputError, transcribe_clip, normalize_voice_language
 from app.api.routes.answers import capacity
 
 router = APIRouter(prefix='/career-intelligence/speech', tags=['Local speech'])
@@ -16,6 +16,12 @@ async def transcribe(request: Request, claims=Depends(get_current_user_claims)):
     if not capacity.acquire(blocking=False):
         raise HTTPException(429, 'Voice typing is busy. Please retry shortly.', headers={'Retry-After': '10'})
     try:
+        language = request.query_params.get('language')
+        try:
+            norm_lang = normalize_voice_language(language)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc))
+
         async def read_audio():
             data = bytearray()
             async for chunk in request.stream():
@@ -29,16 +35,17 @@ async def transcribe(request: Request, claims=Depends(get_current_user_claims)):
             raise HTTPException(408, 'Recording upload timed out.')
         if not data:
             raise HTTPException(422, 'Please record a question first.')
-        language = request.query_params.get('language')
+
         try:
-            if language is not None:
-                return await run_in_threadpool(transcribe_clip, data, language=language)
-            return await run_in_threadpool(transcribe_clip, data)
+            return await run_in_threadpool(transcribe_clip, data, language=norm_lang)
         except AudioInputError as exc:
             raise HTTPException(422, str(exc))
+        except ValueError as exc:
+            raise HTTPException(400, str(exc))
         except Exception as exc:
             import logging
             logging.getLogger(__name__).exception("Transcription error: %s", exc)
             raise HTTPException(503, 'Local voice typing is unavailable. Please type your question for now.')
     finally:
         capacity.release()
+

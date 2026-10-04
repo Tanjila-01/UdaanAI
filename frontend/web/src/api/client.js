@@ -354,13 +354,26 @@ export const getCareerAnswerApi = async (data, { signal } = {}) => {
   return response.data;
 };
 
+export const SUPPORTED_VOICE_LANGUAGES = ['en'];
+
+export const normalizeVoiceLanguage = (language) => {
+  const value = String(language || '').trim().toLowerCase();
+  if (value === 'en' || value === 'english') return 'en';
+  return null;
+};
+
 export const transcribeCareerAudioApi = async (audio, { language, signal } = {}) => {
+  const normLang = normalizeVoiceLanguage(language);
+  if (!normLang) {
+    throw new Error('Unsupported voice language. Supported languages: en');
+  }
   const response = await apiClient.post('/api/v1/career-intelligence/speech/transcribe', audio, {
-    params: language ? { language } : {},
+    params: { language: normLang },
     timeout: 130000, signal, headers: { 'Content-Type': audio.type || 'audio/webm' },
   });
   return response.data;
 };
+
 
 export const listCareerHistoryApi = async (offset = 0, { signal } = {}) => {
   const response = await apiClient.get('/api/v1/career-intelligence/history', { params: { offset }, signal });

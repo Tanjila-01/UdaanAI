@@ -1,0 +1,23 @@
+{
+  "include": [
+    "backend"
+  ],
+  "exclude": [
+    "outputs",
+    "tmp",
+    "node_modules",
+    "**/node_modules",
+    "**/__pycache__"
+  ],
+  "extraPaths": [
+    "backend/ai-career-service",
+    "backend/auth-service",
+    "backend/student-service",
+    "backend/assessment-service",
+    "backend/roadmap-service",
+    "backend/admin-analytics-service",
+    "backend/institution-service"
+  ],
+  "reportMissingImports": "none",
+  "reportMissingModuleSource": "none"
+}

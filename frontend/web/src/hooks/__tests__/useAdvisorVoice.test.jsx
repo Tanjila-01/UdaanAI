@@ -1,8 +1,9 @@
 import { act, renderHook, waitFor, cleanup } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useLocalReadAloud, useLocalVoiceInput } from '../useAdvisorVoice';
+import { useLocalReadAloud, useLocalVoiceInput, normalizeVoiceLanguage, SUPPORTED_VOICE_LANGUAGES } from '../useAdvisorVoice';
 import { transcribeCareerAudioApi } from '../../api/client';
 vi.mock('../../api/client', () => ({ transcribeCareerAudioApi: vi.fn() }));
+
 let recorder, tracks, getUserMedia;
 class Recorder {
   static isTypeSupported() { return true; }
@@ -158,6 +159,115 @@ describe('Local voice input', () => {
     act(() => result.current.cancel());
     expect(result.current.phase).toBe('idle');
   });
+  it('sends language=en when English is configured', async () => {
+    transcribeCareerAudioApi.mockResolvedValueOnce({ text: 'English question' });
+    const { result } = renderHook(() => useLocalVoiceInput(vi.fn(), { language: 'en' }));
+    await act(() => result.current.start());
+    await act(() => result.current.finish());
+    await waitFor(() => expect(transcribeCareerAudioApi).toHaveBeenCalledTimes(1));
+    expect(transcribeCareerAudioApi.mock.calls[0][1].language).toBe('en');
+  });
+  it('sends language=en when english alias is configured', async () => {
+    transcribeCareerAudioApi.mockResolvedValueOnce({ text: 'English question' });
+    const { result } = renderHook(() => useLocalVoiceInput(vi.fn(), { language: 'english' }));
+    await act(() => result.current.start());
+    await act(() => result.current.finish());
+    await waitFor(() => expect(transcribeCareerAudioApi).toHaveBeenCalledTimes(1));
+    expect(transcribeCareerAudioApi.mock.calls[0][1].language).toBe('en');
+  });
+  it('does not send unsupported language to transcription API', async () => {
+    for (const badLang of ['kn', 'kannada', 'hi', 'hindi', 'ta', 'te', 'ml', 'fr', 'es', 'random']) {
+      const { result } = renderHook(() => useLocalVoiceInput(vi.fn(), { language: badLang }));
+      await act(() => result.current.start());
+      expect(result.current.error).toContain('English only');
+      expect(result.current.phase).toBe('idle');
+      expect(transcribeCareerAudioApi).not.toHaveBeenCalled();
+    }
+  });
+  it('MediaRecorder error returns to idle and allows immediate retry', async () => {
+    const { result } = renderHook(() => useLocalVoiceInput(vi.fn()));
+    await act(() => result.current.start());
+    expect(result.current.phase).toBe('recording');
+    act(() => { recorder.onerror?.(new Event('error')); });
+    expect(result.current.phase).toBe('idle');
+    expect(result.current.error).toContain('Recording stopped unexpectedly');
+
+    // Immediately start second recording
+    await act(() => result.current.start());
+    expect(result.current.error).toBe('');
+    expect(result.current.phase).toBe('recording');
+    act(() => result.current.cancel());
+    expect(result.current.phase).toBe('idle');
+  });
+  it('multiple rapid finish calls are idempotent and do not abort transcription', async () => {
+    let resolveApi;
+    transcribeCareerAudioApi.mockReturnValue(new Promise(res => { resolveApi = res; }));
+    const onText = vi.fn();
+    const { result } = renderHook(() => useLocalVoiceInput(onText));
+
+    await act(() => result.current.start());
+    expect(result.current.phase).toBe('recording');
+
+    // First finish triggers transcription
+    act(() => result.current.finish());
+    expect(result.current.phase).toBe('transcribing');
+
+    // Second and third finish calls while transcribing must NOT call cancel or abort
+    act(() => result.current.finish());
+    act(() => result.current.finish());
+    expect(result.current.phase).toBe('transcribing');
+
+    await act(async () => {
+      resolveApi({ text: 'Answer after idempotent finish' });
+    });
+    expect(onText).toHaveBeenCalledWith('Answer after idempotent finish');
+    expect(result.current.phase).toBe('idle');
+  });
+  it('consecutive recordings cleanly nullify previous recorder event listeners', async () => {
+    transcribeCareerAudioApi
+      .mockResolvedValueOnce({ text: 'First question' })
+      .mockResolvedValueOnce({ text: 'Second question' });
+    const onText = vi.fn();
+    const { result } = renderHook(() => useLocalVoiceInput(onText));
+
+    await act(() => result.current.start());
+    const firstRecorder = recorder;
+    await act(() => result.current.finish());
+    expect(result.current.phase).toBe('idle');
+
+    // Previous recorder events must be cleaned up
+    expect(firstRecorder.onstop).toBeNull();
+    expect(firstRecorder.ondataavailable).toBeNull();
+    expect(firstRecorder.onerror).toBeNull();
+
+    // Second recording
+    await act(() => result.current.start());
+    const secondRecorder = recorder;
+    expect(secondRecorder).not.toBe(firstRecorder);
+    await act(() => result.current.finish());
+    expect(result.current.phase).toBe('idle');
+    expect(onText).toHaveBeenCalledTimes(2);
+  });
+  it('captures session language at start so mid-recording language change does not corrupt in-flight request', async () => {
+    transcribeCareerAudioApi.mockResolvedValueOnce({ text: 'English question' });
+    let lang = 'en';
+    const { result, rerender } = renderHook(() => useLocalVoiceInput(vi.fn(), { language: lang }));
+
+    await act(() => result.current.start());
+    expect(result.current.phase).toBe('recording');
+
+    // Profile updates language to Kannada during recording
+    lang = 'kn';
+    rerender();
+    expect(result.current.phase).toBe('recording');
+
+    await act(() => result.current.finish());
+    expect(result.current.phase).toBe('idle');
+    expect(transcribeCareerAudioApi).toHaveBeenCalledWith(
+      expect.any(Blob),
+      expect.objectContaining({ language: 'en' })
+    );
+  });
 });
 
 describe('On-device read-aloud', () => {
@@ -181,3 +291,19 @@ describe('On-device read-aloud', () => {
     expect(result.current.available).toBe(false); expect(synth.speak).not.toHaveBeenCalled();
   });
 });
+
+describe('Voice language normalization contract', () => {
+  it('accepts and normalizes en', () => {
+    expect(SUPPORTED_VOICE_LANGUAGES).toEqual(['en']);
+    expect(normalizeVoiceLanguage('en')).toBe('en');
+    expect(normalizeVoiceLanguage('EN')).toBe('en');
+    expect(normalizeVoiceLanguage('english')).toBe('en');
+    expect(normalizeVoiceLanguage('English')).toBe('en');
+  });
+  it('rejects unsupported languages, empty string, and null/undefined', () => {
+    for (const lang of ['kn', 'kannada', 'hi', 'hindi', 'ta', 'te', 'ml', 'mr', 'bn', 'gu', 'or', 'pa', 'ur', 'as', 'fr', 'de', 'es', '', '  ', null, undefined]) {
+      expect(normalizeVoiceLanguage(lang)).toBeNull();
+    }
+  });
+});
+

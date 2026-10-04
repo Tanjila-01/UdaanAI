@@ -1,7 +1,7 @@
 import time
 import os
-import torch
-from app.services.speech import speech_model, decode_clip
+import torch  # type: ignore
+from app.services.speech import speech_model, decode_clip  # type: ignore
 
 model = speech_model()
 tok = model.tokenizer

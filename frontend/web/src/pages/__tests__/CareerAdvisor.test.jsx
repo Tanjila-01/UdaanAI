@@ -266,3 +266,24 @@ it('submits a suggested follow-up chip when clicked with conversation history li
   expect(await screen.findByText('Software developers need coding and problem-solving skills.')).toBeTruthy();
 });
 
+it('displays English voice badge even when student profile preference is Kannada', () => {
+  useAuth.mockReturnValue({
+    user: { id: 'student-kn' },
+    profile: { preferred_language: 'Kannada' }
+  });
+  mount();
+  expect(screen.getByText('English')).toBeTruthy();
+  expect(screen.queryByText('Kannada')).toBeNull();
+});
+
+it('defaults voice badge to English when student profile preference is Hindi or unsupported', () => {
+  useAuth.mockReturnValue({
+    user: { id: 'student-hi' },
+    profile: { preferred_language: 'Hindi' }
+  });
+  mount();
+  expect(screen.getByText('English')).toBeTruthy();
+  expect(screen.queryByText('Hindi')).toBeNull();
+});
+
+

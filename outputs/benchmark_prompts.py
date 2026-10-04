@@ -1,6 +1,6 @@
 import time
 import sys
-from app.services.speech import speech_model, decode_clip
+from app.services.speech import speech_model, decode_clip  # type: ignore
 
 with open('/tmp/english_sample1.wav', 'rb') as f:
     audio1 = decode_clip(f.read())

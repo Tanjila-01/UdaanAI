@@ -1,10 +1,4 @@
-"""Bounded, in-memory multilingual speech transcription using BharatGenAI Shrutam-2.
-
-LICENSING NOTICE:
-BharatGenAI Shrutam-2 is released under the BharatGen Non-Commercial License.
-Commercial deployment requires compliance with the official BharatGen authorization/license terms.
-(Developed under NM-ICPS, Department of Science and Technology, Government of India).
-"""
+"""Bounded, in-memory multilingual speech transcription using faster-whisper."""
 import io
 import os
 import re
@@ -19,6 +13,16 @@ SAMPLE_RATE = 16000
 MODEL_PATH = os.environ.get('SPEECH_MODEL_PATH', settings.SPEECH_MODEL_PATH)
 REPO_ID = os.environ.get('SPEECH_MODEL_ID', settings.SPEECH_MODEL_ID)
 DEVICE = os.environ.get('SPEECH_MODEL_DEVICE', settings.SPEECH_MODEL_DEVICE)
+COMPUTE_TYPE = os.environ.get('SPEECH_MODEL_COMPUTE_TYPE', getattr(settings, 'SPEECH_MODEL_COMPUTE_TYPE', 'int8'))
+
+SUPPORTED_VOICE_LANGUAGES = {'en'}
+
+
+def normalize_voice_language(language: Optional[str]) -> str:
+    value = (language or '').strip().lower()
+    if value in ('en', 'english'):
+        return 'en'
+    raise ValueError('Unsupported voice language. Supported languages: en')
 
 
 class AudioInputError(ValueError):
@@ -26,8 +30,8 @@ class AudioInputError(ValueError):
 
 
 def decode_clip(data: bytes):
-    import av
-    import numpy as np
+    import av  # type: ignore
+    import numpy as np  # type: ignore
     parts, samples = [], 0
     try:
         with av.open(io.BytesIO(data), options={'protocol_whitelist': 'pipe'}) as clip:
@@ -65,30 +69,6 @@ def detect_language(text: str) -> str:
     # Devanagari (Hindi, Marathi): 0x0900 - 0x097F
     if re.search(r'[\u0900-\u097f]', text):
         return 'hi'
-    # Tamil: 0x0B80 - 0x0BFF
-    if re.search(r'[\u0b80-\u0bff]', text):
-        return 'ta'
-    # Telugu: 0x0C00 - 0x0C7F
-    if re.search(r'[\u0c00-\u0c7f]', text):
-        return 'te'
-    # Malayalam: 0x0D00 - 0x0D7F
-    if re.search(r'[\u0d00-\u0d7f]', text):
-        return 'ml'
-    # Bengali: 0x0980 - 0x09FF
-    if re.search(r'[\u0980-\u09ff]', text):
-        return 'bn'
-    # Gujarati: 0x0A80 - 0x0AFF
-    if re.search(r'[\u0a80-\u0aff]', text):
-        return 'gu'
-    # Gurmukhi (Punjabi): 0x0A00 - 0x0A7F
-    if re.search(r'[\u0a00-\u0a7f]', text):
-        return 'pa'
-    # Odia: 0x0B00 - 0x0B7F
-    if re.search(r'[\u0b00-\u0b7f]', text):
-        return 'or'
-    # Arabic/Urdu: 0x0600 - 0x06FF
-    if re.search(r'[\u0600-\u06ff]', text):
-        return 'ur'
     # Latin / English
     if re.search(r'[a-zA-Z]', text):
         return 'en'
@@ -97,75 +77,49 @@ def detect_language(text: str) -> str:
 
 @lru_cache(maxsize=1)
 def speech_model():
-    """Load BharatGenAI Shrutam-2 model and tokenizer with CPU thread tuning and token bounds."""
-    import torch
-    from transformers import AutoModel, AutoTokenizer
+    """Load faster-whisper WhisperModel as a cached singleton."""
+    from faster_whisper import WhisperModel  # type: ignore
 
-    # Optimal CPU concurrency: 4 threads avoids core thrashing and context switching
-    if not torch.cuda.is_available():
-        torch.set_num_threads(min(4, os.cpu_count() or 4))
+    model_path = os.environ.get('SPEECH_MODEL_PATH', settings.SPEECH_MODEL_PATH)
+    repo_id = os.environ.get('SPEECH_MODEL_ID', settings.SPEECH_MODEL_ID)
+    device = os.environ.get('SPEECH_MODEL_DEVICE', settings.SPEECH_MODEL_DEVICE)
+    compute_type = os.environ.get('SPEECH_MODEL_COMPUTE_TYPE', getattr(settings, 'SPEECH_MODEL_COMPUTE_TYPE', 'int8')) or "int8"
+    cpu_threads = min(4, os.cpu_count() or 4)
 
-    model_source = MODEL_PATH if (os.path.exists(MODEL_PATH) and os.path.isdir(MODEL_PATH)) else REPO_ID
-    target_device = "cuda" if (DEVICE == "auto" and torch.cuda.is_available()) or DEVICE == "cuda" else "cpu"
+    # If local directory exists and is non-empty, load from it; else load by repo/model name
+    model_source = model_path if (os.path.exists(model_path) and os.path.isdir(model_path) and os.listdir(model_path)) else repo_id
+    target_device = "cuda" if device == "cuda" else "cpu"
 
     try:
-        tokenizer = AutoTokenizer.from_pretrained(model_source, trust_remote_code=True)
-        model = AutoModel.from_pretrained(model_source, trust_remote_code=True)
-        model.to(target_device)
-        model.eval()
-        model.tokenizer = tokenizer
-
-        # Safe tokenizer patch for transformers v5+
-        def _safe_tokenize(self, prompt: str, tok):
-            conversation = [{"content": prompt, "role": "user"}]
-            res = tok.apply_chat_template(conversation, tokenize=True, add_generation_prompt=True, return_dict=False)
-            if isinstance(res, dict) or hasattr(res, "input_ids"):
-                prompt_ids = res["input_ids"]
-            else:
-                prompt_ids = res
-            prompt_length = len(prompt_ids)
-            prompt_ids = torch.tensor(prompt_ids, dtype=torch.int64)
-            return prompt_ids, prompt_length
-
-        model.__class__._tokenize = _safe_tokenize
+        model = WhisperModel(
+            model_source,
+            device=target_device,
+            compute_type=compute_type,
+            cpu_threads=cpu_threads,
+            download_root=model_path if not (os.path.exists(model_path) and os.path.isdir(model_path) and os.listdir(model_path)) else None,
+        )
         return model
     except Exception as exc:
-        raise RuntimeError(f"Could not load Shrutam-2 model from '{model_source}' on '{target_device}': {exc}") from exc
+        raise RuntimeError(f"Could not load faster-whisper model from '{model_source}' on '{target_device}': {exc}") from exc
 
 
 def transcribe_clip(data: bytes, language: Optional[str] = None):
+    norm_lang = normalize_voice_language(language)
     audio = decode_clip(data)
     model = speech_model()
-    tokenizer = getattr(model, "tokenizer", None)
 
-    # Shrutam-2 prompt steering
-    lang_code = (language or '').strip().lower()
-    if lang_code in ('kn', 'kannada'):
-        prompt = "Transcribe speech to Kannada text."
-        steered_lang = 'kn'
-    elif lang_code in ('hi', 'hindi'):
-        prompt = "Transcribe speech to Hindi text."
-        steered_lang = 'hi'
-    elif lang_code in ('en', 'english'):
-        prompt = "Transcribe speech to English text."
-        steered_lang = 'en'
-    else:
-        prompt = "Transcribe speech."
-        steered_lang = None
-
-    # Optimized generation: greedy search (num_beams=1), early stop tokens, bounded max_new_tokens=48
-    predictions = model.transcribe(
-        [audio],
-        prompts=[prompt],
-        tokenizer=tokenizer,
-        num_beams=1,
-        max_new_tokens=48
+    segments, _ = model.transcribe(
+        audio,
+        language="en",
+        task="transcribe",
+        beam_size=1,
+        word_timestamps=False,
     )
-    text = predictions[0].strip() if predictions else ""
+    text = " ".join(seg.text for seg in segments).strip()
+
     if not text:
         raise AudioInputError('No clear speech was detected. Please try again in a quieter place.')
     if len(text) > 1000:
         raise AudioInputError('Please record a shorter question, up to 1000 characters.')
 
-    detected_lang = steered_lang or detect_language(text)
-    return {'text': text, 'language': detected_lang}
+    return {'text': text, 'language': 'en'}

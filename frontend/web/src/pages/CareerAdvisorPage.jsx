@@ -3,8 +3,10 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowUp, ArrowUpRight, AudioLines, BookOpen, Check, Code2, Compass, Lightbulb, Loader2, Mic, Palette, Plus, ShieldCheck, Sparkles, Square, Volume2, Wrench, X } from 'lucide-react';
 import { getCareerAnswerApi } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+
 import { useSidebar } from '../context/SidebarContext';
-import { useLocalReadAloud, useLocalVoiceInput } from '../hooks/useAdvisorVoice';
+import { useLocalReadAloud, useLocalVoiceInput, normalizeVoiceLanguage } from '../hooks/useAdvisorVoice';
+
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import EditProfileDrawer from '../components/EditProfileDrawer';
@@ -67,6 +69,8 @@ function Answer({ result }) {
 }
 
 function AdvisorSession() {
+  const { profile } = useAuth() || {};
+  const activeVoiceLanguage = 'en';
   const location = useLocation();
   const navigate = useNavigate();
   const explainRequested = new URLSearchParams(location.search).get('intent') === 'explain_recommendations';
@@ -92,7 +96,7 @@ function AdvisorSession() {
       setQuestion(combined);
       setNotice('Voice added. Check your question, then send it when you are ready.');
     }
-  }, { language: 'en' });
+  }, { language: activeVoiceLanguage });
   const voiceBusy = voice.phase !== 'idle';
   const locked = busy || voiceBusy || historyBusy;
   useEffect(() => () => { pending.current?.abort(); pending.current = null; }, []);
@@ -277,7 +281,7 @@ function AdvisorSession() {
                 </div><button type="submit" disabled={locked || !question.trim()} className="advisor-send" aria-label="Ask Udaan" title="Ask Udaan"><ArrowUp size={20} /></button></div>
               </div>
               <p id="search-description" className="advisor-caption">Udaan researches online and explains the findings. Your profile and assessment scores stay private.</p>
-              <div className="advisor-composer-meta"><span id="voice-description">{voice.supported ? 'Review before sending.' : 'Voice typing is not supported here. You can type instead.'}</span><span id="question-limit">{question.length}/1000</span></div>
+              <div className="advisor-composer-meta"><span id="voice-description">{voice.supported ? 'Review before sending. Voice input currently supports English only.' : 'Voice typing is not supported here. You can type instead.'}</span><span id="question-limit">{question.length}/1000</span></div>
               {(voice.error || readAloud.error) && <p role="alert" className="advisor-error">{voice.error || readAloud.error}</p>}
               {notice && <p role="status" className="advisor-notice"><Check size={15} />{notice}</p>}
             </form>
@@ -287,7 +291,7 @@ function AdvisorSession() {
             <section className="advisor-guide-personal"><span className="advisor-guide-icon"><Sparkles size={22} /></span><h2>Make it about you</h2><p>Discover why your saved pathways match your interests.</p><button className="advisor-secondary" disabled={locked} onClick={explain} aria-label="Understand my saved pathways">Explore my matches <ArrowUpRight size={16} /></button></section>
             <section className="advisor-guide-note"><Lightbulb size={20} /><h2>A good place to start</h2><p>Ask what someone does at work. Name a career, or choose Ask a follow-up on a sourced answer to keep exploring that topic.</p><div className="advisor-divider" /><h3><BookOpen size={16} /> What you can explore</h3><p>Ask about subjects, courses, skills, careers or your next education step. For admissions, name the course, institution and year; official information may still be unavailable.</p></section>
             <div className="advisor-privacy"><ShieldCheck size={16} /><p>New questions start fresh. Ask a follow-up carries the selected career topic. Completed answers are saved to your account in Previous questions, where you can reopen or delete them. Start fresh clears this view only.</p></div>
-            <div className="advisor-privacy"><AudioLines size={16} /><p>Voice typing runs on your local server. Recordings aren't saved. Listen uses an on-device English voice{readAloud.available ? '.' : ', which is not available in this browser.'}</p></div>
+            <div className="advisor-privacy"><AudioLines size={16} /><p>Voice typing currently supports English only and runs on your local server. Recordings aren't saved. Listen uses an on-device English voice{readAloud.available ? '.' : ', which is not available in this browser.'}</p></div>
           </aside>
         </div>
       </main>
