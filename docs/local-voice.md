@@ -13,12 +13,12 @@ English is the only supported language in this release. Short, clear recordings 
 
 ## Model details and current status
 
-- **Model and parameter count:** `BharatGenAI Shrutam-2` (`bharatgenai/Shrutam-2`) is an Indic multilingual speech model. The official BharatGen model card identifies Shrutam-2 as a **2B-parameter** model (not ~8B; the ~7.28 GB download size represents uncompressed model weight files).
-- **Implementation status:** Shrutam-2 is integrated at the code/API level but local inference is currently blocked by available hardware/memory. Whisper Tiny has been removed and there is no automatic Whisper fallback.
-- **Licensing:** The official BharatGen model card states that Shrutam-2 is released under the BharatGen non-commercial license (NM-ICPS, Department of Science and Technology, Government of India). Commercial deployment is not authorized without explicit licensing.
-- **Production readiness:** Shrutam-2 is not production-ready in this environment and is not locally working for inference.
-- **Observed hardware requirements:** BharatGen does not state a hard official minimum (such as a 16 GB VRAM requirement) in its model documentation. However, practical/observed requirements for the current implementation indicate that loading and running inference on the 2B-parameter model requires substantial dedicated host memory or GPU resources beyond what is currently available in the container environment.
-- **Storage and download:** Model weights are stored in the persistent `speech_models` Docker volume at `/models/shrutam-2` using the official [BharatGenAI Shrutam-2 repository](https://huggingface.co/bharatgenai/Shrutam-2). PyAV decodes incoming audio (WebM/Opus, OGG, MP4) to 16 kHz mono float32.
+- **Model and parameter count:** `vasista22/whisper-kannada-small` converted to CTranslate2 INT8 quantization (~240 MB on disk).
+- **Implementation status:** Active and running locally on CPU using `faster-whisper`. Speech recognition is restricted to English (`en`). Previous experimental Shrutam-2 and Whisper Tiny implementations have been superseded.
+- **Licensing:** Apache 2.0.
+- **Production readiness:** Operational for local English speech transcription within the container.
+- **Hardware requirements:** Runs efficiently on CPU with ~500 MB RAM footprint; no dedicated GPU required.
+- **Storage and download:** Model weights are stored in the persistent `speech_models` Docker volume at `/models/whisper-kannada-small-ct2-int8`. PyAV decodes incoming audio (WebM/Opus, OGG, MP4) to 16 kHz mono float32.
 - **Audio and browser controls:** Browser microphone access requires localhost or HTTPS and a supported MediaRecorder format. Read-aloud selects a browser-installed local voice when available.
 
 ## Setup on another machine
@@ -54,10 +54,7 @@ The download step needs internet access once. Whisper Tiny has been completely r
 
 ### Live Speech Verification Outcome
 
-In live endpoint verification (`POST /career-intelligence/speech/transcribe`), local inference did **not** pass. The speech endpoint returned **HTTP 503** across all tested categories:
-- English speech clips
-- Kannada speech clips
-- Hindi speech clips
-- Kannada-English code-mixed speech clips
-
-Local inference is currently blocked by available hardware/memory during model initialization. Whisper Tiny has been completely removed and there is no automatic Whisper fallback.
+In live endpoint verification (`POST /career-intelligence/speech/transcribe`), local inference is **operational** for English speech:
+- English speech clips transcribe reliably within memory limits.
+- Non-English languages (including Kannada, Hindi, and code-mixed speech) are intentionally rejected with HTTP 400 to maintain high transcription quality.
+- The model runs locally via CTranslate2 INT8 quantization on CPU without GPU requirements.

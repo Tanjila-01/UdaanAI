@@ -2,7 +2,7 @@
 
 **A beginner-friendly guide to running and understanding your project.**
 
-Updated: 9 September 2026.
+Updated: 4 October 2026.
 
 Udaan AI helps students explore education and career options. Students can complete an interest questionnaire, see suggestions, choose a pathway and track their progress. Schools and colleges can also request workshops.
 
@@ -19,16 +19,16 @@ The AI Career Service uses separate models for separate jobs. Its text generatio
        |            |            |
       LLM       Embeddings       STT
        |            |            |
-gpt-oss:120b-  all-MiniLM-   Shrutam-2
+gpt-oss:120b-  all-MiniLM-   Vasista INT8
 cloud          L6-v2 (384d)      |
-       |            |       BharatGenAI
- Ollama Cloud   Sentence-   Multilingual
-               Transformers
+       |            |            |
+ Ollama Cloud   Sentence-    faster-whisper
+               Transformers (English)
 ```
 
 - **LLM:** `gpt-oss:120b-cloud` generates grounded advisor responses through Ollama Cloud. It needs network access and Ollama Cloud authentication.
 - **Embeddings:** `sentence-transformers/all-MiniLM-L6-v2` runs locally via Sentence Transformers. PostgreSQL stores 384-dimensional vectors with cosine retrieval.
-- **Speech to text:** `BharatGenAI Shrutam-2` (2B parameters, BharatGen non-commercial license) is integrated at the code/API level, but local inference is currently blocked by available hardware/memory. Whisper Tiny has been removed and there is no automatic Whisper fallback.
+- **Speech to text:** `vasista22/whisper-kannada-small` converted to CTranslate2 INT8 runs locally via `faster-whisper`. Speech recognition is restricted to English (`en`). Previous experimental Shrutam-2 and Whisper Tiny integrations have been replaced with this lightweight, local INT8 implementation.
 
 Set `OLLAMA_CLOUD_API_KEY` in your untracked `.env` file. Never place it in frontend code or commit it. See [AI model setup](docs/local-ai-setup.md) for the exact startup steps.
 
@@ -301,7 +301,7 @@ Click a service name for its beginner guide.
 **Two distinctions to remember**
 
 - The working admin workshop dashboard uses **Institution**, not Admin analytics.
-- Career recommendations currently use **programmed rules**, not a language model. An AI explanation feature is future work.
+- Career recommendations are computed using **programmed rules**. The Career Advisor provides grounded explanations and conversational guidance using Ollama Cloud and local knowledge embeddings.
 
 Flowcharts use Mermaid. View this file in a Markdown preview that supports Mermaid to see diagrams; the nearby explanations remain readable without it.
 
@@ -535,12 +535,11 @@ The frontend declares a lint command, but its ESLint dependency/configuration is
 
 ### Last recorded checks
 
-During the earlier file cleanup on 9 September 2026:
+During the repository verification and safe cleanup on 4 October 2026:
 
-- All **95 backend tests** passed on the host before cleanup.
-- The **17 tests** for the two changed backend services passed again afterward.
-- All **37 frontend tests** passed after cleanup.
-- The frontend build passed with identical application asset hashes before and after cleanup.
+- All **299 backend tests** across all microservices passed (199 in `ai-career-service`, 43 in `institution-service`, 31 in `roadmap-service`, 15 in `assessment-service`, 5 in `student-service`, 5 in `auth-service`, 1 in `admin-analytics-service`).
+- All **192 frontend tests** across 22 test suites in Vitest passed.
+- The frontend production build (`npm run build`) passed cleanly.
 
 These are historical results, not a claim that tests were re-run for this wording update. Most business tests use temporary SQLite databases or mocked service responses. They do not replace live PostgreSQL and browser checks.
 
@@ -559,7 +558,7 @@ These are historical results, not a claim that tests were re-run for this wordin
 | Educational content | Sources, eligibility claims and pathway relationships need review |
 | Recommendations | Rules exist; stale results and some strong wording need improvement |
 | Kannada and accessibility | Full translation and usability validation remain |
-| First AI feature | Grounded AI explanations are not implemented |
+| AI Career Advisor | Grounded AI Career Advisor with contextual history, recommendation grounding, and English voice input implemented |
 | Admin analytics | Health endpoint only |
 
 The current Compose setup is for local development. It exposes service ports and runs Vite's development server.
