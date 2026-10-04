@@ -38,7 +38,7 @@ export const PrivacyPolicyPage = () => {
               Privacy Policy
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-2 font-medium">
-              Last Updated: September 2026 • Effective for all students, educators, and institutions in Karnataka
+              • Effective for all students, educators, and institutions in Karnataka
             </p>
           </div>
 
@@ -80,7 +80,7 @@ export const PrivacyPolicyPage = () => {
             <section className="space-y-3">
               <h2 className="text-base sm:text-lg font-bold text-slate-950">1. Introduction</h2>
               <p>
-                Udaan AI (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) provides structured career guidance, Karnataka pathway exploration, and AI-driven advisory support to students, schools, and colleges. We are committed to safeguarding the privacy of young learners and complying with applicable Indian digital data protection standards, including the Digital Personal Data Protection (DPDP) framework.
+                Udaan AI provides structured career guidance, Karnataka pathway exploration, and AI-driven advisory support to students, schools, and colleges. We are committed to safeguarding the privacy of young learners and complying with applicable Indian digital data protection standards, including the Digital Personal Data Protection (DPDP) framework.
               </p>
             </section>
 

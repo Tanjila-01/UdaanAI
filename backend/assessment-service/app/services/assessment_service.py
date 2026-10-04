@@ -367,7 +367,7 @@ class AssessmentService:
         )
 
         summary_text = (
-            f"Based on your assessment responses, you show strong aptitude for {primary_recommendation} "
+            f"Based on your assessment responses, you show strong interest alignment for {primary_recommendation} "
             f"with key strength in {top_dim.replace('_', ' ').title()} (score: {top_score}). Your secondary suitable pathway is "
             f"{secondary_recommendation}. Target career match: {top_career}."
         )

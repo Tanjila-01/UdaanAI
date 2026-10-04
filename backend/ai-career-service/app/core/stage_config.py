@@ -54,12 +54,12 @@ STAGE_CONFIG = {
             "engineering": ["puc-science-eng", "puc-science-arch"],
             "computing": ["puc-science-comp"],
             "medicine": ["puc-science-med", "puc-science-ayush", "puc-science-vet"],
-            "allied_health": ["puc-science-allied", "puc-science-pharm", "puc-science-agri"],
-            "pure_sciences": ["puc-science-pure", "cross-law", "cross-design"],
+            "allied_health": ["puc-science-allied", "puc-science-pharm"],
+            "pure_sciences": ["puc-science-pure", "puc-science-agri", "cross-law", "cross-design"],
         },
         "dimension_reasons": {
             "engineering": [
-                "Aligned with your aptitude for physical mechanisms, structural design, and technology systems.",
+                "Aligned with your interest in physical mechanisms, structural design, and technology systems.",
                 "Opens direct pathways to Karnataka B.E/B.Tech programs via KCET and JEE."
             ],
             "computing": [
@@ -67,7 +67,7 @@ STAGE_CONFIG = {
                 "Direct path toward BCA, B.Tech CSE, and artificial intelligence careers."
             ],
             "medicine": [
-                "Matches your clinical aptitude for living systems, diagnostics, and patient care.",
+                "Matches your clinical interest in living systems, diagnostics, and patient care.",
                 "Prepares for NEET-UG admissions into MBBS, BDS, and AYUSH degree colleges."
             ],
             "allied_health": [
@@ -75,8 +75,8 @@ STAGE_CONFIG = {
                 "Strong foundation for B.Pharm, Nursing, and Allied Health Sciences in Karnataka."
             ],
             "pure_sciences": [
-                "Aligned with your passion for fundamental research, mathematical proofs, and laboratory inquiry.",
-                "Direct route to IISER, B.Sc Honours, and scientific research institutions."
+                "Aligned with your passion for fundamental research, mathematical proofs, laboratory inquiry, or agricultural sciences.",
+                "Direct route to IISER, B.Sc Honours, Agricultural Universities, and scientific research institutions."
             ],
         }
     },
@@ -96,7 +96,7 @@ STAGE_CONFIG = {
         },
         "dimension_reasons": {
             "accounting_ca": [
-                "Exceptional aptitude for double-entry bookkeeping, auditing, and statutory financial compliance.",
+                "Strong orientation toward double-entry bookkeeping, auditing, and statutory financial compliance.",
                 "Direct alignment with ICAI Chartered Accountancy (CA) and CMA programs."
             ],
             "finance_banking": [
@@ -130,7 +130,7 @@ STAGE_CONFIG = {
         },
         "dimension_reasons": {
             "law_judiciary": [
-                "Exceptional aptitude for legal argument, constitutional safeguards, and statutory analysis.",
+                "Strong inclination toward legal argument, constitutional safeguards, and statutory analysis.",
                 "Direct route into 5-Year Integrated B.A. LL.B via CLAT and Karnataka State Law University."
             ],
             "design_arts": [
@@ -167,7 +167,7 @@ STAGE_CONFIG = {
                 "Enables direct admission into 2nd year B.E/B.Tech at Karnataka engineering colleges."
             ],
             "software_digital": [
-                "High aptitude for programming, networking protocols, and full-stack software development.",
+                "High interest in programming, networking protocols, and full-stack software development.",
                 "Direct route to computing roles and IT industry technical certifications."
             ],
             "core_industrial": [
@@ -199,7 +199,7 @@ STAGE_CONFIG = {
                 "Direct eligibility for permanent industrial technician recruitment exams."
             ],
             "energy_electrical": [
-                "High aptitude for electrical panel wiring, solar power installations, and motor maintenance.",
+                "High interest in electrical panel wiring, solar power installations, and motor maintenance.",
                 "Path to state electrical contractor licensing and energy sector employment."
             ],
             "mechanical_machining": [

@@ -41,6 +41,7 @@ class ConversationState(BaseModel):
     stated_preferences: List[Dict[str, str]] = Field(default_factory=list) # [{"preference": "drawing", "origin": "chat"}]
     discussed_options: List[str] = Field(default_factory=list) # e.g. ["Graphic Design", "Animation", "Media"]
     last_recommended_pathway: Optional[str] = None # e.g. "ITI Vocational Trades"
+    last_specific_pathway: Optional[str] = None # e.g. "Pharmacy Education (B.Pharm / D.Pharm)"
     last_topic: Optional[str] = None            # e.g. "options after SSLC"
     last_question: Optional[str] = None
     last_answer: Optional[str] = None
@@ -104,9 +105,19 @@ def is_provenance_question(question: str, state: Optional[ConversationState] = N
 ASSESSMENT_CONTEXT_PATTERNS = [
     r'\b(?:what\s+is|what\s+are|show\s+me|tell\s+me|explain)\s+(?:my|the)\s+(?:saved\s+|career\s+|top\s+)*(?:recommended|recommendations?)\b',
     r'\b(?:my|the)\s+recommended\s+(?:path|pathway|career|stream|course|track|option)s?\b',
+    r'\b(?:what\s+(?:are|is|were)|show\s+me|tell\s+me\s+about|explain)\s+my\s+(?:saved\s+|career\s+)?(?:pathways?|paths?|options?)\b',
+    r'\bwhat\s+are\s+my\s+pathways\b',
+    r'\bmy\s+pathways\b',
+    r'\bwhat\s+(?:is|was|are|were)\s+my\s+(?:top|primary|highest)\s+(?:career\s+)?(?:path|pathway|option|track|match)s?\b',
     r'\b(?:paths?|pathways?|careers?|options?|courses?)\s+(?:was\s+|were\s+|are\s+|is\s+)?recommended\s+(?:for|to)\s+me\b',
+    r'\bwhich\s+path\s+(?:was\s+|is\s+)?recommended\s+(?:for|to)\s+me\b',
     r'\bwhy\s+(?:was|were)\s+(.+?)\s+(?:pathways?\s+)?recommended\s*(?:to|for)?\s*me?\b',
     r'\bwhy\s+was\s+(.+?)\s+recommended\b',
+    r'\bwhy\s+(?:was|were)\s+(?:this|that|these)\s+(?:path|pathway|career)?\s*recommended\b',
+    r'\bwhy\s+did\s+i\s+get\s+(?:that|this|these)\b',
+    r'\b(?:can|could)\s+i\s+(?:choose|pick|take|pursue|switch\s+to|change\s+to)\s+(?:an?other|different|alternative)\s+(?:path|pathway|career|stream|course|option)\b',
+    r'\b(?:can|could)\s+i\s+(?:change|switch)\s+(?:my\s+)?(?:path|pathway|direction)\b',
+    r'\b(?:tell\s+me\s+more\s+about|tell\s+me\s+about|what\s+about|explain)\s+(?:the\s+)?(?:first|second|third|1st|2nd|3rd|last|top)\s+(?:one|path|pathway|recommendation|option)\b',
     r'\bwhat\s+(?:was|were|is|are)\s+recommended\s+(?:to|for)\s+me\b',
     r'\bwhat\s+(?:are|were)\s+my\s+(?:top\s+)?(?:recommendations?|matches?|results?)\b',
     r'\bmy\s+(?:saved\s+|career\s+|top\s+)*(?:recommendations?|matches?)\b',
@@ -124,9 +135,11 @@ def is_assessment_context_question(question: str, state: Optional[ConversationSt
     q = normalize_text(question).lower().strip()
     if any(re.search(p, q) for p in ASSESSMENT_CONTEXT_PATTERNS):
         return True
-    # If active conversation context just explained recommendations, follow-up "Tell me more about X" is assessment-context
+    # If active conversation context just explained recommendations, follow-ups are assessment-context
     if state and getattr(state, "last_status", None) == "recommendations_explained":
         if re.search(r'\btell\s+me\s+more\s+about\s+(.+?)\b', q) or re.search(r'\bwhat\s+about\s+(.+?)\b', q):
+            return True
+        if re.search(r'\b(?:why|how)\s+(?:did\s+i\s+get|was\s+that|were\s+those)\b', q):
             return True
     return False
 
@@ -135,8 +148,10 @@ ASPECT_PATTERNS = re.compile(
     r'\b(?:skills?|key\s+skills?|technical\s+skills?|programming\s+languages?|'
     r'work\s+environment|working\s+environment|day-to-day\s+work|typical\s+work\s+day|'
     r'daily\s+work|day-to-day|responsibilit(?:y|ies)|salary|salaries|pay|earnings?|'
-    r'education\s+path(?:way)?|degree|qualifications?|preparation|how\s+to\s+prepare|'
-    r'exams?|subjects?|eligibilit(?:y|ies)|career\s+growth|opportunities|'
+    r'education\s+path(?:way)?|education(?:\s+is)?\s+required|required\s+education|degree|qualifications?|'
+    r'prepar(?:e|ation)|how\s+to\s+prepare|what\s+should\s+i\s+prepare|'
+    r'stud(?:y|ies)|what\s+should\s+i\s+study|'
+    r'scope|career\s+scope|career\s+growth|opportunities|'
     r'how\s+long\s+(?:does\s+it\s+take|is\s+it)|duration|job\s+roles?|kinds?\s+of\s+jobs?|'
     r'subjects\s+should\s+i\s+focus\s+on)\b',
     re.I
@@ -147,6 +162,68 @@ def is_aspect_question(question: str) -> bool:
     """Detect if a question is asking about a specific aspect of a career/pathway rather than a full overview."""
     q = normalize_text(question).lower().strip()
     return bool(ASPECT_PATTERNS.search(q))
+
+
+REFERENTIAL_FOLLOWUP_PATTERNS = [
+    r'\b(?:this|that|it|the)\s+(?:career|path|pathway|profession|field|job|course|option|track|stream|role)\b',
+    r'\b(?:for|in|about)\s+(?:this|that|it)\b',
+    r'\b(?:how\s+to\s+prepare|how\s+(?:do|can)\s+i\s+prepare|what\s+should\s+i\s+prepare)\b',
+    r'\bwhat\s+(?:should|do)\s+i\s+study\b',
+    r'\bwhat\s+(?:is|are)\s+the\s+(?:career\s+)?scope\b',
+    r'\bwhat\s+education\s+is\s+required\b',
+    r'\bwhat\s+(?:are\s+the\s+)?skills\s+(?:do\s+i\s+need|needed|required)\b',
+    r'\bwhat\s+is\s+the\s+(?:day-to-day|daily|work)\b',
+]
+
+
+def is_referential_followup(question: str) -> bool:
+    """Detect if a question is a referential follow-up to an existing career/pathway."""
+    q = normalize_text(question).lower().strip()
+    if any(re.search(p, q) for p in REFERENTIAL_FOLLOWUP_PATTERNS):
+        return True
+    return is_aspect_question(q)
+
+
+def is_generic_topic(topic: Optional[str]) -> bool:
+    """Check if topic is a generic bucket rather than a specific pathway/career."""
+    if not topic:
+        return True
+    t = clean_label(topic).lower()
+    if t.startswith("assessment recommendations:"):
+        inner = clean_label(t[len("assessment recommendations:"):])
+        return is_generic_topic(inner)
+    if t in {
+        "career exploration",
+        "assessment recommendations",
+        "alternative pathways",
+        "alternative pathway",
+        "admissions",
+        "course inquiry",
+        "general",
+        "options",
+        "this career",
+        "that career",
+        "the career"
+    }:
+        return True
+    if t.startswith("options after"):
+        return True
+    return False
+
+
+def clean_pathway_topic(topic: Optional[str]) -> Optional[str]:
+    """Extract clean specific pathway/career title, or None if generic."""
+    if not topic:
+        return None
+    t = clean_label(topic)
+    if t.lower().startswith("assessment recommendations:"):
+        inner = clean_label(t[len("assessment recommendations:"):])
+        if not is_generic_topic(inner):
+            return inner
+        return None
+    if not is_generic_topic(t):
+        return t
+    return None
 
 
 EDUCATION_STATEMENT_PATTERNS = [
@@ -522,6 +599,9 @@ def load_conversation_state(
         if not state.last_topic and resp.get('conversation_topic'):
             state.last_topic = clean_label(resp.get('conversation_topic'))
 
+        if not state.last_specific_pathway:
+            state.last_specific_pathway = clean_pathway_topic(state.last_topic) or clean_pathway_topic(state.last_recommended_pathway)
+
     return state
 
 
@@ -543,6 +623,8 @@ def update_conversation_state(
         state.discussed_options = []
         state.last_topic = clean_label(reset_subject)
         state.referral_subject = clean_label(reset_subject)
+        state.last_specific_pathway = clean_label(reset_subject)
+        state.last_recommended_pathway = clean_label(reset_subject)
     else:
         hypo = extract_hypothetical_stage(question)
         if hypo:
@@ -588,8 +670,16 @@ def update_conversation_state(
     elif topic:
         state.referral_subject = topic
 
-    recs = response.get('recommendations')
-    if isinstance(recs, list) and recs:
-        state.last_recommended_pathway = recs[0].get('title')
+    # Track most recent specific pathway context (do NOT overwrite with generic alternative pathways or general lists)
+    specific = response.get('specific_pathway') or clean_pathway_topic(topic) or clean_pathway_topic(response.get('conversation_topic'))
+    if specific and not is_generic_topic(specific):
+        state.last_specific_pathway = clean_label(specific)
+        state.last_recommended_pathway = state.last_specific_pathway
+    elif not state.last_specific_pathway:
+        recs = response.get('recommendations')
+        if isinstance(recs, list) and recs:
+            top_title = recs[0].get('title')
+            if top_title and not is_generic_topic(top_title):
+                state.last_recommended_pathway = top_title
 
     return state

@@ -165,3 +165,127 @@ def test_general_exploration_offers_a_concrete_start_without_inference(monkeypat
     assert 'Discover My Interests' in response['answer']
     assert 'graphic designer' in response['answer']
     assert not response['sources']
+
+
+def test_explain_saved_career_recommendations_flow_puc_science(monkeypatch):
+    """Verify 'Explain my saved career recommendations.' flow for an existing PUC Science student.
+
+    Existing assessment scores:
+        allied_health: 60
+        pure_sciences: 30
+        medicine: 25
+        engineering: 13
+        computing: 8
+
+    Old persisted recommendation items in database had:
+        Agriculture & Allied Sciences: 60 (with healthcare/pharma reasoning)
+        Allied Health: 60
+        Pharmacy: 60
+
+    Corrected flow must return:
+        1. Allied Health: 60 (Good)
+        2. Pharmacy: 60 (Good)
+        3. Agriculture: 30 (Explore)
+    With Agriculture reasons free from pharmaceutical/clinical diagnostics,
+    no 'aptitude' claims, and assessment dimension scores strictly preserved.
+    """
+    user_id = str(uuid4())
+    attempt = uuid4()
+    assessment = {
+        "user_id": user_id,
+        "is_current": True,
+        "attempt_id": str(attempt),
+        "assessment_id": "puc-science",
+        "scoring_version": "rule-v1",
+        "dimension_scores": {
+            "engineering": 13,
+            "computing": 8,
+            "medicine": 25,
+            "pure_sciences": 30,
+            "allied_health": 60,
+        },
+    }
+    profile = {"current_level": "PUC 2", "stream": "Science", "name": "Student T"}
+
+    # Mock old persisted recommendations in DB before sync
+    old_agri_item = SimpleNamespace(
+        pathway_id="puc-science-agri",
+        pathway_title="Agriculture & Allied Sciences",
+        rank=1,
+        match_score=60,
+        match_label="Good",
+        reasons=["Fits your interest in pharmaceutical formulations, clinical diagnostics, and healthcare support."],
+    )
+    old_allied_item = SimpleNamespace(
+        pathway_id="puc-science-allied",
+        pathway_title="Allied Health Sciences & Nursing",
+        rank=2,
+        match_score=60,
+        match_label="Good",
+        reasons=["Fits your interest in pharmaceutical formulations, clinical diagnostics, and healthcare support."],
+    )
+    old_pharm_item = SimpleNamespace(
+        pathway_id="puc-science-pharm",
+        pathway_title="Pharmacy Education (B.Pharm / D.Pharm)",
+        rank=3,
+        match_score=60,
+        match_label="Good",
+        reasons=["Fits your interest in pharmaceutical formulations, clinical diagnostics, and healthcare support."],
+    )
+    saved = SimpleNamespace(
+        source_attempt_id=attempt,
+        source_assessment_id="puc-science",
+        source_scoring_version="rule-v1",
+        recommendations=[old_agri_item, old_allied_item, old_pharm_item],
+    )
+
+    db = MagicMock()
+    db.query.return_value.filter.return_value.order_by.return_value.first.return_value = saved
+    monkeypatch.setattr(answers, "fetch_student_context", lambda token: (profile, assessment))
+
+    response = answers.answer_question(
+        db, user_id, "token", "Explain my saved career recommendations.", intent="explain_recommendations"
+    )
+
+    assert response["status"] == "recommendations_explained"
+    assert response["context_status"] == "current"
+    assert len(response["recommendations"]) == 3
+
+    recs_by_id = {r["pathway_id"]: r for r in response["recommendations"]}
+
+    # 1. Correct pathway scores
+    assert recs_by_id["puc-science-agri"]["match_score"] == 30
+    assert recs_by_id["puc-science-agri"]["match_label"] == "Explore"
+    assert recs_by_id["puc-science-allied"]["match_score"] == 60
+    assert recs_by_id["puc-science-allied"]["match_label"] == "Good"
+    assert recs_by_id["puc-science-pharm"]["match_score"] == 60
+    assert recs_by_id["puc-science-pharm"]["match_label"] == "Good"
+
+    # 2. Ranking order: 60s first, 30 last
+    assert recs_by_id["puc-science-agri"]["rank"] == 3
+    assert recs_by_id["puc-science-allied"]["rank"] in {1, 2}
+    assert recs_by_id["puc-science-pharm"]["rank"] in {1, 2}
+
+    # 3. Agriculture reasoning does NOT contain pharmaceutical / clinical diagnostics
+    agri_reasons_str = " ".join(recs_by_id["puc-science-agri"].get("reasons", [])).lower()
+    for forbidden in ["pharmaceutical", "clinical diagnostics", "pharmacy", "nursing", "healthcare support"]:
+        assert forbidden not in agri_reasons_str
+
+    # 4. Agriculture reasoning comes from pure_sciences / agricultural configuration
+    assert any(term in agri_reasons_str for term in ["research", "laboratory", "agricultural"])
+
+    # 5. No recommendation mentions 'aptitude'
+    for r in response["recommendations"]:
+        assert "aptitude" not in r.get("explanation", "").lower()
+        for reason in r.get("reasons", []):
+            assert "aptitude" not in reason.lower()
+
+    # 6. Existing assessment dimension scores remain unchanged
+    assert assessment["dimension_scores"] == {
+        "engineering": 13,
+        "computing": 8,
+        "medicine": 25,
+        "pure_sciences": 30,
+        "allied_health": 60,
+    }
+

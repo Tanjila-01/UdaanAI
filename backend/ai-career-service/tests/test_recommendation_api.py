@@ -812,3 +812,102 @@ def test_recommendation_freshness_and_user_isolation():
     assert recovered_data["is_outdated"] is False
     assert recovered_data["outdated_reason"] is None
 
+
+def test_puc_science_allied_health_and_agriculture_differentiation():
+    """
+    Audit & Bugfix Verification:
+    When a PUC Science student scores high in allied_health (60) and moderate in pure_sciences (30):
+    1. Agriculture (puc-science-agri) must NOT inherit the allied_health score (60). It receives pure_sciences score (30).
+    2. Allied Health (puc-science-allied) and Pharmacy (puc-science-pharm) receive their allied_health score (60).
+    3. Recommendations reasons must NOT claim unproven aptitude.
+    4. stage_config dimension_pathway_map has puc-science-agri under pure_sciences, not allied_health.
+    """
+    global MOCK_LATEST_RESULT, MOCK_PROFILE, MOCK_PATHWAYS
+    token = create_test_token(USER_1_ID)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    MOCK_LATEST_RESULT = {
+        "attempt_id": str(uuid.uuid4()),
+        "assessment_id": "puc-science-direction-v2",
+        "scoring_version": "rule-v2-puc-science",
+        "dimension_scores": {
+            "engineering": 13,
+            "computing": 8,
+            "medicine": 25,
+            "pure_sciences": 30,
+            "allied_health": 60
+        }
+    }
+
+    MOCK_PROFILE = {
+        "current_level": "PUC 2",
+        "stream": "Science",
+        "is_complete": True,
+        "id": str(uuid.uuid4()),
+        "user_id": USER_1_ID
+    }
+
+    MOCK_PATHWAYS = {
+        "pathways": [
+            {
+                "id": "puc-science-allied",
+                "title": "Allied Health Sciences & Nursing",
+                "education_level": "Undergraduate",
+                "stream": "Science",
+                "recommendation_dimensions": ["allied_health"]
+            },
+            {
+                "id": "puc-science-pharm",
+                "title": "Pharmacy Education (B.Pharm / D.Pharm)",
+                "education_level": "Undergraduate",
+                "stream": "Science",
+                "recommendation_dimensions": ["allied_health"]
+            },
+            {
+                "id": "puc-science-agri",
+                "title": "Agriculture & Allied Sciences",
+                "education_level": "Undergraduate",
+                "stream": "Science",
+                "recommendation_dimensions": ["pure_sciences"]
+            },
+            {
+                "id": "puc-science-med",
+                "title": "Medicine & Surgery (MBBS / BDS)",
+                "education_level": "Undergraduate",
+                "stream": "Science",
+                "recommendation_dimensions": ["medicine"]
+            }
+        ]
+    }
+
+    resp = client.post("/career-intelligence/recommendations/generate", headers=headers)
+    assert resp.status_code == 200
+    recs = resp.json()["recommendations"]
+
+    rec_by_id = {r["pathway_id"]: r for r in recs}
+
+    # Allied Health and Pharmacy correctly inherit allied_health (60)
+    assert rec_by_id["puc-science-allied"]["match_score"] == 60
+    assert rec_by_id["puc-science-pharm"]["match_score"] == 60
+
+    # Agriculture received score 30 (pure_sciences), NOT 60 (allied_health)
+    assert "puc-science-agri" in rec_by_id
+    assert rec_by_id["puc-science-agri"]["match_score"] == 30
+    assert rec_by_id["puc-science-agri"]["match_score"] != 60
+
+    # Agriculture reasons do not contain pharmaceutical or clinical diagnostics text
+    agri_reasons = rec_by_id["puc-science-agri"]["reasons"]
+    assert not any("pharmaceutical" in r.lower() or "clinical diagnostics" in r.lower() for r in agri_reasons)
+
+    # For all returned recommendations, verify no unproven aptitude claims
+    for r in recs:
+        for reason in r.get("reasons", []):
+            assert "aptitude" not in reason.lower()
+
+    # Stage config mapping verification
+    from app.core.stage_config import STAGE_CONFIG
+    puc_science_map = STAGE_CONFIG["PUC_SCIENCE"]["dimension_pathway_map"]
+    assert "puc-science-agri" in puc_science_map["pure_sciences"]
+    assert "puc-science-agri" not in puc_science_map["allied_health"]
+
+

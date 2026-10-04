@@ -526,3 +526,43 @@ def test_assessment_token_validation_matrix():
         res_bad_exp = client.get("/assessments/my-latest-result", headers={"Authorization": f"Bearer {bad_exp_token}"})
         assert res_bad_exp.status_code == 401
         assert res_bad_exp.json()["detail"] == "Invalid token"
+
+
+def test_assessment_completion_summary_wording_uses_interest_alignment():
+    """Verify that AssessmentService generates summary text using 'interest alignment' rather than 'aptitude'."""
+    from app.services.assessment_service import AssessmentService
+    from app.models.assessment import AssessmentAttempt, AssessmentQuestion, AssessmentOption, AssessmentAnswer, Assessment
+    from unittest.mock import MagicMock
+    import uuid
+
+    mock_db = MagicMock()
+    user_id = str(uuid.uuid4())
+    attempt_id = uuid.uuid4()
+    assessment_id = "puc-science-direction-v2"
+
+    attempt = MagicMock(spec=AssessmentAttempt)
+    attempt.id = attempt_id
+    attempt.student_id = uuid.UUID(user_id)
+    attempt.assessment_id = assessment_id
+    attempt.status = "in_progress"
+    attempt.assessment = MagicMock(spec=Assessment)
+    attempt.assessment.assessment_version = "v2"
+    attempt.assessment.scoring_version = "rule-v2-puc-science"
+    attempt.result = None
+
+    q = MagicMock(spec=AssessmentQuestion)
+    q.id = uuid.uuid4()
+    opt = MagicMock(spec=AssessmentOption)
+    opt.weight_dimension = "allied_health"
+    opt.weight_score = 3
+    q.options = [opt]
+
+    ans = MagicMock(spec=AssessmentAnswer)
+    ans.selected_option = opt
+
+    mock_db.query.return_value.filter.return_value.first.return_value = attempt
+    mock_db.query.return_value.filter.return_value.all.side_effect = [[q], [ans]]
+
+    result = AssessmentService.complete_assessment(mock_db, user_id, attempt_id)
+    assert "strong interest alignment" in result.summary_text
+    assert "aptitude" not in result.summary_text.lower()

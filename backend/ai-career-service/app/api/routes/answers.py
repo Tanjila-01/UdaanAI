@@ -37,6 +37,9 @@ from app.services.advisor_context import (
     is_standalone_subject_reset,
     parse_preference_and_exclusion,
     is_aspect_question,
+    is_referential_followup,
+    is_generic_topic,
+    clean_pathway_topic,
 )
 from app.services.advisor_history import save_answer
 from app.services.assessment_grounding import (
@@ -400,6 +403,12 @@ def career_answer(request: AnswerRequest, claims=Depends(get_current_user_claims
                 topic, pathway_id = followup_context(db, claims['sub'], request.follow_up_to)
                 if topic is None and conv_state.last_topic and not re.search(r'^(?:what|how)\s+about\s+(?:this|that|it)\b', raw_question, re.I):
                     topic = conv_state.last_topic
+                if is_referential_followup(raw_question) and getattr(conv_state, "last_specific_pathway", None):
+                    topic = conv_state.last_specific_pathway
+                elif topic and is_generic_topic(topic) and getattr(conv_state, "last_specific_pathway", None):
+                    topic = conv_state.last_specific_pathway
+                elif topic:
+                    topic = clean_pathway_topic(topic) or topic
                 if topic is None:
                     return dict(
                         status='needs_clarification',
@@ -410,7 +419,14 @@ def career_answer(request: AnswerRequest, claims=Depends(get_current_user_claims
                         answer_origin='local'
                     )
             elif conv_state.last_topic and not re.search(r'^(?:what|how)\s+about\s+(?:this|that|it)\b', raw_question, re.I):
-                topic = conv_state.last_topic
+                if is_referential_followup(raw_question) and getattr(conv_state, "last_specific_pathway", None):
+                    topic = conv_state.last_specific_pathway
+                elif is_generic_topic(conv_state.last_topic) and getattr(conv_state, "last_specific_pathway", None):
+                    topic = conv_state.last_specific_pathway
+                else:
+                    topic = clean_pathway_topic(conv_state.last_topic) or conv_state.last_topic
+            elif is_referential_followup(raw_question) and getattr(conv_state, "last_specific_pathway", None):
+                topic = conv_state.last_specific_pathway
 
             if settings.WEB_SEARCH_ENABLED and request.answer_mode != 'local':
                 selected_route = "web_explore"

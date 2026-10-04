@@ -125,11 +125,79 @@ class RecommendationService:
                 freshness_status = "current"
                 is_outdated = False
                 outdated_reason = None
+                dimension_scores = assess_data.get("dimension_scores") if assess_data else None
+                if isinstance(dimension_scores, dict) and stage_cfg:
+                    RecommendationService.sync_recommendation_items(
+                        db, latest, curr_stage, dimension_scores
+                    )
 
         latest.freshness_status = freshness_status
         latest.is_outdated = is_outdated
         latest.outdated_reason = outdated_reason
         return latest
+
+    @staticmethod
+    def sync_recommendation_items(
+        db: Session,
+        result: CareerRecommendationResult,
+        stage: str,
+        dimension_scores: dict
+    ) -> bool:
+        """
+        Synchronize persisted recommendation item match scores and reasons
+        against the active stage configuration and student dimension scores.
+        Ensures existing assessments reflect corrected mapping without requiring retakes.
+        """
+        stage_cfg = STAGE_CONFIG.get(stage)
+        if not stage_cfg or not isinstance(dimension_scores, dict) or not getattr(result, "recommendations", None):
+            return False
+
+        dim_map = stage_cfg.get("dimension_pathway_map", {})
+        dim_reasons = stage_cfg.get("dimension_reasons", {})
+        supported_dims = stage_cfg.get("supported_dimensions", set())
+
+        changed = False
+        for item in result.recommendations:
+            v_dims = [d for d, p_ids in dim_map.items() if item.pathway_id in p_ids and d in supported_dims]
+            if v_dims:
+                max_pct = max(dimension_scores.get(d, 0) for d in v_dims)
+                expected_score = max(0, min(100, int(5 * round(max_pct / 5.0))))
+                if getattr(item, "match_score", None) != expected_score:
+                    item.match_score = expected_score
+                    changed = True
+                    if expected_score >= 70:
+                        item.match_label = "High"
+                    elif expected_score >= 50:
+                        item.match_label = "Good"
+                    else:
+                        item.match_label = "Explore"
+
+                h_dim = v_dims[0]
+                for d in v_dims:
+                    if dimension_scores.get(d, 0) > dimension_scores.get(h_dim, 0):
+                        h_dim = d
+                expected_reasons = dim_reasons.get(h_dim)
+                if expected_reasons and getattr(item, "reasons", None) != expected_reasons:
+                    item.reasons = expected_reasons
+                    changed = True
+
+        if changed:
+            sorted_items = sorted(
+                result.recommendations,
+                key=lambda x: (-getattr(x, "match_score", 0), getattr(x, "pathway_title", ""))
+            )
+            for rank_idx, s_item in enumerate(sorted_items):
+                s_item.rank = rank_idx + 1
+            if db is not None:
+                try:
+                    db.commit()
+                    if hasattr(db, "refresh") and hasattr(result, "id"):
+                        db.refresh(result)
+                except Exception:
+                    if hasattr(db, "rollback"):
+                        db.rollback()
+
+        return changed
 
     @staticmethod
     def generate_recommendations(db: Session, user_id: str, token: str) -> CareerRecommendationResult:
@@ -293,7 +361,7 @@ class RecommendationService:
                     highest_dim = d
 
             reasons = dim_reasons.get(highest_dim, [
-                f"Matches your high interest and aptitude in {highest_dim.replace('_', ' ').title()}.",
+                f"Matches your high interest in {highest_dim.replace('_', ' ').title()}.",
                 "Aligned with your academic strengths and career trajectory."
             ])
 
